@@ -4,6 +4,8 @@ import Product from '@/lib/db/models/Product'
 import { ApiResponse } from '@/types'
 import { authenticateToken } from '@/lib/auth/middleware'
 import mongoose from 'mongoose'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth/config'
 
 interface ProductUpdateRequest {
   name?: string
@@ -26,12 +28,14 @@ interface ProductUpdateRequest {
 // GET /api/products/[id] - Get individual product details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     await connectDB()
 
-    const { id } = params
+    const { id } = 'then' in (context.params as any)
+      ? await (context.params as Promise<{ id: string }>)
+      : (context.params as { id: string })
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -70,22 +74,26 @@ export async function GET(
 // PUT /api/products/[id] - Update product (admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     await connectDB()
 
-    // Verify authentication and admin role
-    const authResult = await authenticateToken(request)
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        error: 'Authentication required'
-      }, { status: 401 })
+    // Verify authentication and admin role (NextAuth session first, then JWT)
+    const session = await getServerSession(authOptions)
+    let isAdmin = false
+    if (session && (session.user as any)?.role === 'admin') {
+      isAdmin = true
+    } else {
+      const authResult = await authenticateToken(request)
+      if (!(authResult.success && authResult.user)) {
+        return NextResponse.json<ApiResponse>({ success: false, error: 'Authentication required' }, { status: 401 })
+      }
+      isAdmin = authResult.user.role === 'admin'
     }
-
-    // For now, we'll skip admin role check since we don't have roles implemented yet
-    // TODO: Add admin role verification when user roles are implemented
+    if (!isAdmin) {
+      return NextResponse.json<ApiResponse>({ success: false, error: 'Admin privileges required' }, { status: 403 })
+    }
 
     const { id } = params
 
@@ -116,8 +124,38 @@ export async function PUT(
     if (body.images !== undefined) updateData.images = body.images
     if (body.category !== undefined) updateData.category = new mongoose.Types.ObjectId(body.category)
     if (body.brand !== undefined) updateData.brand = body.brand.trim()
-    if (body.variants !== undefined) updateData.variants = body.variants
-    if (body.inventory !== undefined) updateData.inventory = body.inventory
+    // Normalize and validate variants + inventory rule
+    if (body.variants !== undefined) {
+      const normalized = body.variants.map(v => ({
+        _id: v._id,
+        size: v.size?.trim() || undefined,
+        color: v.color?.trim() || undefined,
+        sku: v.sku?.trim?.() || v.sku,
+        price: v.price,
+        inventory: Number(v.inventory) || 0,
+      }))
+      updateData.variants = normalized
+      if (normalized.length > 0) {
+        const total = normalized.reduce((s, x) => s + (Number(x.inventory) || 0), 0)
+        const inv = body.inventory != null ? Number(body.inventory) : undefined
+        if (inv != null) {
+          if (Number.isNaN(inv) || inv < 0) {
+            return NextResponse.json<ApiResponse>({ success: false, error: 'Inventory must be a non-negative number' }, { status: 400 })
+          }
+          if (inv !== total) {
+            return NextResponse.json<ApiResponse>({ success: false, error: `Inventory (${inv}) must equal the sum of variant inventories (${total})` }, { status: 400 })
+          }
+          updateData.inventory = inv
+        } else {
+          // If inventory not provided, set to sum to keep consistency
+          updateData.inventory = total
+        }
+      }
+    }
+    if (body.inventory !== undefined && updateData.variants === undefined) {
+      // If variants not being updated in this request, still allow inventory change (no coupling possible here)
+      updateData.inventory = body.inventory
+    }
 
     // Update product
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -164,24 +202,30 @@ export async function PUT(
 // DELETE /api/products/[id] - Delete product (admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
     await connectDB()
 
-    // Verify authentication and admin role
-    const authResult = await authenticateToken(request)
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        error: 'Authentication required'
-      }, { status: 401 })
+    // Verify authentication and admin role (NextAuth session first, then JWT)
+    const session = await getServerSession(authOptions)
+    let isAdmin = false
+    if (session && (session.user as any)?.role === 'admin') {
+      isAdmin = true
+    } else {
+      const authResult = await authenticateToken(request)
+      if (!(authResult.success && authResult.user)) {
+        return NextResponse.json<ApiResponse>({ success: false, error: 'Authentication required' }, { status: 401 })
+      }
+      isAdmin = authResult.user.role === 'admin'
+    }
+    if (!isAdmin) {
+      return NextResponse.json<ApiResponse>({ success: false, error: 'Admin privileges required' }, { status: 403 })
     }
 
-    // For now, we'll skip admin role check since we don't have roles implemented yet
-    // TODO: Add admin role verification when user roles are implemented
-
-    const { id } = params
+    const { id } = 'then' in (context.params as any)
+      ? await (context.params as Promise<{ id: string }>)
+      : (context.params as { id: string })
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
