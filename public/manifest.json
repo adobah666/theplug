@@ -1,0 +1,68 @@
+{
+  "name": "ThePlug - Fashion & Style",
+  "short_name": "ThePlug",
+  "description": "Discover the latest fashion trends with ThePlug. Shop clothing, shoes, and accessories from top brands.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["shopping", "lifestyle", "fashion"],
+  "icons": [],
+  "shortcuts": [
+    {
+      "name": "Browse Clothing",
+      "short_name": "Clothing",
+      "description": "Browse our clothing collection",
+      "url": "/categories/clothing",
+      "icons": [
+        {
+          "src": "/icons/clothing-shortcut.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Browse Shoes",
+      "short_name": "Shoes",
+      "description": "Browse our shoe collection",
+      "url": "/categories/shoes",
+      "icons": [
+        {
+          "src": "/icons/shoes-shortcut.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "My Orders",
+      "short_name": "Orders",
+      "description": "View your order history",
+      "url": "/account/orders",
+      "icons": [
+        {
+          "src": "/icons/orders-shortcut.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-home.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "ThePlug homepage on desktop"
+    },
+    {
+      "src": "/screenshots/mobile-home.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "ThePlug homepage on mobile"
+    }
+  ]
+}

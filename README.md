@@ -1,24 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fashion Ecommerce Platform
 
-## Getting Started
+A modern fashion ecommerce platform built with Next.js 15, React 19, and Tailwind CSS. This platform provides a comprehensive online shopping experience for clothing, shoes, and fashion accessories.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- 🛍️ Product catalog with search and filtering
+- 👤 User authentication and account management
+- 🛒 Shopping cart and checkout process
+- 💳 Payment processing with Paystack
+- 📦 Order management and tracking
+- ⭐ Product reviews and ratings
+- 📱 Mobile-responsive design
+- 🔍 Advanced search with Meilisearch
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Quick Start
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Setup the project:**
+   ```bash
+   npm install
+   cp .env.example .env.local
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Configure environment variables in `.env.local`**
+
+3. **Test the setup:**
+   ```bash
+   npm run test:core
+   ```
+
+4. **Start development server:**
+   ```bash
+   npm run dev
+   ```
+
+For detailed setup instructions, see [docs/SETUP.md](docs/SETUP.md).
+
+## Technology Stack
+
+- **Frontend:** Next.js 15, React 19, Tailwind CSS 4
+- **Backend:** Next.js API Routes, MongoDB, Mongoose
+- **Authentication:** NextAuth.js, JWT, bcryptjs
+- **Payment:** Paystack
+- **Search:** Meilisearch
+- **Email:** AWS SES
+- **Images:** Cloudinary
 
 ## Learn More
 

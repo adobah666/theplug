@@ -1,103 +1,202 @@
-import Image from "next/image";
+import { Suspense } from 'react'
+import { Hero } from '@/components/layout/Hero'
+import { FeaturedProducts } from '@/components/product/FeaturedProducts'
+import { CategoryShowcase } from '@/components/layout/CategoryShowcase'
+import { PromotionalBanner } from '@/components/layout/PromotionalBanner'
+import { Newsletter } from '@/components/layout/Newsletter'
+import { Testimonials } from '@/components/layout/Testimonials'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { ErrorMessage } from '@/components/ui/ErrorMessage'
 
-export default function Home() {
+// This would typically come from an API
+async function getFeaturedProducts() {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 100))
+  
+  return [
+    {
+      id: '1',
+      name: 'Summer Floral Dress',
+      price: 25000,
+      originalPrice: 35000,
+      image: '/images/products/dress-1.jpg',
+      category: 'Clothing',
+      rating: 4.8,
+      reviewCount: 124,
+      isNew: true,
+      isOnSale: true
+    },
+    {
+      id: '2',
+      name: 'Classic Denim Jacket',
+      price: 18000,
+      image: '/images/products/jacket-1.jpg',
+      category: 'Clothing',
+      rating: 4.6,
+      reviewCount: 89,
+      isNew: false,
+      isOnSale: false
+    },
+    {
+      id: '3',
+      name: 'Leather Ankle Boots',
+      price: 32000,
+      originalPrice: 40000,
+      image: '/images/products/boots-1.jpg',
+      category: 'Shoes',
+      rating: 4.9,
+      reviewCount: 156,
+      isNew: false,
+      isOnSale: true
+    },
+    {
+      id: '4',
+      name: 'Gold Chain Necklace',
+      price: 15000,
+      image: '/images/products/necklace-1.jpg',
+      category: 'Accessories',
+      rating: 4.7,
+      reviewCount: 67,
+      isNew: true,
+      isOnSale: false
+    },
+    {
+      id: '5',
+      name: 'Casual Sneakers',
+      price: 22000,
+      image: '/images/products/sneakers-1.jpg',
+      category: 'Shoes',
+      rating: 4.5,
+      reviewCount: 203,
+      isNew: false,
+      isOnSale: false
+    },
+    {
+      id: '6',
+      name: 'Designer Handbag',
+      price: 45000,
+      originalPrice: 55000,
+      image: '/images/products/handbag-1.jpg',
+      category: 'Accessories',
+      rating: 4.8,
+      reviewCount: 91,
+      isNew: true,
+      isOnSale: true
+    }
+  ]
+}
+
+async function getCategories() {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 50))
+  
+  return [
+    {
+      id: 'clothing',
+      name: 'Clothing',
+      description: 'Discover the latest trends in fashion',
+      image: '/images/categories/clothing.jpg',
+      href: '/search?category=clothing',
+      productCount: 1250,
+      isPopular: true
+    },
+    {
+      id: 'shoes',
+      name: 'Shoes',
+      description: 'Step up your style game',
+      image: '/images/categories/shoes.jpg',
+      href: '/search?category=shoes',
+      productCount: 850,
+      isPopular: true
+    },
+    {
+      id: 'accessories',
+      name: 'Accessories',
+      description: 'Complete your look with perfect accessories',
+      image: '/images/categories/accessories.jpg',
+      href: '/search?category=accessories',
+      productCount: 650
+    }
+  ]
+}
+
+interface HomePageContentProps {
+  featuredProducts: Awaited<ReturnType<typeof getFeaturedProducts>>
+  categories: Awaited<ReturnType<typeof getCategories>>
+}
+
+function HomePageContent({ featuredProducts, categories }: HomePageContentProps) {
+  // Prepare hero featured products (first 4 products)
+  const heroProducts = featuredProducts.slice(0, 4).map(product => ({
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    image: product.image,
+    href: `/products/${product.id}`
+  }))
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <>
+      {/* Hero Section */}
+      <Hero featuredProducts={heroProducts} />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      {/* Promotional Banner */}
+      <PromotionalBanner />
+
+      {/* Featured Products */}
+      <FeaturedProducts 
+        products={featuredProducts}
+        title="Trending Now"
+        subtitle="Discover what's popular with our customers this week"
+      />
+
+      {/* Category Showcase */}
+      <CategoryShowcase 
+        categories={categories}
+        title="Shop by Category"
+        subtitle="Find exactly what you're looking for in our curated collections"
+      />
+
+      {/* Customer Testimonials */}
+      <Testimonials />
+
+      {/* Newsletter Signup */}
+      <Newsletter />
+    </>
+  )
+}
+
+export default async function Home() {
+  try {
+    // Fetch data in parallel
+    const [featuredProducts, categories] = await Promise.all([
+      getFeaturedProducts(),
+      getCategories()
+    ])
+
+    return (
+      <div className="min-h-screen">
+        <Suspense 
+          fallback={
+            <div className="flex items-center justify-center min-h-[400px]">
+              <LoadingSpinner size="lg" />
+            </div>
+          }
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+          <HomePageContent 
+            featuredProducts={featuredProducts}
+            categories={categories}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+        </Suspense>
+      </div>
+    )
+  } catch (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <ErrorMessage 
+          message="Failed to load homepage content. Please try refreshing the page." 
+        />
+      </div>
+    )
+  }
 }
