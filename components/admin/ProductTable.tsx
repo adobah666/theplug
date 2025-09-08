@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface ProductRow {
   _id: string
@@ -324,7 +325,7 @@ export default function ProductTable() {
                     </div>
                   </td>
                   <td className="px-3 py-2">{p.brand}</td>
-                  <td className="px-3 py-2">₦{p.price?.toLocaleString?.() ?? p.price}</td>
+                  <td className="px-3 py-2">{formatCurrency(p.price)}</td>
                   <td className="px-3 py-2">{p.inventory}</td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">

@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface ProductCardProps {
   product: {
@@ -30,12 +31,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onAddToCart,
   onAddToWishlist
 }) => {
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN'
-    }).format(price)
-  }
+  const formatPrice = (price: number) => formatCurrency(price)
 
   const renderStars = (rating: number) => {
     const stars = []
@@ -140,9 +136,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
                 {/* Price */}
                 <div className="mb-4">
-                  <span className="text-2xl font-bold text-gray-900">
-                    {formatPrice(product.price)}
-                  </span>
+                  <span className="text-2xl font-bold text-gray-900">{formatPrice(product.price)}</span>
                 </div>
               </div>
 
@@ -238,9 +232,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Price */}
         <div className="mb-2 sm:mb-3">
-          <span className="text-sm sm:text-lg font-bold text-gray-900">
-            {formatPrice(product.price)}
-          </span>
+          <span className="text-sm sm:text-lg font-bold text-gray-900">{formatPrice(product.price)}</span>
         </div>
 
         {/* Add to cart button */}

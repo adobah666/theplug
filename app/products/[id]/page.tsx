@@ -13,6 +13,7 @@ import { RelatedProducts } from '@/components/product/RelatedProducts';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { useCart } from '@/lib/cart/hooks';
 import { Product, ProductVariant } from '@/types';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface ProductPageProps {}
 
@@ -36,10 +37,11 @@ export default function ProductPage({}: ProductPageProps) {
         if (!response.ok) {
           throw new Error('Product not found');
         }
-        const productData = await response.json();
-        setProduct(productData);
-        if (productData.variants && productData.variants.length > 0) {
-          setSelectedVariant(productData.variants[0]);
+        const json = await response.json();
+        const prod = json?.data?.product || json?.product || json;
+        setProduct(prod);
+        if (prod?.variants && prod.variants.length > 0) {
+          setSelectedVariant(prod.variants[0]);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load product');
@@ -68,7 +70,7 @@ export default function ProductPage({}: ProductPageProps) {
   };
 
   const handleQuantityChange = (newQuantity: number) => {
-    if (newQuantity >= 1 && newQuantity <= (selectedVariant?.stock || 0)) {
+    if (newQuantity >= 1 && newQuantity <= (selectedVariant?.inventory || 0)) {
       setQuantity(newQuantity);
     }
   };
@@ -94,13 +96,24 @@ export default function ProductPage({}: ProductPageProps) {
     );
   }
 
+  // Derive safe category values for rendering/links
+  const catAny = (product as any).category;
+  const categoryName = typeof catAny === 'string' ? catAny : (catAny?.name || '');
+  const categorySlug = typeof catAny === 'string' ? catAny : (catAny?.slug || '');
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
       <Breadcrumb
         items={[
           { label: 'Home', href: '/' },
-          { label: product.category.charAt(0).toUpperCase() + product.category.slice(1), href: `/categories/${product.category}` },
+          (() => {
+            const cat = (product as any).category;
+            const catLabel = typeof cat === 'string' ? cat : (cat?.name || 'Category');
+            const catSlug = typeof cat === 'string' ? cat : (cat?.slug || '');
+            const safeLabel = String(catLabel || '').toString();
+            return { label: safeLabel.charAt(0).toUpperCase() + safeLabel.slice(1), href: catSlug ? `/categories/${catSlug}` : undefined } as any;
+          })(),
           { label: product.name }
         ]}
         className="mb-8"
@@ -111,26 +124,28 @@ export default function ProductPage({}: ProductPageProps) {
         <div className="space-y-4">
           <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden">
             <Image
-              src={product.images[selectedImageIndex] || '/placeholder-product.jpg'}
+              src={(product.images && product.images[selectedImageIndex]) || '/placeholder-product.jpg'}
               alt={product.name}
               fill
               className="object-cover"
               priority
             />
+
             {isOnSale && (
               <div className="absolute top-4 left-4 bg-red-500 text-white px-2 py-1 rounded text-sm font-medium">
                 -{discount}%
               </div>
             )}
           </div>
-          
+
           {/* Image Thumbnails */}
-          {product.images.length > 1 && (
+          {product.images && product.images.length > 1 && (
             <div className="flex space-x-2 overflow-x-auto">
               {product.images.map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImageIndex(index)}
+
                   className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
                     selectedImageIndex === index ? 'border-blue-500' : 'border-gray-200'
                   }`}
@@ -169,15 +184,11 @@ export default function ProductPage({}: ProductPageProps) {
                 </span>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3 mb-6">
-              <span className="text-3xl font-bold text-gray-900">
-                ₦{currentPrice.toLocaleString()}
-              </span>
+              <span className="text-3xl font-bold text-gray-900">{formatCurrency(currentPrice)}</span>
               {isOnSale && (
-                <span className="text-xl text-gray-500 line-through">
-                  ₦{originalPrice.toLocaleString()}
-                </span>
+                <span className="text-xl text-gray-500 line-through">{formatCurrency(originalPrice as number)}</span>
               )}
             </div>
           </div>
@@ -206,21 +217,21 @@ export default function ProductPage({}: ProductPageProps) {
                 <span className="px-4 py-2 border-x border-gray-300">{quantity}</span>
                 <button
                   onClick={() => handleQuantityChange(quantity + 1)}
-                  disabled={quantity >= (selectedVariant?.stock || 0)}
+                  disabled={quantity >= (selectedVariant?.inventory || 0)}
                   className="px-3 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50"
                 >
                   +
                 </button>
               </div>
               <span className="text-sm text-gray-600">
-                {selectedVariant?.stock || 0} in stock
+                {selectedVariant?.inventory || 0} in stock
               </span>
             </div>
 
             <div className="flex space-x-4">
               <Button
                 onClick={handleAddToCart}
-                disabled={!selectedVariant || selectedVariant.stock === 0 || cartLoading}
+                disabled={!selectedVariant || selectedVariant.inventory === 0 || cartLoading}
                 className="flex-1 flex items-center justify-center space-x-2"
               >
                 <ShoppingCart className="w-5 h-5" />
@@ -291,7 +302,7 @@ export default function ProductPage({}: ProductPageProps) {
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-600">Category:</dt>
-                <dd className="font-medium capitalize">{product.category}</dd>
+                <dd className="font-medium capitalize">{categoryName || 'N/A'}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-600">SKU:</dt>
@@ -317,7 +328,7 @@ export default function ProductPage({}: ProductPageProps) {
       {/* Related Products */}
       <RelatedProducts
         productId={product._id}
-        category={product.category}
+        category={categorySlug || categoryName}
         className="mt-16"
       />
     </div>
