@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { SearchBar } from '@/components/product/SearchBar'
@@ -8,20 +8,47 @@ import { CartIcon } from '@/components/cart/CartIcon'
 import { CartDrawer } from '@/components/cart/CartDrawer'
 import { MobileNavDrawer } from '@/components/layout/MobileNavDrawer'
 import { useCart } from '@/lib/cart'
-import { useAuth } from '@/lib/auth/hooks'
+import { useAuthUser } from '@/lib/auth/hooks'
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
   
   const { state, updateQuantity, removeItem } = useCart()
-  const { user } = useAuth()
+  const { user, logout } = useAuthUser()
 
-  const categories = [
-    { name: 'Clothing', href: '/category/clothing' },
-    { name: 'Shoes', href: '/category/shoes' },
-    { name: 'Accessories', href: '/category/accessories' },
-  ]
+  const [categories, setCategories] = useState<Array<{ name: string; slug: string }>>([])
+  const [brands, setBrands] = useState<Array<{ name: string; slug?: string }>>([])
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch('/api/categories', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) return
+        const list = (json?.data?.categories || []) as Array<{ name: string; slug: string }>
+        // sort by name ASC
+        list.sort((a, b) => a.name.localeCompare(b.name))
+        if (mounted) setCategories(list)
+      } catch {
+        // ignore
+      }
+    })()
+    ;(async () => {
+      try {
+        const res = await fetch('/api/brands', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) return
+        const list = (json?.brands || []) as Array<{ name: string; slug?: string }>
+        // Keep API order (already sorted by popularity via productCount desc)
+        if (mounted) setBrands(list)
+      } catch {
+        // ignore
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white">
@@ -60,14 +87,22 @@ const Header: React.FC = () => {
           <div className="flex items-center space-x-4">
             {/* Account */}
             {user ? (
-              <Link href="/account" className="hidden md:flex items-center space-x-1 text-gray-700 hover:text-gray-900">
-                <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-xs text-blue-600 font-medium">
-                    {user.name?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <span className="text-sm">{user.name}</span>
-              </Link>
+              <div className="hidden md:flex items-center space-x-3">
+                <Link href="/account" className="flex items-center space-x-1 text-gray-700 hover:text-gray-900">
+                  <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
+                    <span className="text-xs text-blue-600 font-medium">
+                      {(user.firstName || user.name || '').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <span className="text-sm">{user.firstName || user.name}</span>
+                </Link>
+                <button
+                  onClick={() => logout()}
+                  className="text-sm text-gray-700 hover:text-gray-900"
+                >
+                  Logout
+                </button>
+              </div>
             ) : (
               <Link href="/login" className="hidden md:flex items-center space-x-1 text-gray-700 hover:text-gray-900">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,13 +152,27 @@ const Header: React.FC = () => {
             <div className="hidden md:flex items-center space-x-8">
               {categories.map((category) => (
                 <Link
-                  key={category.name}
-                  href={category.href}
+                  key={category.slug}
+                  href={`/categories/${category.slug}`}
                   className="text-sm font-medium text-gray-700 hover:text-blue-600"
                 >
                   {category.name}
                 </Link>
               ))}
+            </div>
+
+            {/* Brands - Desktop */}
+            <div className="hidden md:flex items-center space-x-6">
+              {brands.slice(0, 3).map((brand) => (
+                <Link
+                  key={brand.slug || brand.name}
+                  href={`/brands/${brand.slug || brand.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  className="text-sm text-gray-600 hover:text-blue-600"
+                >
+                  {brand.name}
+                </Link>
+              ))}
+              <Link href="/brands" className="text-sm font-medium text-gray-700 hover:text-blue-600">All Brands</Link>
             </div>
 
             {/* Auth buttons - Desktop */}

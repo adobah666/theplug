@@ -1,23 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth/jwt';
-import { User } from '@/lib/db/models/User';
+import { getToken } from 'next-auth/jwt';
+import User from '@/lib/db/models/User';
+import connectDB from '@/lib/db/connection';
 
+/**
+ * Updates an address for a user.
+ * 
+ * @param request - The incoming request.
+ * @param params - The route parameters, including the address ID.
+ * @returns A JSON response with the updated address or an error message.
+ */
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
+    await connectDB();
+    const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET });
+    if (!token || !(token as any).id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
     const addressData = await request.json();
+
     const {
       firstName,
       lastName,
@@ -29,19 +34,19 @@ export async function PUT(
       isDefault,
     } = addressData;
 
-    const user = await User.findById(payload.userId);
+    const user = await User.findById((token as any).id);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const addressIndex = user.addresses?.findIndex(addr => addr.id === params.id);
+    const addressIndex = user.addresses?.findIndex((addr: any) => addr.id === params.id);
     if (addressIndex === -1 || addressIndex === undefined) {
       return NextResponse.json({ error: 'Address not found' }, { status: 404 });
     }
 
     // If this is set as default, unset other default addresses
     if (isDefault) {
-      user.addresses = user.addresses!.map(addr => ({
+      user.addresses = user.addresses!.map((addr: any) => ({
         ...addr,
         isDefault: addr.id === params.id,
       }));
@@ -72,32 +77,34 @@ export async function PUT(
   }
 }
 
+/**
+ * Deletes an address for a user.
+ * 
+ * @param request - The incoming request.
+ * @param params - The route parameters, including the address ID.
+ * @returns A JSON response with a success message or an error message.
+ */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
+    const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET });
+    if (!token || !(token as any).id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const user = await User.findById(payload.userId);
+    const user = await User.findById((token as any).id);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const addressIndex = user.addresses?.findIndex(addr => addr.id === params.id);
+    const addressIndex = user.addresses?.findIndex((addr: any) => addr.id === params.id);
     if (addressIndex === -1 || addressIndex === undefined) {
       return NextResponse.json({ error: 'Address not found' }, { status: 404 });
     }
 
-    user.addresses = user.addresses!.filter(addr => addr.id !== params.id);
+    user.addresses = user.addresses!.filter((addr: any) => addr.id !== params.id);
     await user.save();
 
     return NextResponse.json({ message: 'Address deleted successfully' });

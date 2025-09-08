@@ -9,7 +9,19 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Button } from '@/components/ui/Button';
 import { Filter, Grid, List } from 'lucide-react';
-import { Product } from '@/types';
+// Lightweight product type for client rendering
+type UIProduct = {
+  _id: string
+  name: string
+  description?: string
+  price: number
+  images: string[]
+  category?: { _id: string; name: string; slug: string }
+  brand: string
+  rating: number
+  reviewCount: number
+  inventory: number
+}
 
 interface CategoryPageProps {}
 
@@ -52,7 +64,7 @@ export default function CategoryPage({}: CategoryPageProps) {
   const searchParams = useSearchParams();
   const category = params.category as string;
   
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<UIProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -98,8 +110,26 @@ export default function CategoryPage({}: CategoryPageProps) {
         }
 
         const data = await response.json();
-        setProducts(data.products || []);
-        setTotalProducts(data.total || 0);
+        const payload = data?.data || {};
+        const raw: any[] = payload.data || [];
+        const normalized: UIProduct[] = raw.map((p: any) => ({
+          _id: p._id,
+          name: p.name,
+          description: p.description,
+          price: p.price,
+          images: p.images || [],
+          brand: p.brand || '',
+          rating: p.rating ?? 0,
+          reviewCount: p.reviewCount ?? 0,
+          inventory: p.inventory ?? 0,
+          category: p.category ? {
+            _id: p.category._id?.toString?.() || p.category._id || '',
+            name: p.category.name || '',
+            slug: p.category.slug || ''
+          } : undefined,
+        }))
+        setProducts(normalized);
+        setTotalProducts(payload.pagination?.total || 0);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load products');
       } finally {
@@ -294,7 +324,7 @@ export default function CategoryPage({}: CategoryPageProps) {
                       return (
                         <Button
                           key={page}
-                          variant={currentPage === page ? 'default' : 'outline'}
+                          variant={currentPage === page ? 'primary' : 'outline'}
                           size="sm"
                           onClick={() => handlePageChange(page)}
                         >

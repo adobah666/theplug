@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth/config'
 import connectDB from '@/lib/db/connection'
 import Product from '@/lib/db/models/Product'
 import { ApiResponse, PaginatedResponse } from '@/types'
@@ -96,20 +98,28 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB()
 
-    // Verify authentication and admin role
-    const authResult = await authenticateToken(request)
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        error: 'Authentication required'
-      }, { status: 401 })
+    // Verify authentication and admin role via NextAuth session first
+    const session = await getServerSession(authOptions)
+    if (!(session && (session.user as any)?.role === 'admin')) {
+      // Fall back to JWT Authorization header auth
+      const authResult = await authenticateToken(request)
+      if (!authResult.success || !authResult.user) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Authentication required'
+        }, { status: 401 })
+      }
+      if (authResult.user.role !== 'admin') {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Admin privileges required'
+        }, { status: 403 })
+      }
     }
 
-    // For now, we'll skip admin role check since we don't have roles implemented yet
-    // TODO: Add admin role verification when user roles are implemented
-
     const body: ProductCreateRequest = await request.json()
-    const { name, description, price, images, category, brand, variants, inventory } = body
+    const { name, description, price, images, category, brand } = body
+    let { variants, inventory } = body
 
     // Validate required fields
     if (!name || !description || !price || !images || !category || !brand) {
@@ -127,6 +137,33 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Normalize variants
+    variants = (variants || []).map(v => ({
+      size: v.size?.trim() || undefined,
+      color: v.color?.trim() || undefined,
+      sku: v.sku.trim(),
+      price: v.price,
+      inventory: Number(v.inventory) || 0,
+    }))
+
+    // If variants exist, validate inventory equals sum of variant inventories
+    if (variants && variants.length > 0) {
+      const variantsTotal = variants.reduce((sum, v) => sum + (Number(v.inventory) || 0), 0)
+      if (inventory == null) inventory = 0
+      const inventoryNum = Number(inventory)
+      if (Number.isNaN(inventoryNum) || inventoryNum < 0) {
+        return NextResponse.json<ApiResponse>({ success: false, error: 'Inventory must be a non-negative number' }, { status: 400 })
+      }
+      if (inventoryNum !== variantsTotal) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: `Inventory (${inventoryNum}) must equal the sum of variant inventories (${variantsTotal})`
+        }, { status: 400 })
+      }
+      // Ensure inventory matches sum
+      inventory = variantsTotal
+    }
+
     // Create new product
     const newProduct = new Product({
       name: name.trim(),
@@ -136,7 +173,7 @@ export async function POST(request: NextRequest) {
       category: new mongoose.Types.ObjectId(category),
       brand: brand.trim(),
       variants: variants || [],
-      inventory: inventory || 0
+      inventory: Number(inventory) || 0
     })
 
     await newProduct.save()

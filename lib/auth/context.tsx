@@ -58,8 +58,8 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Registration failed')
+      const error = await response.json().catch(() => ({}))
+      throw new Error(error?.error || error?.message || `Registration failed (${response.status})`)
     }
 
     // Auto-login after successful registration
@@ -83,8 +83,8 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Failed to send reset email')
+      const error = await response.json().catch(() => ({}))
+      throw new Error(error?.error || error?.message || `Failed to send reset email (${response.status})`)
     }
   }
 
@@ -98,8 +98,8 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Failed to update profile')
+      const error = await response.json().catch(() => ({}))
+      throw new Error(error?.error || error?.message || `Failed to update profile (${response.status})`)
     }
 
     // Refresh session to get updated user data

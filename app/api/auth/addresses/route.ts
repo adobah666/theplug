@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth/jwt';
-import { User } from '@/lib/db/models/User';
+import { getToken } from 'next-auth/jwt';
+import User from '@/lib/db/models/User';
+import connectDB from '@/lib/db/connection';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
+    await connectDB();
+    const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET });
+    if (!token || !(token as any).id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const user = await User.findById(payload.userId);
+    const user = await User.findById((token as any).id);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
@@ -31,14 +28,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
+    await connectDB();
+    const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET });
+    if (!token || !(token as any).id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     const addressData = await request.json();
@@ -60,7 +53,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await User.findById(payload.userId);
+    const user = await User.findById((token as any).id);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
@@ -79,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     // If this is set as default, unset other default addresses
     if (newAddress.isDefault) {
-      user.addresses = (user.addresses || []).map(addr => ({
+      user.addresses = (user.addresses || []).map((addr: any) => ({
         ...addr,
         isDefault: false,
       }));

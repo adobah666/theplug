@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { useAuth } from '@/lib/auth/hooks';
+import { useAuthUser } from '@/lib/auth/hooks';
 
 interface ProfileFormData {
   firstName: string;
@@ -19,7 +19,7 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ onSuccess }: ProfileFormProps) {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile } = useAuthUser();
   const [formData, setFormData] = useState<ProfileFormData>({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -29,6 +29,16 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Keep form in sync when session user loads/changes
+  useEffect(() => {
+    setFormData({
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+    })
+  }, [user?.firstName, user?.lastName, user?.email, user?.phone])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

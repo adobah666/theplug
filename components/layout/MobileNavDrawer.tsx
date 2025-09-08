@@ -1,9 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
-import { useAuth } from '@/lib/auth/hooks'
+import { useAuthUser } from '@/lib/auth/hooks'
 
 interface MobileNavDrawerProps {
   isOpen: boolean
@@ -11,13 +11,26 @@ interface MobileNavDrawerProps {
 }
 
 const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) => {
-  const { user, logout } = useAuth()
+  const { user, logout } = useAuthUser()
 
-  const categories = [
-    { name: 'Clothing', href: '/categories/clothing', icon: '👕' },
-    { name: 'Shoes', href: '/categories/shoes', icon: '👟' },
-    { name: 'Accessories', href: '/categories/accessories', icon: '👜' },
-  ]
+  const [categories, setCategories] = useState<Array<{ name: string; slug: string }>>([])
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch('/api/categories', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) return
+        const list = (json?.data?.categories || []) as Array<{ name: string; slug: string }>
+        list.sort((a, b) => a.name.localeCompare(b.name))
+        if (mounted) setCategories(list)
+      } catch {
+        // ignore
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
 
   const quickLinks = [
     { name: 'New Arrivals', href: '/new-arrivals' },
@@ -88,12 +101,12 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) =>
               <div className="space-y-2">
                 {categories.map((category) => (
                   <Link
-                    key={category.name}
-                    href={category.href}
+                    key={category.slug}
+                    href={`/categories/${category.slug}`}
                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
                     onClick={onClose}
                   >
-                    <span className="text-2xl">{category.icon}</span>
+                    <span className="text-2xl">•</span>
                     <span className="font-medium text-gray-900">{category.name}</span>
                     <svg className="h-5 w-5 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

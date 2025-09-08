@@ -24,6 +24,7 @@ export function RegisterForm({ onSubmit, className }: RegisterFormProps) {
     formState: { errors, isValid },
     reset,
     watch,
+    setError,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     mode: 'onChange',
@@ -38,9 +39,12 @@ export function RegisterForm({ onSubmit, className }: RegisterFormProps) {
       await onSubmit(data)
       reset()
     } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : 'Registration failed. Please try again.'
-      )
+      const message = error instanceof Error ? error.message : 'Registration failed. Please try again.'
+      // If backend reports duplicate email, surface as a field error
+      if (/already exists|duplicate key|E11000/i.test(message)) {
+        setError('email', { type: 'manual', message: 'An account with this email already exists' })
+      }
+      setSubmitError(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -63,12 +67,9 @@ export function RegisterForm({ onSubmit, className }: RegisterFormProps) {
             autoComplete="name"
             placeholder="Enter your full name"
             {...register('name')}
-            error={!!errors.name}
+            error={errors.name?.message}
             disabled={isSubmitting}
           />
-          {errors.name && (
-            <ErrorMessage message={errors.name.message} className="mt-1" />
-          )}
         </div>
 
         <div>
@@ -81,12 +82,9 @@ export function RegisterForm({ onSubmit, className }: RegisterFormProps) {
             autoComplete="email"
             placeholder="Enter your email"
             {...register('email')}
-            error={!!errors.email}
+            error={errors.email?.message}
             disabled={isSubmitting}
           />
-          {errors.email && (
-            <ErrorMessage message={errors.email.message} className="mt-1" />
-          )}
         </div>
 
         <div>
@@ -99,12 +97,9 @@ export function RegisterForm({ onSubmit, className }: RegisterFormProps) {
             autoComplete="tel"
             placeholder="Enter your phone number"
             {...register('phone')}
-            error={!!errors.phone}
+            error={errors.phone?.message}
             disabled={isSubmitting}
           />
-          {errors.phone && (
-            <ErrorMessage message={errors.phone.message} className="mt-1" />
-          )}
         </div>
 
         <div>
@@ -117,12 +112,9 @@ export function RegisterForm({ onSubmit, className }: RegisterFormProps) {
             autoComplete="new-password"
             placeholder="Create a password"
             {...register('password')}
-            error={!!errors.password}
+            error={errors.password?.message}
             disabled={isSubmitting}
           />
-          {errors.password && (
-            <ErrorMessage message={errors.password.message} className="mt-1" />
-          )}
           <div className="mt-1 text-xs text-gray-500">
             Password must contain at least one uppercase letter, lowercase letter, and number
           </div>
@@ -138,12 +130,9 @@ export function RegisterForm({ onSubmit, className }: RegisterFormProps) {
             autoComplete="new-password"
             placeholder="Confirm your password"
             {...register('confirmPassword')}
-            error={!!errors.confirmPassword}
+            error={errors.confirmPassword?.message}
             disabled={isSubmitting}
           />
-          {errors.confirmPassword && (
-            <ErrorMessage message={errors.confirmPassword.message} className="mt-1" />
-          )}
         </div>
       </div>
 

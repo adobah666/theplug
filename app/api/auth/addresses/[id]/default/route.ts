@@ -1,23 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth/jwt';
-import { User } from '@/lib/db/models/User';
+import { getToken } from 'next-auth/jwt';
+import User from '@/lib/db/models/User';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
+    const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET });
+    if (!token || !(token as any).id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const user = await User.findById(payload.userId);
+    const user = await User.findById((token as any).id);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
@@ -28,7 +23,7 @@ export async function PUT(
     }
 
     // Set all addresses to non-default, then set the specified one as default
-    user.addresses = user.addresses!.map(addr => ({
+    user.addresses = user.addresses!.map((addr: any) => ({
       ...addr,
       isDefault: addr.id === params.id,
     }));

@@ -40,6 +40,7 @@ export interface IUser extends Document {
   lastName: string
   phone?: string
   password: string
+  role: 'user' | 'admin'
   addresses?: IAddress[]
   wishlist?: IWishlistItem[]
   cart?: ICartItem[]
@@ -182,6 +183,11 @@ const UserSchema = new Schema<IUser>({
     required: [true, 'Password is required'],
     minlength: [8, 'Password must be at least 8 characters long'],
     select: false // Don't include password in queries by default
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
   },
   addresses: [AddressSchema],
   wishlist: [WishlistItemSchema],

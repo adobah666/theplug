@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, useParams } from 'next/navigation'
+
 import { ChevronDown, ChevronUp, X, Filter } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -34,83 +35,55 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 }) => {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const paramsRoute = useParams() as { category?: string }
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['category', 'price', 'brand']))
   const [filters, setFilters] = useState<Record<string, any>>({})
   const [priceRange, setPriceRange] = useState({ min: '', max: '' })
+  const [filterSections, setFilterSections] = useState<FilterSection[]>([])
+  const [facetsLoading, setFacetsLoading] = useState(false)
+  const [facetsError, setFacetsError] = useState<string | null>(null)
 
-  // Filter sections configuration
-  const filterSections: FilterSection[] = [
-    {
-      key: 'category',
-      title: 'Category',
-      type: 'radio',
-      options: [
-        { value: 'clothing', label: 'Clothing', count: 150 },
-        { value: 'shoes', label: 'Shoes', count: 89 },
-        { value: 'accessories', label: 'Accessories', count: 67 },
-        { value: 'bags', label: 'Bags', count: 45 },
-        { value: 'jewelry', label: 'Jewelry', count: 32 }
-      ]
-    },
-    {
-      key: 'brand',
-      title: 'Brand',
-      type: 'checkbox',
-      options: [
-        { value: 'nike', label: 'Nike', count: 45 },
-        { value: 'adidas', label: 'Adidas', count: 38 },
-        { value: 'zara', label: 'Zara', count: 52 },
-        { value: 'h&m', label: 'H&M', count: 41 },
-        { value: 'uniqlo', label: 'Uniqlo', count: 29 }
-      ]
-    },
-    {
-      key: 'price',
-      title: 'Price Range',
-      type: 'range',
-      min: 0,
-      max: 10000
-    },
-    {
-      key: 'size',
-      title: 'Size',
-      type: 'checkbox',
-      options: [
-        { value: 'xs', label: 'XS', count: 23 },
-        { value: 's', label: 'S', count: 45 },
-        { value: 'm', label: 'M', count: 67 },
-        { value: 'l', label: 'L', count: 54 },
-        { value: 'xl', label: 'XL', count: 32 },
-        { value: 'xxl', label: 'XXL', count: 18 }
-      ]
-    },
-    {
-      key: 'color',
-      title: 'Color',
-      type: 'checkbox',
-      options: [
-        { value: 'black', label: 'Black', count: 89 },
-        { value: 'white', label: 'White', count: 76 },
-        { value: 'blue', label: 'Blue', count: 54 },
-        { value: 'red', label: 'Red', count: 43 },
-        { value: 'green', label: 'Green', count: 32 },
-        { value: 'gray', label: 'Gray', count: 28 }
-      ]
-    },
-    {
-      key: 'rating',
-      title: 'Customer Rating',
-      type: 'radio',
-      options: [
-        { value: '4', label: '4 Stars & Up', count: 156 },
-        { value: '3', label: '3 Stars & Up', count: 234 },
-        { value: '2', label: '2 Stars & Up', count: 298 },
-        { value: '1', label: '1 Star & Up', count: 345 }
-      ]
-    }
-  ]
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        setFacetsLoading(true)
+        setFacetsError(null)
+        const sp = new URLSearchParams()
+        if (paramsRoute?.category) sp.set('category', paramsRoute.category)
+        const res = await fetch(`/api/products/facets?${sp.toString()}`)
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(json?.error || 'Failed to load facets')
+        if (!mounted) return
+        const data = json?.data || {}
+        const categories: FilterOption[] = (data.categories || []).map((c: any) => ({ value: c.slug, label: c.name, count: c.count }))
+        const brands: FilterOption[] = (data.brands || []).map((b: any) => ({ value: b.name, label: b.name, count: b.count }))
+        const sizes: FilterOption[] = (data.sizes || []).map((s: any) => ({ value: s.value, label: s.value.toUpperCase(), count: s.count }))
+        const colors: FilterOption[] = (data.colors || []).map((c: any) => ({ value: c.value, label: c.value.charAt(0).toUpperCase() + c.value.slice(1), count: c.count }))
 
-  // Initialize filters from URL params
+        const sections: FilterSection[] = [
+          { key: 'category', title: 'Category', type: 'radio', options: categories },
+          { key: 'brand', title: 'Brand', type: 'checkbox', options: brands },
+          { key: 'price', title: 'Price Range', type: 'range', min: 0, max: 1000000 },
+          { key: 'size', title: 'Size', type: 'checkbox', options: sizes },
+          { key: 'color', title: 'Color', type: 'checkbox', options: colors },
+          { key: 'rating', title: 'Customer Rating', type: 'radio', options: [
+            { value: '4', label: '4 Stars & Up' },
+            { value: '3', label: '3 Stars & Up' },
+            { value: '2', label: '2 Stars & Up' },
+            { value: '1', label: '1 Star & Up' },
+          ]}
+        ]
+        setFilterSections(sections)
+      } catch (err) {
+        setFacetsError(err instanceof Error ? err.message : 'Failed to load facets')
+      } finally {
+        setFacetsLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [paramsRoute?.category])
+
   useEffect(() => {
     const initialFilters: Record<string, any> = {}
     
@@ -125,7 +98,6 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
       }
     })
 
-    // Handle price range separately
     const minPrice = searchParams.get('minPrice')
     const maxPrice = searchParams.get('maxPrice')
     if (minPrice || maxPrice) {
@@ -135,9 +107,8 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     }
 
     setFilters(initialFilters)
-  }, [searchParams])
+  }, [searchParams, filterSections])
 
-  // Toggle section expansion
   const toggleSection = (sectionKey: string) => {
     setExpandedSections(prev => {
       const newSet = new Set(prev)
@@ -150,7 +121,6 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     })
   }
 
-  // Handle filter change
   const handleFilterChange = (sectionKey: string, value: string, checked?: boolean) => {
     let newFilters = { ...filters }
 
@@ -183,7 +153,6 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     }
   }
 
-  // Handle price range change
   const handlePriceChange = (type: 'min' | 'max', value: string) => {
     const newPriceRange = { ...priceRange, [type]: value }
     setPriceRange(newPriceRange)
@@ -202,7 +171,6 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
     setFilters(newFilters)
     
-    // Debounce URL update for price range
     const timeoutId = setTimeout(() => {
       updateURL(newFilters)
       if (onFilterChange) {
@@ -213,11 +181,9 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     return () => clearTimeout(timeoutId)
   }
 
-  // Update URL with filters
   const updateURL = (newFilters: Record<string, any>) => {
     const params = new URLSearchParams(searchParams.toString())
     
-    // Clear existing filter params
     filterSections.forEach(section => {
       params.delete(section.key)
     })
@@ -225,7 +191,6 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     params.delete('maxPrice')
     params.delete('page') // Reset to first page when filters change
 
-    // Add new filter params
     Object.entries(newFilters).forEach(([key, value]) => {
       if (Array.isArray(value)) {
         if (value.length > 0) {
@@ -239,7 +204,6 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     router.push(`?${params.toString()}`, { scroll: false })
   }
 
-  // Clear all filters
   const clearAllFilters = () => {
     setFilters({})
     setPriceRange({ min: '', max: '' })
@@ -259,12 +223,10 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     }
   }
 
-  // Check if any filters are active
   const hasActiveFilters = Object.keys(filters).length > 0
 
   return (
     <div className={`bg-white border border-gray-200 rounded-lg p-4 ${className}`}>
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center">
           <Filter className="h-5 w-5 mr-2" />
@@ -282,11 +244,12 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
         )}
       </div>
 
-      {/* Filter sections */}
       <div className="space-y-4">
+        {facetsError && (
+          <div className="text-sm text-red-600">{facetsError}</div>
+        )}
         {filterSections.map(section => (
           <div key={section.key} className="border-b border-gray-100 pb-4 last:border-b-0">
-            {/* Section header */}
             <button
               onClick={() => toggleSection(section.key)}
               className="flex items-center justify-between w-full py-2 text-left"
@@ -300,7 +263,6 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
               )}
             </button>
 
-            {/* Section content */}
             {expandedSections.has(section.key) && (
               <div className="mt-2 space-y-2">
                 {section.type === 'range' ? (
@@ -333,6 +295,9 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {facetsLoading && section.options?.length === 0 && (
+                      <div className="text-sm text-gray-500">Loading...</div>
+                    )}
                     {section.options?.map(option => (
                       <label
                         key={option.value}
@@ -356,7 +321,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
                           disabled={isLoading}
                         />
                         <span className="text-sm text-gray-700 flex-1">{option.label}</span>
-                        {option.count && (
+                        {option.count != null && (
                           <span className="text-xs text-gray-500">({option.count})</span>
                         )}
                       </label>
@@ -369,7 +334,6 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
         ))}
       </div>
 
-      {/* Active filters summary */}
       {hasActiveFilters && (
         <div className="mt-4 pt-4 border-t border-gray-200">
           <h4 className="text-sm font-medium text-gray-900 mb-2">Active Filters:</h4>

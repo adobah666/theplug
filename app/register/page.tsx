@@ -6,26 +6,22 @@ import { useState } from 'react'
 import { RegisterForm } from '@/components/auth/RegisterForm'
 import type { RegisterFormData } from '@/lib/auth/validation'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { useAuth } from '@/lib/auth/hooks'
 
 export default function RegisterPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const { register } = useAuth()
 
   const onSubmit = async (data: RegisterFormData) => {
     setError(null)
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
-
-    const json = await res.json()
-    if (!res.ok || !json?.success) {
-      throw new Error(json?.error || 'Unable to create account')
+    try {
+      await register(data) // will auto-login per context implementation
+      router.push('/account')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to create account')
+      throw e
     }
-
-    // After successful registration, send user to login
-    router.push('/login')
   }
 
   return (

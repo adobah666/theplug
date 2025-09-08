@@ -9,7 +9,8 @@ import connectDB from '@/lib/db/connection'
 const client = new MongoClient(process.env.MONGODB_URI!)
 
 export const authOptions: NextAuthOptions = {
-  adapter: MongoDBAdapter(client),
+  // Cast to any to avoid type mismatch between next-auth and @auth adapter typings
+  adapter: MongoDBAdapter(client) as any,
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -25,7 +26,8 @@ export const authOptions: NextAuthOptions = {
         try {
           await connectDB()
           
-          const user = await User.findOne({ email: credentials.email })
+          // Select password explicitly as it is select:false in the schema
+          const user = await User.findOne({ email: credentials.email }).select('+password')
           if (!user) {
             throw new Error('Invalid email or password')
           }
@@ -38,8 +40,12 @@ export const authOptions: NextAuthOptions = {
           return {
             id: user._id.toString(),
             email: user.email,
-            name: user.name,
+            // next-auth User requires a name field
+            name: `${user.firstName} ${user.lastName}`.trim(),
+            firstName: user.firstName,
+            lastName: user.lastName,
             phone: user.phone,
+            role: (user as any).role,
           }
         } catch (error) {
           console.error('Authentication error:', error)
@@ -58,21 +64,30 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
-        token.phone = user.phone
+        const t = token as any
+        t.id = (user as any).id
+        t.phone = (user as any).phone
+        t.firstName = (user as any).firstName
+        t.lastName = (user as any).lastName
+        t.role = (user as any).role
       }
       return token
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id as string
-        session.user.phone = token.phone as string
+        const t = token as any
+        ;(session.user as any).id = t.id
+        ;(session.user as any).phone = t.phone
+        ;(session.user as any).firstName = t.firstName
+        ;(session.user as any).lastName = t.lastName
+        ;(session.user as any).role = t.role
       }
       return session
     }
   },
   pages: {
-    signIn: '/auth/login',
+    // We created /login page
+    signIn: '/login',
   },
   secret: process.env.NEXTAUTH_SECRET,
 }

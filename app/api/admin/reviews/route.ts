@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth/config'
 import connectDB from '@/lib/db/connection'
 import { getReviewsForModeration } from '@/lib/reviews/service'
 import { authenticateToken } from '@/lib/auth/middleware'
@@ -8,18 +10,24 @@ export async function GET(request: NextRequest) {
   try {
     await connectDB()
 
-    // Verify authentication
-    const authResult = await verifyToken(request)
-    if (!authResult.success) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+    // Verify authentication and admin role via NextAuth session first
+    const session = await getServerSession(authOptions)
+    if (!(session && (session.user as any)?.role === 'admin')) {
+      // Fallback to JWT Authorization header auth
+      const authResult = await authenticateToken(request)
+      if (!authResult.success || !authResult.user) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        )
+      }
+      if (authResult.user.role !== 'admin') {
+        return NextResponse.json(
+          { error: 'Admin privileges required' },
+          { status: 403 }
+        )
+      }
     }
-
-    // TODO: Add admin role check when user roles are implemented
-    // For now, we'll assume authenticated users can access this endpoint
-    // In production, you should verify the user has admin privileges
 
     const { searchParams } = new URL(request.url)
     

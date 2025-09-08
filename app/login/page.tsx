@@ -6,26 +6,22 @@ import { LoginForm } from '@/components/auth/LoginForm'
 import type { LoginFormData } from '@/lib/auth/validation'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { useState } from 'react'
+import { useAuth } from '@/lib/auth/hooks'
 
 export default function LoginPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const { login } = useAuth()
 
   const onSubmit = async (data: LoginFormData) => {
     setError(null)
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    })
-
-    const json = await res.json()
-    if (!res.ok || !json?.success) {
-      throw new Error(json?.error || 'Unable to sign in')
+    try {
+      await login(data)
+      router.push('/account')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to sign in')
+      throw e
     }
-
-    // On success, navigate to account page or home
-    router.push('/account')
   }
 
   return (

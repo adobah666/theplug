@@ -27,7 +27,8 @@ const CategorySchema = new Schema<ICategory>({
   },
   slug: {
     type: String,
-    required: [true, 'Category slug is required'],
+    // Not strictly required; we'll auto-generate from name
+    required: false,
     unique: true,
     trim: true,
     lowercase: true,
@@ -46,8 +47,8 @@ const CategorySchema = new Schema<ICategory>({
   timestamps: true
 })
 
-// Pre-save middleware to generate slug from name if not provided
-CategorySchema.pre('save', function(next) {
+// Ensure slug is generated before validation if missing
+CategorySchema.pre('validate', function(next) {
   if (!this.slug && this.name) {
     this.slug = this.name
       .toLowerCase()
@@ -59,9 +60,35 @@ CategorySchema.pre('save', function(next) {
   next()
 })
 
+// Also keep post-validate save hook for any cases where slug might still be empty in updates
+CategorySchema.pre('save', function(next) {
+  if (!this.slug && this.name) {
+    this.slug = this.name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim()
+  }
+  next()
+})
+
 // Index for better query performance
 CategorySchema.index({ parentCategory: 1 })
 CategorySchema.index({ isActive: 1 })
+
+// In development, clear cached model to avoid schema mismatch during HMR
+if (process.env.NODE_ENV === 'development') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const models: any = mongoose.models
+    if (models && models.Category) {
+      delete models.Category
+    }
+  } catch {
+    // no-op
+  }
+}
 
 // Create and export the model
 const Category = mongoose.models.Category || mongoose.model<ICategory>('Category', CategorySchema)

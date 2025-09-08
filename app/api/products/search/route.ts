@@ -122,9 +122,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Brand filter
+    // Brand filter (support multiple comma-separated values)
     if (params.brand) {
-      query.brand = { $regex: new RegExp(params.brand, 'i') }
+      const brands = params.brand.split(',').map(b => b.trim()).filter(Boolean)
+      if (brands.length === 1) {
+        query.brand = { $regex: new RegExp(brands[0], 'i') }
+      } else if (brands.length > 1) {
+        query.$or = query.$or || []
+        query.$or.push({ brand: { $in: brands.map(b => new RegExp(b, 'i')) } })
+      }
     }
 
     // Price range filter
@@ -143,22 +149,31 @@ export async function GET(request: NextRequest) {
       query.rating = { $gte: params.minRating }
     }
 
-    // Size and color filters (check variants)
+    // Size and color filters (support multiple values, check variants)
     if (params.size || params.color) {
-      const variantQuery: any = {}
-      
+      const andClauses: any[] = []
+
       if (params.size) {
-        variantQuery['variants.size'] = { $regex: new RegExp(params.size, 'i') }
+        const sizes = params.size.split(',').map(s => s.trim()).filter(Boolean)
+        if (sizes.length === 1) {
+          andClauses.push({ 'variants.size': { $regex: new RegExp(sizes[0], 'i') } })
+        } else if (sizes.length > 1) {
+          andClauses.push({ 'variants.size': { $in: sizes.map(s => new RegExp(s, 'i')) } })
+        }
       }
-      
+
       if (params.color) {
-        variantQuery['variants.color'] = { $regex: new RegExp(params.color, 'i') }
+        const colors = params.color.split(',').map(c => c.trim()).filter(Boolean)
+        if (colors.length === 1) {
+          andClauses.push({ 'variants.color': { $regex: new RegExp(colors[0], 'i') } })
+        } else if (colors.length > 1) {
+          andClauses.push({ 'variants.color': { $in: colors.map(c => new RegExp(c, 'i')) } })
+        }
       }
-      
-      // Combine with existing query
-      if (Object.keys(variantQuery).length > 0) {
+
+      if (andClauses.length > 0) {
         query.$and = query.$and || []
-        query.$and.push(variantQuery)
+        query.$and.push(...andClauses)
       }
     }
 
