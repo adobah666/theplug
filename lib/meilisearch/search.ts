@@ -5,7 +5,7 @@ import { MeilisearchProduct } from './indexing'
 export interface ProductSearchParams {
   query?: string
   category?: string
-  brand?: string
+  brand?: string | string[]
   minPrice?: number
   maxPrice?: number
   size?: string
@@ -36,7 +36,12 @@ const buildFilters = (params: ProductSearchParams): string[] => {
   }
   
   if (params.brand) {
-    filters.push(`brand = "${params.brand}"`)
+    if (Array.isArray(params.brand)) {
+      const values = params.brand.filter(Boolean).map(b => `"${b}"`).join(', ')
+      if (values) filters.push(`brand IN [${values}]`)
+    } else if (typeof params.brand === 'string' && params.brand.trim()) {
+      filters.push(`brand = "${params.brand}"`)
+    }
   }
   
   if (params.minPrice !== undefined || params.maxPrice !== undefined) {

@@ -170,10 +170,48 @@ ProductSchema.pre('save', function(next) {
 // Post-save middleware to update Meilisearch index
 ProductSchema.post('save', async function(doc) {
   try {
-    await indexProduct(doc)
+    // Ensure category is populated to extract slug for indexing
+    const populatedDoc = await doc.populate({ path: 'category', select: 'slug name' })
+    await indexProduct(populatedDoc as any)
   } catch (error) {
     console.error('Error updating Meilisearch index after save:', error)
     // Don't throw error to avoid breaking the save operation
+  }
+})
+
+// Post-update middleware to update Meilisearch index when using findOneAndUpdate
+ProductSchema.post('findOneAndUpdate', async function(result) {
+  try {
+    if (result) {
+      const populated = await (result as any).populate({ path: 'category', select: 'slug name' })
+      await indexProduct(populated as any)
+    } else {
+      // Fallback: try to fetch the updated document by query
+      const query = this.getQuery()
+      if (query && query._id) {
+        const updated = await (this as any).model.findById(query._id).populate({ path: 'category', select: 'slug name' })
+        if (updated) {
+          await indexProduct(updated as any)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error updating Meilisearch index after findOneAndUpdate:', error)
+  }
+})
+
+// Post-update middleware for updateOne (query middleware)
+ProductSchema.post('updateOne', async function() {
+  try {
+    const query = this.getQuery()
+    if (query && query._id) {
+      const updated = await (this as any).model.findById(query._id).populate({ path: 'category', select: 'slug name' })
+      if (updated) {
+        await indexProduct(updated as any)
+      }
+    }
+  } catch (error) {
+    console.error('Error updating Meilisearch index after updateOne:', error)
   }
 })
 
@@ -186,6 +224,18 @@ ProductSchema.post('findOneAndDelete', async function(doc) {
       console.error('Error removing from Meilisearch index after delete:', error)
       // Don't throw error to avoid breaking the delete operation
     }
+  }
+})
+
+// Post-delete middleware for deleteOne (query middleware)
+ProductSchema.post('deleteOne', { document: false, query: true } as any, async function() {
+  try {
+    const query = this.getQuery()
+    if (query && query._id) {
+      await removeProductFromIndex(query._id.toString())
+    }
+  } catch (error) {
+    console.error('Error removing from Meilisearch index after deleteOne:', error)
   }
 })
 

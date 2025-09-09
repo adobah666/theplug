@@ -52,7 +52,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate facets using aggregation pipeline
-    const facetPipeline = [
+    // Use a broad type to avoid overly strict PipelineStage typing issues with $facet
+    const facetPipeline: any[] = [
       { $match: baseQuery },
       {
         $lookup: {
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
                 count: { $sum: 1 }
               }
             },
-            { $match: { _id: { $ne: null, $ne: '' } } },
+            { $match: { _id: { $nin: [null, ''] } } },
             { $sort: { count: -1 } },
             { $limit: 20 },
             {
@@ -136,11 +137,11 @@ export async function GET(request: NextRequest) {
             {
               $group: {
                 _id: { $toLower: '$variants.color' },
-                label: { $first: { $toTitle: '$variants.color' } },
+                label: { $first: { $toUpper: '$variants.color' } },
                 count: { $sum: 1 }
               }
             },
-            { $match: { _id: { $ne: null, $ne: '' } } },
+            { $match: { _id: { $nin: [null, ''] } } },
             { $sort: { count: -1 } },
             { $limit: 20 },
             {
@@ -170,7 +171,7 @@ export async function GET(request: NextRequest) {
               $bucket: {
                 groupBy: '$rating',
                 boundaries: [0, 1, 2, 3, 4, 5],
-                default: 0,
+                default: 5,
                 output: {
                   count: { $sum: 1 }
                 }
@@ -210,7 +211,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const [facetResults] = await Product.aggregate(facetPipeline)
+    const [facetResults] = await Product.aggregate(facetPipeline as any)
 
     // Process rating distribution
     const ratingCounts: Record<string, number> = {}

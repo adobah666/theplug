@@ -9,6 +9,7 @@ export interface MeilisearchProduct {
   description: string
   brand: string
   category: string
+  categoryName?: string
   price: number
   images: string[]
   variants: Array<{
@@ -29,11 +30,13 @@ export interface MeilisearchProduct {
 // Convert MongoDB product to Meilisearch document
 export const productToMeilisearchDoc = (product: IProduct): MeilisearchProduct => {
   return {
-    id: product._id.toString(),
+    id: ((product as any)?._id?.toString?.() || (product as any)?.id?.toString?.() || ''),
     name: product.name,
     description: product.description,
     brand: product.brand,
-    category: product.category?.toString() || '',
+    // Use category slug when populated, else fallback to ObjectId string
+    category: (product as any)?.category?.slug || product.category?.toString() || '',
+    categoryName: (product as any)?.category?.name || undefined,
     price: product.price,
     images: product.images,
     variants: product.variants.map(variant => ({
@@ -62,7 +65,9 @@ export const initializeProductsIndex = async () => {
       'name',
       'description',
       'brand',
-      'searchableText'
+      'searchableText',
+      // Allow searching by category name too
+      'categoryName'
     ])
     
     // Set filterable attributes
@@ -97,7 +102,8 @@ export const initializeProductsIndex = async () => {
     
     console.log('Products index initialized successfully')
   } catch (error) {
-    console.warn('Error initializing products index (using mock):', error.message)
+    const msg = error instanceof Error ? error.message : String(error)
+    console.warn('Error initializing products index (using mock):', msg)
     // Don't throw error for mock client
   }
 }
@@ -111,7 +117,9 @@ export const indexProduct = async (product: IProduct) => {
     await index.addDocuments([doc])
     console.log(`Product ${product._id} indexed successfully`)
   } catch (error) {
-    console.warn(`Error indexing product ${product._id} (using mock):`, error.message)
+    const pid = ((product as any)?._id?.toString?.() || (product as any)?.id?.toString?.() || 'unknown')
+    const msg = error instanceof Error ? error.message : String(error)
+    console.warn(`Error indexing product ${pid} (using mock):`, msg)
     // Don't throw error for mock client
   }
 }
@@ -138,7 +146,8 @@ export const removeProductFromIndex = async (productId: string) => {
     await index.deleteDocument(productId)
     console.log(`Product ${productId} removed from index`)
   } catch (error) {
-    console.warn(`Error removing product ${productId} from index (using mock):`, error.message)
+    const msg = error instanceof Error ? error.message : String(error)
+    console.warn(`Error removing product ${productId} from index (using mock):`, msg)
     // Don't throw error for mock client
   }
 }

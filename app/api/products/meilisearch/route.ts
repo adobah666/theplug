@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchProducts, getSearchSuggestions, type ProductSearchParams } from '../../../../lib/meilisearch/search'
+import { initializeClient } from '../../../../lib/meilisearch/client'
 
 // GET /api/products/meilisearch - Search products using Meilisearch
 export async function GET(request: NextRequest) {
   try {
+    // Ensure Meilisearch client is initialized (uses real server if available, otherwise mock)
+    await initializeClient()
+    
     const { searchParams } = new URL(request.url)
     
     // Parse search parameters
     const params: ProductSearchParams = {
       query: searchParams.get('q') || undefined,
       category: searchParams.get('category') || undefined,
-      brand: searchParams.get('brand') || undefined,
+      brand: (() => {
+        const b = searchParams.get('brand')
+        if (!b) return undefined
+        const items = b.split(',').map(s => s.trim()).filter(Boolean)
+        return items.length > 1 ? items : items[0]
+      })(),
       minPrice: searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : undefined,
       maxPrice: searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined,
       size: searchParams.get('size') || undefined,
@@ -86,7 +95,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       { 
         error: 'Failed to search products',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
       },
       { status: 500 }
     )
@@ -96,6 +105,9 @@ export async function GET(request: NextRequest) {
 // POST /api/products/meilisearch/suggestions - Get search suggestions
 export async function POST(request: NextRequest) {
   try {
+    // Ensure Meilisearch client is initialized (uses real server if available, otherwise mock)
+    await initializeClient()
+    
     const body = await request.json()
     const { query, limit = 5 } = body
     
@@ -132,10 +144,11 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     console.error('Search suggestions API error:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
       { 
         error: 'Failed to get search suggestions',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
       },
       { status: 500 }
     )

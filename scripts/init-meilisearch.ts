@@ -8,6 +8,7 @@
 import { config } from 'dotenv'
 import connectDB from '../lib/db/connection'
 import Product from '../lib/db/models/Product'
+import '../lib/db/models/Category'
 import { initializeProductsIndex, indexProducts, getIndexStats } from '../lib/meilisearch/indexing'
 import { initializeClient } from '../lib/meilisearch/client'
 
@@ -35,7 +36,7 @@ async function initializeMeilisearch() {
     
     // Get existing products from MongoDB
     console.log('📊 Fetching existing products...')
-    const products = await Product.find({}).populate('category')
+    const products = await Product.find({}).populate({ path: 'category', select: 'slug name' })
     console.log(`📦 Found ${products.length} products`)
     
     if (products.length > 0) {

@@ -46,7 +46,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     const timeoutId = setTimeout(async () => {
       try {
         setIsLoading(true)
-        const response = await fetch('/api/products/meilisearch/suggestions', {
+        const response = await fetch('/api/products/meilisearch', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

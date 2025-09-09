@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { 
   SearchState, 
@@ -153,17 +153,17 @@ export function useSearchResults(searchState: SearchState): UseSearchResultsRetu
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Memoize the query string to avoid triggering effects due to object identity changes
+  const queryString = useMemo(() => buildSearchParams(searchState).toString(), [searchState])
+
   // Fetch search results
   const fetchResults = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
 
-      // Build query parameters
-      const params = buildSearchParams(searchState)
-      
       // Use Meilisearch for better search experience
-      const response = await fetch(`/api/products/meilisearch?${params.toString()}`)
+      const response = await fetch(`/api/products/meilisearch?${queryString}`)
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -189,7 +189,7 @@ export function useSearchResults(searchState: SearchState): UseSearchResultsRetu
     } finally {
       setIsLoading(false)
     }
-  }, [searchState])
+  }, [queryString])
 
   // Fetch results when search state changes
   useEffect(() => {
@@ -224,6 +224,9 @@ export function useFilterFacets(searchState: SearchState): UseFilterFacetsReturn
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Memoize the query string to avoid triggering effects due to object identity changes
+  const facetsQueryString = useMemo(() => buildSearchParams(searchState).toString(), [searchState])
+
   // Fetch filter facets
   const fetchFacets = useCallback(async () => {
     try {
@@ -231,9 +234,7 @@ export function useFilterFacets(searchState: SearchState): UseFilterFacetsReturn
       setError(null)
 
       // Build query parameters (exclude facets we're calculating)
-      const params = buildSearchParams(searchState)
-      
-      const response = await fetch(`/api/products/search/facets?${params.toString()}`)
+      const response = await fetch(`/api/products/search/facets?${facetsQueryString}`)
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -253,7 +254,7 @@ export function useFilterFacets(searchState: SearchState): UseFilterFacetsReturn
     } finally {
       setIsLoading(false)
     }
-  }, [searchState])
+  }, [facetsQueryString])
 
   // Fetch facets when search state changes
   useEffect(() => {
