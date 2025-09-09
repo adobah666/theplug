@@ -31,7 +31,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.542.0",
     "meilisearch": "^0.52.0",
-    "mongoose": "^8.18.0",
+    "mongoose": "^8.18.1",
     "next": "15.5.2",
     "next-auth": "^4.24.11",
     "paystack": "^2.0.1",

@@ -96,19 +96,8 @@ export async function GET(request: NextRequest) {
     // Build MongoDB query
     const query: any = {}
 
-    // Text search (partial match via regex for admin needs)
-    if (params.q) {
-      const escaped = params.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      const rx = new RegExp(escaped, 'i')
-      query.$or = [
-        { name: rx },
-        { brand: rx },
-        { description: rx },
-        { 'variants.sku': rx },
-        { 'variants.color': rx },
-        { 'variants.size': rx },
-      ]
-    }
+    // Defer text filtering until after category lookup so we can also match category.name
+    const textQuery = params.q ? params.q : undefined
 
     // Category filter
     if (params.category) {
@@ -214,8 +203,9 @@ export async function GET(request: NextRequest) {
         sortObj.name = order
         break
       case 'popularity':
-        // Sort by review count as a proxy for popularity
-        sortObj.reviewCount = order
+        // Sort by computed popularity (from events or counters). We'll add popularityComputed later in pipeline
+        sortObj.popularityComputed = order
+        sortObj.purchaseCount = order
         break
       case 'relevance':
       default:
@@ -314,6 +304,73 @@ export async function GET(request: NextRequest) {
     aggregationPipeline.push({
       $unwind: '$category'
     })
+
+    // Overlay ProductEvent totals per product and compute effective counters & popularity
+    aggregationPipeline.push({
+      $lookup: {
+        from: 'productevents',
+        let: { pid: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$productId', '$$pid'] } } },
+          { $group: { _id: { type: '$type' }, total: { $sum: { $ifNull: ['$quantity', 1] } } } },
+          { $group: {
+              _id: null,
+              views: { $sum: { $cond: [{ $eq: ['$_id.type', 'view'] }, '$total', 0] } },
+              adds: { $sum: { $cond: [{ $eq: ['$_id.type', 'add_to_cart'] }, '$total', 0] } },
+              purchases: { $sum: { $cond: [{ $eq: ['$_id.type', 'purchase'] }, '$total', 0] } }
+            }
+          },
+          { $project: { _id: 0, views: 1, adds: 1, purchases: 1 } }
+        ],
+        as: 'eventAgg'
+      }
+    })
+    aggregationPipeline.push({
+      $addFields: {
+        _eventTotals: { $ifNull: [ { $arrayElemAt: ['$eventAgg', 0] }, { views: 0, adds: 0, purchases: 0 } ] }
+      }
+    })
+    aggregationPipeline.push({
+      $addFields: {
+        views: { $cond: [{ $gt: ['$views', 0] }, '$views', '$_eventTotals.views'] },
+        addToCartCount: { $cond: [{ $gt: ['$addToCartCount', 0] }, '$addToCartCount', '$_eventTotals.adds'] },
+        purchaseCount: { $cond: [{ $gt: ['$purchaseCount', 0] }, '$purchaseCount', '$_eventTotals.purchases'] },
+      }
+    })
+    aggregationPipeline.push({
+      $addFields: {
+        popularityComputed: {
+          $add: [
+            { $multiply: [{ $ifNull: ['$purchaseCount', 0] }, 5] },
+            { $multiply: [{ $ifNull: ['$addToCartCount', 0] }, 2] },
+            { $multiply: [{ $ifNull: ['$views', 0] }, 0.2] }
+          ]
+        },
+        // We also mirror the popularity into popularityScore for consumers that read that field
+        popularityScore: { $ifNull: ['$popularityScore', '$popularityComputed'] }
+      }
+    })
+
+    // When searching, optionally apply a text filter that also includes category.name
+    if (textQuery) {
+      const escaped = textQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const rx = new RegExp(escaped, 'i')
+      aggregationPipeline.push({
+        $match: {
+          $or: [
+            { name: rx },
+            { brand: rx },
+            { description: rx },
+            { searchableText: rx },
+            { 'variants.sku': rx },
+            { 'variants.color': rx },
+            { 'variants.size': rx },
+            { 'category.name': rx },
+            { 'category.slug': rx }
+          ]
+        }
+      })
+    }
 
     // Add sort stage
     aggregationPipeline.push({ $sort: sortObj })

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import connectDB from '@/lib/db/connection'
 import Product from '@/lib/db/models/Product'
+import ProductEvent from '@/lib/db/models/ProductEvent'
 import { ApiResponse, PaginatedResponse } from '@/types'
 import { authenticateToken } from '@/lib/auth/middleware'
 import mongoose from 'mongoose'
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // Build sort object
     const sortObj: Record<string, 1 | -1> = {}
-    const validSortFields = ['name', 'price', 'rating', 'createdAt', 'updatedAt']
+    const validSortFields = ['name', 'price', 'rating', 'createdAt', 'updatedAt', 'popularityScore', 'purchaseCount']
     if (validSortFields.includes(sort)) {
       sortObj[sort] = order
     } else {
@@ -65,10 +66,40 @@ export async function GET(request: NextRequest) {
       Product.countDocuments({})
     ])
 
+    // Overlay aggregated event totals so UI shows real counts even when product counters are zero
+    const ids = products.map(p => (p as any)._id).filter(Boolean)
+    let totalsById: Record<string, { views: number; adds: number; purchases: number }> = {}
+    if (ids.length > 0) {
+      const totals = await ProductEvent.aggregate([
+        { $match: { productId: { $in: ids as any } } },
+        { $group: { _id: { productId: '$productId', type: '$type' }, total: { $sum: { $ifNull: ['$quantity', 1] } } } },
+        { $group: {
+            _id: '$_id.productId',
+            views: { $sum: { $cond: [{ $eq: ['$_id.type', 'view'] }, '$total', 0] } },
+            adds: { $sum: { $cond: [{ $eq: ['$_id.type', 'add_to_cart'] }, '$total', 0] } },
+            purchases: { $sum: { $cond: [{ $eq: ['$_id.type', 'purchase'] }, '$total', 0] } }
+          }
+        }
+      ])
+      totalsById = Object.fromEntries(totals.map((t: any) => [String(t._id), { views: t.views || 0, adds: t.adds || 0, purchases: t.purchases || 0 }]))
+    }
+
+    const merged = products.map((p: any) => {
+      const t = totalsById[String(p._id)]
+      if (t) {
+        const views = p.views > 0 ? p.views : t.views
+        const adds = p.addToCartCount > 0 ? p.addToCartCount : t.adds
+        const purchases = p.purchaseCount > 0 ? p.purchaseCount : t.purchases
+        const popularity = (Number(purchases) * 5) + (Number(adds) * 2) + (Number(views) * 0.2)
+        return { ...p, views, addToCartCount: adds, purchaseCount: purchases, popularityScore: popularity }
+      }
+      return p
+    })
+
     const pages = Math.ceil(total / limit)
 
     const response: PaginatedResponse<typeof products[0]> = {
-      data: products,
+      data: merged,
       pagination: {
         page,
         limit,

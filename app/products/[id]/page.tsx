@@ -31,6 +31,7 @@ export default function ProductPage({}: ProductPageProps) {
   const { addItem, refreshCart, state } = useCart();
   const cartLoading = state.isLoading;
   const [buyNowLoading, setBuyNowLoading] = useState(false);
+  const [viewTracked, setViewTracked] = useState(false);
 
   // Compute client-side reserved quantity and available quantity
   const reservedQty = (() => {
@@ -75,6 +76,42 @@ export default function ProductPage({}: ProductPageProps) {
     }
   }, [productId]);
 
+  // Track product view once per mount
+  useEffect(() => {
+    const track = async () => {
+      try {
+        if (!productId || viewTracked) return;
+        await fetch(`/api/products/${productId}/analytics`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event: 'view' })
+        })
+        setViewTracked(true)
+      } catch {}
+    }
+    track()
+  }, [productId, viewTracked])
+
+  const recordAddToCart = async () => {
+    try {
+      await fetch(`/api/products/${productId}/analytics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: 'add_to_cart' })
+      })
+    } catch {}
+  }
+
+  const recordPurchase = async () => {
+    try {
+      await fetch(`/api/products/${productId}/analytics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: 'purchase' })
+      })
+    } catch {}
+  }
+
   const handleAddToCart = async () => {
     if (!product) return;
 
@@ -90,6 +127,8 @@ export default function ProductPage({}: ProductPageProps) {
         color: selectedVariant?.color,
         maxInventory: selectedVariant?.inventory ?? (product.inventory || 0),
       });
+      // fire-and-forget analytics
+      recordAddToCart()
     } catch (err) {
       console.error('Failed to add to cart:', err);
     }

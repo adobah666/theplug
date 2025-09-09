@@ -26,6 +26,11 @@ export interface IProduct extends Document {
   searchableText: string
   createdAt: Date
   updatedAt: Date
+  // Analytics counters
+  views: number
+  addToCartCount: number
+  purchaseCount: number
+  popularityScore: number
 }
 
 // Product variant subdocument schema
@@ -131,7 +136,12 @@ const ProductSchema = new Schema<IProduct>({
   searchableText: {
     type: String,
     index: 'text' // Text index for search functionality
-  }
+  },
+  // Analytics counters
+  views: { type: Number, default: 0, min: [0, 'Views cannot be negative'] },
+  addToCartCount: { type: Number, default: 0, min: [0, 'Add to cart count cannot be negative'] },
+  purchaseCount: { type: Number, default: 0, min: [0, 'Purchase count cannot be negative'] },
+  popularityScore: { type: Number, default: 0, min: [0, 'Popularity score cannot be negative'] }
 }, {
   timestamps: true // Adds createdAt and updatedAt automatically
 })
@@ -245,6 +255,11 @@ ProductSchema.index({ price: 1 })
 ProductSchema.index({ rating: -1 })
 ProductSchema.index({ createdAt: -1 })
 ProductSchema.index({ 'variants.sku': 1 })
+// Analytics related indexes
+ProductSchema.index({ views: -1 })
+ProductSchema.index({ addToCartCount: -1 })
+ProductSchema.index({ purchaseCount: -1 })
+ProductSchema.index({ popularityScore: -1 })
 
 // Create and export the model
 const Product = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema)

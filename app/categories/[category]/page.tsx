@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { ProductGrid } from '@/components/product/ProductGrid';
 import { FilterSidebar } from '@/components/product/FilterSidebar';
 import { MobileFilterDrawer } from '@/components/product/MobileFilterDrawer';
@@ -62,6 +62,7 @@ const CATEGORY_INFO: Record<string, CategoryInfo> = {
 export default function CategoryPage({}: CategoryPageProps) {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const category = params.category as string;
   
   const [products, setProducts] = useState<UIProduct[]>([]);
@@ -95,8 +96,26 @@ export default function CategoryPage({}: CategoryPageProps) {
           category,
           page: currentPage.toString(),
           limit: '20',
-          sort: sortBy
+          // Map UI sort to API sort/order
+          // UI: newest | price-low | price-high | rating | popular
+          // API expects: sort=[createdAt|price|rating|popularity] and optional order=[asc|desc]
+          // We'll set defaults here; order can be appended conditionally below.
+          sort: ((): string => {
+            switch (sortBy) {
+              case 'newest': return 'createdAt';
+              case 'price-low': return 'price';
+              case 'price-high': return 'price';
+              case 'rating': return 'rating';
+              case 'popular': return 'popularity';
+              default: return 'createdAt';
+            }
+          })()
         });
+        if (sortBy === 'price-low') params.append('order', 'asc');
+        if (sortBy === 'price-high') params.append('order', 'desc');
+        if (sortBy === 'newest') params.append('order', 'desc');
+        if (sortBy === 'rating') params.append('order', 'desc');
+        if (sortBy === 'popular') params.append('order', 'desc');
 
         if (priceRange) params.append('price', priceRange);
         if (subcategory) params.append('subcategory', subcategory);
@@ -283,8 +302,7 @@ export default function CategoryPage({}: CategoryPageProps) {
                 onChange={(e) => {
                   const url = new URL(window.location.href);
                   url.searchParams.set('sort', e.target.value);
-                  window.history.pushState({}, '', url.toString());
-                  window.location.reload();
+                  router.push(url.pathname + '?' + url.searchParams.toString());
                 }}
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >

@@ -56,8 +56,14 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
 
   // Handle sort change
   const handleSortChange = (newSort: string) => {
-    const [sortField, sortOrder] = newSort.includes('_') 
-      ? newSort.split('_') 
+    // When selecting Relevance, clear sort/order to let the backend use full-text relevance
+    if (newSort === 'relevance') {
+      updateSearch({ sort: undefined, order: undefined })
+      return
+    }
+
+    const [sortField, sortOrder] = newSort.includes('_')
+      ? newSort.split('_')
       : [newSort, 'desc']
     setSort(sortField, sortOrder as 'asc' | 'desc')
   }
@@ -193,7 +199,17 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
                 </label>
                 <select
                   id="sort"
-                  value={`${searchState.sort || 'relevance'}${searchState.order ? `_${searchState.order}` : ''}`}
+                  value={((): string => {
+                    const s = searchState.sort
+                    const o = searchState.order || 'desc'
+                    if (!s) return 'relevance'
+                    if (s === 'price') return o === 'asc' ? 'price_asc' : 'price_desc'
+                    if (s === 'rating') return 'rating_desc'
+                    if (s === 'newest' || s === 'createdAt' || s === 'date') return 'newest'
+                    if (s === 'popularity') return 'popularity'
+                    // Fallback
+                    return 'relevance'
+                  })()}
                   onChange={(e) => handleSortChange(e.target.value)}
                   className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={isLoading}
@@ -210,7 +226,7 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
             {/* View mode toggle */}
             <div className="flex items-center space-x-2">
               <Button
-                variant={searchState.viewMode === 'grid' ? 'default' : 'ghost'}
+                variant={searchState.viewMode === 'grid' ? 'primary' : 'ghost'}
                 size="sm"
                 onClick={() => handleViewModeChange('grid')}
                 disabled={isLoading}
@@ -218,7 +234,7 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
                 <Grid className="h-4 w-4" />
               </Button>
               <Button
-                variant={searchState.viewMode === 'list' ? 'default' : 'ghost'}
+                variant={searchState.viewMode === 'list' ? 'primary' : 'ghost'}
                 size="sm"
                 onClick={() => handleViewModeChange('list')}
                 disabled={isLoading}
@@ -266,7 +282,7 @@ export default function SearchResults({ searchParams }: SearchResultsProps) {
                       return (
                         <Button
                           key={pageNum}
-                          variant={pageNum === currentPage ? 'default' : 'outline'}
+                          variant={pageNum === currentPage ? 'primary' : 'outline'}
                           size="sm"
                           onClick={() => handlePageChange(pageNum)}
                         >

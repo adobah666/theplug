@@ -31,13 +31,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showSuggestionsList, setShowSuggestionsList] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const [hasInteracted, setHasInteracted] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
   // Debounce suggestions fetch
   useEffect(() => {
-    if (!showSuggestions || query.length < 2) {
+    // Only fetch suggestions after the user has interacted (typed) or when the input is focused
+    const shouldFetch = showSuggestions && query.length >= 2 && (isFocused || hasInteracted)
+    if (!shouldFetch) {
       setSuggestions([])
       setShowSuggestionsList(false)
       return
@@ -61,7 +65,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             name,
             category: 'Product'
           })))
-          setShowSuggestionsList(true)
+          // Only show the dropdown if the input is currently focused
+          if (isFocused) setShowSuggestionsList(true)
         }
       } catch (error) {
         console.error('Failed to fetch suggestions:', error)
@@ -71,7 +76,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     }, 300)
 
     return () => clearTimeout(timeoutId)
-  }, [query, showSuggestions])
+  }, [query, showSuggestions, isFocused, hasInteracted])
 
   // Handle search submission
   const handleSearch = (searchQuery: string = query) => {
@@ -134,7 +139,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
   // Handle input focus
   const handleFocus = () => {
-    if (suggestions.length > 0) {
+    setIsFocused(true)
+    if (suggestions.length > 0 && (isFocused || hasInteracted)) {
       setShowSuggestionsList(true)
     }
   }
@@ -148,6 +154,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         setSelectedIndex(-1)
       }
     }, 150)
+    setIsFocused(false)
   }
 
   // Clear search
@@ -167,7 +174,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           type="text"
           placeholder={placeholder}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => { setQuery(e.target.value); if (!hasInteracted) setHasInteracted(true) }}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           onBlur={handleBlur}

@@ -4,6 +4,8 @@ import { authenticateToken } from '@/lib/auth/middleware'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import { createOrder, getUserOrders } from '@/lib/orders/service'
+import Product from '@/lib/db/models/Product'
+import ProductEvent from '@/lib/db/models/ProductEvent'
 import { PaymentMethod } from '@/lib/db/models/Order'
 import mongoose from 'mongoose'
 
@@ -96,6 +98,34 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       )
+    }
+
+    // Increment analytics for successful purchase
+    try {
+      const order = result.order!
+      if (order && order.items && order.items.length > 0) {
+        // Build bulk updates for counters and popularity score
+        const ops = order.items.map(it => ({
+          updateOne: {
+            filter: { _id: new mongoose.Types.ObjectId(it.productId) },
+            update: { $inc: { purchaseCount: it.quantity, popularityScore: 5 * it.quantity } }
+          }
+        }))
+        if (ops.length > 0) {
+          await Product.bulkWrite(ops)
+        }
+        // Log ProductEvent per item
+        try {
+          await ProductEvent.insertMany(order.items.map(it => ({
+            productId: new mongoose.Types.ObjectId(it.productId),
+            type: 'purchase',
+            quantity: it.quantity,
+            userId: order.userId
+          })))
+        } catch {}
+      }
+    } catch (analyticsErr) {
+      console.error('Failed to record purchase analytics:', analyticsErr)
     }
 
     // Send order confirmation email

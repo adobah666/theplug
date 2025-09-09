@@ -15,6 +15,11 @@ interface ProductRow {
   inventory: number
   images: string[]
   category?: { _id: string; name: string }
+  // analytics
+  views?: number
+  addToCartCount?: number
+  purchaseCount?: number
+  popularityScore?: number
 }
 
 export default function ProductTable() {
@@ -52,6 +57,7 @@ export default function ProductTable() {
       } else {
         url = `/api/products?${qs.toString()}`
       }
+
 
       // Apply filters (search endpoint supports these; list endpoint ignores unknown params)
       if (categoryFilter) qs.set('category', categoryFilter)
@@ -96,6 +102,10 @@ export default function ProductTable() {
         inventory: p.inventory ?? 0,
         images: p.images || [],
         category: p.category && typeof p.category === 'object' ? { _id: p.category._id, name: p.category.name } : undefined,
+        views: p.views ?? 0,
+        addToCartCount: p.addToCartCount ?? 0,
+        purchaseCount: p.purchaseCount ?? 0,
+        popularityScore: p.popularityScore ?? 0,
       }))
       setItems(rows)
       setTotal(pagination?.total ?? rows.length)
@@ -132,12 +142,17 @@ export default function ProductTable() {
       // If the new item belongs on current page+filter, easiest is to reload
       load()
     }
+    const onAnalyticsUpdated = (e: Event) => {
+      load()
+    }
     if (typeof window !== 'undefined') {
       window.addEventListener('admin:product:created', onCreated)
+      window.addEventListener('admin:analytics:updated', onAnalyticsUpdated)
     }
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('admin:product:created', onCreated)
+        window.removeEventListener('admin:analytics:updated', onAnalyticsUpdated)
       }
     }
   }, [page, search])
@@ -179,6 +194,12 @@ export default function ProductTable() {
   const [brands, setBrands] = useState<Array<{ name: string }>>([])
   const [modalData, setModalData] = useState<any | null>(null)
 
+  // Analytics modal state
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null)
+  const [analyticsData, setAnalyticsData] = useState<any | null>(null)
+
   // Full-edit modal helpers (must be inside component scope)
   const openModal = async (id: string) => {
     try {
@@ -218,6 +239,23 @@ export default function ProductTable() {
       setModalError(err instanceof Error ? err.message : 'Failed to open editor')
     } finally {
       setModalLoading(false)
+    }
+  }
+
+  // Open analytics modal and load data
+  const openAnalytics = async (id: string) => {
+    try {
+      setAnalyticsOpen(true)
+      setAnalyticsLoading(true)
+      setAnalyticsError(null)
+      const res = await fetch(`/api/admin/analytics/products/${id}?days=30`, { cache: 'no-store' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json?.error || 'Failed to load analytics')
+      setAnalyticsData(json?.data || json)
+    } catch (err) {
+      setAnalyticsError(err instanceof Error ? err.message : 'Failed to load analytics')
+    } finally {
+      setAnalyticsLoading(false)
     }
   }
 
@@ -404,6 +442,10 @@ export default function ProductTable() {
                 <th className="px-3 py-2 text-left">Brand</th>
                 <th className="px-3 py-2 text-left">Price</th>
                 <th className="px-3 py-2 text-left">Inventory</th>
+                <th className="px-3 py-2 text-left">Views</th>
+                <th className="px-3 py-2 text-left">Adds</th>
+                <th className="px-3 py-2 text-left">Purchases</th>
+                <th className="px-3 py-2 text-left">Popularity</th>
                 <th className="px-3 py-2 text-left">Actions</th>
               </tr>
             </thead>
@@ -414,7 +456,7 @@ export default function ProductTable() {
                     <div className="flex items-center gap-2">
                       {p.images?.[0] && <img src={p.images[0]} alt="" className="w-10 h-10 object-cover rounded" />}
                       <div>
-                        <div className="font-medium">{p.name}</div>
+                        <button className="font-medium text-blue-600 hover:underline" onClick={async () => { await openAnalytics(p._id) }}>{p.name}</button>
                         <div className="text-gray-500 text-xs">{p.category?.name || '—'}</div>
                       </div>
                     </div>
@@ -422,8 +464,13 @@ export default function ProductTable() {
                   <td className="px-3 py-2">{p.brand}</td>
                   <td className="px-3 py-2">{formatCurrency(p.price)}</td>
                   <td className="px-3 py-2">{p.inventory}</td>
+                  <td className="px-3 py-2">{p.views ?? 0}</td>
+                  <td className="px-3 py-2">{p.addToCartCount ?? 0}</td>
+                  <td className="px-3 py-2">{p.purchaseCount ?? 0}</td>
+                  <td className="px-3 py-2">{Math.round((p.popularityScore ?? 0) * 10) / 10}</td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
+                      <Button size="sm" variant="secondary" onClick={async () => { await openAnalytics(p._id) }}>Analytics</Button>
                       <Button size="sm" onClick={async () => { await openModal(p._id) }}>Edit</Button>
                       <Button size="sm" variant="destructive" onClick={() => onDelete(p._id)}>Delete</Button>
                     </div>
@@ -557,6 +604,46 @@ export default function ProductTable() {
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setShowModal(false)}>Cancel</Button>
               <Button onClick={saveModal}>Save Changes</Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* Analytics Modal */}
+      <Modal open={analyticsOpen} onClose={() => setAnalyticsOpen(false)}>
+        {analyticsLoading ? (
+          <div className="py-10 flex justify-center"><LoadingSpinner size="lg" /></div>
+        ) : analyticsError ? (
+          <ErrorMessage message={analyticsError} />
+        ) : analyticsData ? (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Analytics: {analyticsData?.product?.name}</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="border rounded-md p-3"><div className="text-xs text-gray-500">Views</div><div className="text-xl font-semibold">{analyticsData.product.views ?? 0}</div></div>
+              <div className="border rounded-md p-3"><div className="text-xs text-gray-500">Adds</div><div className="text-xl font-semibold">{analyticsData.product.addToCartCount ?? 0}</div></div>
+              <div className="border rounded-md p-3"><div className="text-xs text-gray-500">Purchases</div><div className="text-xl font-semibold">{analyticsData.product.purchaseCount ?? 0}</div></div>
+              <div className="border rounded-md p-3"><div className="text-xs text-gray-500">Popularity</div><div className="text-xl font-semibold">{Math.round(((analyticsData.product.popularityScore ?? 0)) * 10) / 10}</div></div>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">Last 30 days</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                {['view','add_to_cart','purchase'].map((t) => (
+                  <div key={t} className="border rounded-md p-3">
+                    <div className="font-semibold mb-1 capitalize">{t.replace('_',' ')}</div>
+                    <div className="max-h-56 overflow-auto space-y-1">
+                      {analyticsData.series.filter((s: any) => s.type === t).map((s: any) => (
+                        <div key={t + s.day} className="flex justify-between"><span>{s.day}</span><span>{s.total}</span></div>
+                      ))}
+                      {analyticsData.series.filter((s: any) => s.type === t).length === 0 && (
+                        <div className="text-gray-500">No data</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="text-right">
+              <Button onClick={() => setAnalyticsOpen(false)}>Close</Button>
             </div>
           </div>
         ) : null}

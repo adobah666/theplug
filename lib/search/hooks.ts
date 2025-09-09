@@ -162,8 +162,12 @@ export function useSearchResults(searchState: SearchState): UseSearchResultsRetu
       setIsLoading(true)
       setError(null)
 
-      // Use Meilisearch for better search experience
-      const response = await fetch(`/api/products/meilisearch?${queryString}`)
+      // Decide endpoint: use Mongo aggregation when sorting by popularity so we can sort by event-based popularity
+      const params = new URLSearchParams(queryString)
+      const sort = params.get('sort') || undefined
+      const useMongoPopularity = sort === 'popularity'
+      const endpoint = useMongoPopularity ? '/api/products/search' : '/api/products/meilisearch'
+      const response = await fetch(`${endpoint}?${queryString}`)
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -171,13 +175,23 @@ export function useSearchResults(searchState: SearchState): UseSearchResultsRetu
 
       const data = await response.json()
       
-      if (data.success) {
+      if (!data.success) throw new Error(data.error || 'Failed to fetch results')
+
+      if (useMongoPopularity) {
+        // Normalize from PaginatedResponse
+        const payload = data.data || {}
+        const list = payload.data || []
+        const pag = payload.pagination || {}
+        setResults(list)
+        setTotalResults(pag.total || list.length || 0)
+        setTotalPages(pag.pages || 0)
+        setCurrentPage(pag.page || 1)
+      } else {
+        // Meilisearch shape
         setResults(data.data.hits || [])
         setTotalResults(data.data.totalHits || 0)
         setTotalPages(data.data.totalPages || 0)
         setCurrentPage(data.data.currentPage || 1)
-      } else {
-        throw new Error(data.error || 'Failed to fetch results')
       }
     } catch (err) {
       console.error('Search results error:', err)

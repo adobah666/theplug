@@ -30,6 +30,34 @@ export async function GET(request: NextRequest) {
       page: searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1,
       limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 20
     }
+
+    // Backward-compat: map `sort` + optional `order` to Meilisearch `sortBy`
+    if (!params.sortBy) {
+      const sort = searchParams.get('sort') || undefined
+      const order = (searchParams.get('order') as 'asc' | 'desc') || 'desc'
+      if (sort) {
+        switch (sort) {
+          case 'price':
+            params.sortBy = order === 'asc' ? 'price_asc' : 'price_desc'
+            break
+          case 'createdAt':
+          case 'date':
+          case 'newest':
+            params.sortBy = order === 'asc' ? 'oldest' : 'newest'
+            break
+          case 'rating':
+            params.sortBy = 'rating_desc'
+            break
+          case 'popularity':
+            params.sortBy = 'popularity'
+            break
+          case 'relevance':
+          default:
+            // Let Meilisearch relevance take precedence
+            break
+        }
+      }
+    }
     
     // Validate pagination parameters
     if (params.page !== undefined && params.page < 1) {
