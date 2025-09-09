@@ -32,15 +32,22 @@ export default function ProductPage({}: ProductPageProps) {
   const cartLoading = state.isLoading;
   const [buyNowLoading, setBuyNowLoading] = useState(false);
 
-  // Compute client-side reserved quantity for the selected variant from cart
+  // Compute client-side reserved quantity and available quantity
   const reservedQty = (() => {
-    if (!product || !selectedVariant) return 0;
-    return state.items
-      .filter((it) => it.productId === product._id && it.variantId === selectedVariant._id)
-      .reduce((sum, it) => sum + (it.quantity || 0), 0);
+    if (!product) return 0;
+    if (selectedVariant) {
+      return state.items
+        .filter((it) => it.productId === product._id && it.variantId === selectedVariant._id)
+        .reduce((sum, it) => sum + (it.quantity || 0), 0);
+    } else {
+      // No variant: sum items for this product without a variantId
+      return state.items
+        .filter((it) => it.productId === product._id && !it.variantId)
+        .reduce((sum, it) => sum + (it.quantity || 0), 0);
+    }
   })();
-  const variantInventory = selectedVariant?.inventory || 0;
-  const availableQty = Math.max(0, variantInventory - reservedQty);
+  const baseInventory = selectedVariant ? (selectedVariant.inventory || 0) : (product?.inventory || 0);
+  const availableQty = Math.max(0, baseInventory - reservedQty);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -69,19 +76,19 @@ export default function ProductPage({}: ProductPageProps) {
   }, [productId]);
 
   const handleAddToCart = async () => {
-    if (!product || !selectedVariant) return;
+    if (!product) return;
 
     try {
       await addItem({
         productId: product._id,
-        variantId: selectedVariant._id,
+        variantId: selectedVariant?._id,
         quantity,
-        price: selectedVariant.price || product.price || 0,
+        price: (selectedVariant?.price ?? product.price) || 0,
         name: product.name,
         image: (product.images && product.images[0]) || '/placeholder-product.jpg',
-        size: selectedVariant.size,
-        color: selectedVariant.color,
-        maxInventory: selectedVariant.inventory || 0,
+        size: selectedVariant?.size,
+        color: selectedVariant?.color,
+        maxInventory: selectedVariant?.inventory ?? (product.inventory || 0),
       });
     } catch (err) {
       console.error('Failed to add to cart:', err);
@@ -89,19 +96,19 @@ export default function ProductPage({}: ProductPageProps) {
   };
 
   const handleBuyNow = async () => {
-    if (!product || !selectedVariant || availableQty === 0) return;
+    if (!product || availableQty === 0) return;
     try {
       setBuyNowLoading(true);
       await addItem({
         productId: product._id,
-        variantId: selectedVariant._id,
+        variantId: selectedVariant?._id,
         quantity,
-        price: selectedVariant.price || product.price || 0,
+        price: (selectedVariant?.price ?? product.price) || 0,
         name: product.name,
         image: (product.images && product.images[0]) || '/placeholder-product.jpg',
-        size: selectedVariant.size,
-        color: selectedVariant.color,
-        maxInventory: selectedVariant.inventory || 0,
+        size: selectedVariant?.size,
+        color: selectedVariant?.color,
+        maxInventory: selectedVariant?.inventory ?? (product.inventory || 0),
       });
       // Ensure server-side cart (session-based) is hydrated before navigating
       await refreshCart();
@@ -275,7 +282,7 @@ export default function ProductPage({}: ProductPageProps) {
             <div className="flex space-x-4">
               <Button
                 onClick={handleAddToCart}
-                disabled={!selectedVariant || availableQty === 0 || cartLoading}
+                disabled={availableQty === 0 || cartLoading}
                 className="flex-1 flex items-center justify-center space-x-2"
               >
                 <ShoppingCart className="w-5 h-5" />
@@ -283,7 +290,7 @@ export default function ProductPage({}: ProductPageProps) {
               </Button>
               <Button
                 onClick={handleBuyNow}
-                disabled={!selectedVariant || availableQty === 0 || buyNowLoading}
+                disabled={availableQty === 0 || buyNowLoading}
                 className="flex-1 flex items-center justify-center"
               >
                 {buyNowLoading ? 'Processing...' : 'Buy Now'}

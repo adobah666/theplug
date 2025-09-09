@@ -224,14 +224,17 @@ export default function ProductTable() {
   // Auto-total inventory and auto-generate SKUs when relevant fields change
   useEffect(() => {
     if (!modalData) return
-    const total = (modalData.variants || []).reduce((s: number, v: any) => s + (Number(v.inventory) || 0), 0)
-    // Update total only if changed to avoid loops
-    if (modalData.inventory !== total) {
-      setModalData((d: any) => ({ ...d, inventory: total }))
+    const variantsArr = modalData.variants || []
+    if (variantsArr.length > 0) {
+      const total = variantsArr.reduce((s: number, v: any) => s + (Number(v.inventory) || 0), 0)
+      // Update total only if changed to avoid loops
+      if (modalData.inventory !== total) {
+        setModalData((d: any) => ({ ...d, inventory: total }))
+      }
+      const drafts = variantsArr.map((v: any) => generateBaseSku(modalData.brand, modalData.name, v.color, v.size))
+      const uniques = makeUniqueSkus(drafts)
+      setModalData((d: any) => ({ ...d, variants: d.variants.map((v: any, i: number) => ({ ...v, sku: uniques[i] })) }))
     }
-    const drafts = (modalData.variants || []).map((v: any) => generateBaseSku(modalData.brand, modalData.name, v.color, v.size))
-    const uniques = makeUniqueSkus(drafts)
-    setModalData((d: any) => ({ ...d, variants: d.variants.map((v: any, i: number) => ({ ...v, sku: uniques[i] })) }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalData?.brand, modalData?.name, JSON.stringify(modalData?.variants?.map((v: any) => ({ c: v.color, s: v.size, inv: v.inventory, sys: v.sizeSystem })))])
 
@@ -468,8 +471,13 @@ export default function ProductTable() {
                 </select>
               </div>
               <div>
-                <label className="text-sm text-gray-700">Inventory (auto from variants)</label>
-                <Input disabled value={modalData.inventory} />
+                <label className="text-sm text-gray-700">Inventory {modalData.variants?.length > 0 ? '(auto from variants)' : ''}</label>
+                <Input
+                  disabled={modalData.variants?.length > 0}
+                  type="number"
+                  value={modalData.inventory}
+                  onChange={e => setModalData((d: any) => ({ ...d, inventory: Number(e.target.value) }))}
+                />
               </div>
             </div>
 
