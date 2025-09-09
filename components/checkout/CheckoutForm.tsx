@@ -70,15 +70,28 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          // Map items to the server's expected IOrderItem shape
           items: cartState.items.map(item => ({
             productId: item.productId,
             variantId: item.variantId,
+            productName: item.name,
+            productImage: item.image,
+            size: item.size,
+            color: item.color,
             quantity: item.quantity,
-            price: item.price,
-            name: item.name,
-            image: item.image
+            unitPrice: item.price,
+            totalPrice: item.price * item.quantity,
           })),
-          shippingAddress,
+          // Map shipping address to API contract
+          shippingAddress: {
+            street: shippingAddress.street,
+            city: shippingAddress.city,
+            state: shippingAddress.state,
+            ...(shippingAddress.zipCode ? { zipCode: shippingAddress.zipCode } : {}),
+            country: shippingAddress.country,
+            recipientName: `${shippingAddress.firstName} ${shippingAddress.lastName}`.trim(),
+            recipientPhone: shippingAddress.phone,
+          },
           paymentMethod: paymentMethod.type,
           subtotal,
           shipping,
@@ -89,11 +102,11 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
 
       if (!orderResponse.ok) {
         const errorData = await orderResponse.json()
-        throw new Error(errorData.message || 'Failed to create order')
+        throw new Error(errorData.error || errorData.message || 'Failed to create order')
       }
 
       const orderData = await orderResponse.json()
-      const orderId = orderData.data._id
+      const orderId = orderData.order?.id || orderData.data?._id
 
       // For bank transfer, redirect to order page immediately
       if (paymentMethod.type === 'bank_transfer') {

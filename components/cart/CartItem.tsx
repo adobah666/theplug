@@ -4,6 +4,7 @@ import React from 'react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { formatCurrency } from '@/lib/utils/currency'
 
 export interface CartItemData {
   _id?: string
@@ -15,6 +16,7 @@ export interface CartItemData {
   image: string
   size?: string
   color?: string
+  maxInventory?: number
 }
 
 interface CartItemProps {
@@ -23,6 +25,7 @@ interface CartItemProps {
   onRemove: (productId: string, variantId: string | undefined) => void
   isUpdating?: boolean
   isRemoving?: boolean
+  availableQty?: number
 }
 
 const CartItem: React.FC<CartItemProps> = ({
@@ -30,7 +33,8 @@ const CartItem: React.FC<CartItemProps> = ({
   onUpdateQuantity,
   onRemove,
   isUpdating = false,
-  isRemoving = false
+  isRemoving = false,
+  availableQty
 }) => {
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity < 1) {
@@ -40,12 +44,7 @@ const CartItem: React.FC<CartItemProps> = ({
     }
   }
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN'
-    }).format(price)
-  }
+  const formatPrice = (price: number) => formatCurrency(price)
 
   return (
     <div className="flex items-start space-x-4 py-4 border-b border-gray-200 last:border-b-0">
@@ -104,7 +103,7 @@ const CartItem: React.FC<CartItemProps> = ({
             
             <button
               onClick={() => handleQuantityChange(item.quantity + 1)}
-              disabled={isUpdating || isRemoving || item.quantity >= 99}
+              disabled={isUpdating || isRemoving || item.quantity >= 99 || (typeof availableQty === 'number' && item.quantity >= availableQty)}
               className="px-2 py-1 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Increase quantity"
             >
@@ -133,10 +132,15 @@ const CartItem: React.FC<CartItemProps> = ({
         </div>
       </div>
 
-      {/* Total Price */}
+      {/* Availability + Total Price */}
       <div className="text-sm font-medium text-gray-900">
         {formatPrice(item.price * item.quantity)}
       </div>
+      {typeof availableQty === 'number' && (
+        <div className="text-xs text-gray-500 mt-1">
+          {availableQty} available
+        </div>
+      )}
     </div>
   )
 }

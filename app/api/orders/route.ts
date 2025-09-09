@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import connectDB from '@/lib/db/connection'
 import { authenticateToken } from '@/lib/auth/middleware'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth/config'
 import { createOrder, getUserOrders } from '@/lib/orders/service'
 import { PaymentMethod } from '@/lib/db/models/Order'
 import mongoose from 'mongoose'
@@ -10,9 +12,19 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB()
 
-    // Verify authentication
-    const authResult = await authenticateToken(request)
-    if (!authResult.success || !authResult.user) {
+    // Verify authentication via NextAuth session or Authorization header
+    let userId: string | null = null
+    const session = await getServerSession(authOptions)
+    if (session && (session.user as any)?.id) {
+      userId = (session.user as any).id
+    } else {
+      const authResult = await authenticateToken(request)
+      if (authResult.success && authResult.userId) {
+        userId = authResult.userId
+      }
+    }
+
+    if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -46,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate shipping address fields
-    const requiredAddressFields = ['street', 'city', 'state', 'zipCode', 'country', 'recipientName', 'recipientPhone']
+    const requiredAddressFields = ['street', 'city', 'state', 'country', 'recipientName', 'recipientPhone']
     for (const field of requiredAddressFields) {
       if (!shippingAddress[field]) {
         return NextResponse.json(
@@ -66,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Create the order
     const result = await createOrder({
-      userId: authResult.userId!,
+      userId: userId!,
       cartId,
       items,
       shippingAddress,
@@ -91,7 +103,7 @@ export async function POST(request: NextRequest) {
       const { emailNotificationService } = await import('@/lib/email');
       const User = (await import('@/lib/db/models/User')).default;
       
-      const user = await User.findById(authResult.userId);
+      const user = await User.findById(userId);
       if (user) {
         await emailNotificationService.queueOrderConfirmation(user.email, {
           customerName: `${user.firstName} ${user.lastName}`,
@@ -100,7 +112,7 @@ export async function POST(request: NextRequest) {
           items: result.order!.items.map(item => ({
             name: item.productName,
             quantity: item.quantity,
-            price: item.price,
+            price: item.unitPrice,
             image: item.productImage
           })),
           subtotal: result.order!.subtotal,

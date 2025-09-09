@@ -3,6 +3,8 @@ import connectDB from '@/lib/db/connection'
 import { authenticateToken } from '@/lib/auth/middleware'
 import { getOrderById } from '@/lib/orders/service'
 import mongoose from 'mongoose'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth/config'
 
 // GET /api/orders/[id] - Get order details
 export async function GET(
@@ -12,9 +14,19 @@ export async function GET(
   try {
     await connectDB()
 
-    // Verify authentication
-    const authResult = await authenticateToken(request)
-    if (!authResult.success || !authResult.user) {
+    // Verify authentication via NextAuth session or Authorization header
+    let userId: string | null = null
+    const session = await getServerSession(authOptions)
+    if (session && (session.user as any)?.id) {
+      userId = (session.user as any).id
+    } else {
+      const authResult = await authenticateToken(request)
+      if (authResult.success && authResult.userId) {
+        userId = authResult.userId
+      }
+    }
+
+    if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -32,7 +44,7 @@ export async function GET(
     }
 
     // Get order with user validation
-    const order = await getOrderById(id, authResult.userId!)
+    const order = await getOrderById(id, userId!)
 
     if (!order) {
       return NextResponse.json(
@@ -41,7 +53,8 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ order })
+    // Return in shape expected by app/orders/[id]/page.ts
+    return NextResponse.json({ data: order })
 
   } catch (error) {
     console.error('Error fetching order:', error)

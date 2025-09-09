@@ -28,7 +28,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
     city: initialData.city || '',
     state: initialData.state || '',
     zipCode: initialData.zipCode || '',
-    country: initialData.country || 'Nigeria'
+    country: initialData.country || 'Ghana'
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -56,12 +56,10 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
     onSubmit(validation.data)
   }
 
-  const nigerianStates = [
-    'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
-    'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo',
-    'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa',
-    'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba',
-    'Yobe', 'Zamfara'
+  const ghanaRegions = [
+    'Ahafo', 'Ashanti', 'Bono', 'Bono East', 'Central', 'Eastern', 'Greater Accra',
+    'North East', 'Northern', 'Oti', 'Savannah', 'Upper East', 'Upper West', 'Volta',
+    'Western', 'Western North'
   ]
 
   return (
@@ -105,7 +103,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
           value={formData.phone}
           onChange={(e) => handleInputChange('phone', e.target.value)}
           error={errors.phone}
-          placeholder="+234 800 000 0000"
+          placeholder="+233 200 000 000"
           required
           disabled={isLoading}
         />
@@ -133,10 +131,10 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
           disabled={isLoading}
         />
 
-        {/* State */}
+        {/* Region */}
         <div>
           <label htmlFor="state-select" className="mb-2 block text-sm font-medium text-gray-700">
-            State
+            Region
           </label>
           <select
             id="state-select"
@@ -146,9 +144,9 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
             required
             disabled={isLoading}
           >
-            <option value="">Select State</option>
-            {nigerianStates.map(state => (
-              <option key={state} value={state}>{state}</option>
+            <option value="">Select Region</option>
+            {ghanaRegions.map(region => (
+              <option key={region} value={region}>{region}</option>
             ))}
           </select>
           {errors.state && (
@@ -156,14 +154,13 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
           )}
         </div>
 
-        {/* ZIP Code */}
+        {/* GhanaPost GPS Address (optional) */}
         <Input
-          label="ZIP Code"
+          label="GhanaPost GPS Address (optional)"
           value={formData.zipCode}
           onChange={(e) => handleInputChange('zipCode', e.target.value)}
           error={errors.zipCode}
-          placeholder="100001"
-          required
+          placeholder="GA-123-4567"
           disabled={isLoading}
         />
       </div>
@@ -179,9 +176,9 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
           onChange={(e) => handleInputChange('country', e.target.value)}
           className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           required
-          disabled={isLoading}
+          disabled={true}
         >
-          <option value="Nigeria">Nigeria</option>
+          <option value="Ghana">Ghana</option>
         </select>
         {errors.country && (
           <p className="mt-1 text-sm text-red-600">{errors.country}</p>

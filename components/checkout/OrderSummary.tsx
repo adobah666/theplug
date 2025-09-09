@@ -4,6 +4,7 @@ import React from 'react'
 import Image from 'next/image'
 import { CartItemData } from '@/components/cart/CartItem'
 import { ShippingAddress, PaymentMethod } from '@/types/checkout'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface OrderSummaryProps {
   items: CartItemData[]
@@ -30,12 +31,7 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   showShipping = false,
   showPayment = false
 }) => {
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN'
-    }).format(price)
-  }
+  const formatPrice = (price: number) => formatCurrency(price)
 
   const formatCardNumber = (cardNumber: string) => {
     // Show only last 4 digits

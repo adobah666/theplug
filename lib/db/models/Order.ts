@@ -113,9 +113,10 @@ const ShippingAddressSchema = new Schema<IShippingAddress>({
   },
   zipCode: {
     type: String,
-    required: [true, 'ZIP code is required'],
+    required: false,
     trim: true,
-    match: [/^\d{5}(-\d{4})?$/, 'Please enter a valid ZIP code']
+    // Accept GhanaPost GPS codes (e.g., GA-123-4567) or general alphanumeric codes
+    match: [/^(?:[A-Z]{2}-\d{3,4}-\d{4}|[A-Za-z0-9\-\s]{3,15})$/, 'Please enter a valid address code']
   },
   country: {
     type: String,

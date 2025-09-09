@@ -27,7 +27,18 @@ export default function ProductPage({}: ProductPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const { addToCart, isLoading: cartLoading } = useCart();
+  const { addItem, state } = useCart();
+  const cartLoading = state.isLoading;
+
+  // Compute client-side reserved quantity for the selected variant from cart
+  const reservedQty = (() => {
+    if (!product || !selectedVariant) return 0;
+    return state.items
+      .filter((it) => it.productId === product._id && it.variantId === selectedVariant._id)
+      .reduce((sum, it) => sum + (it.quantity || 0), 0);
+  })();
+  const variantInventory = selectedVariant?.inventory || 0;
+  const availableQty = Math.max(0, variantInventory - reservedQty);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -59,10 +70,16 @@ export default function ProductPage({}: ProductPageProps) {
     if (!product || !selectedVariant) return;
 
     try {
-      await addToCart({
+      await addItem({
         productId: product._id,
         variantId: selectedVariant._id,
-        quantity
+        quantity,
+        price: selectedVariant.price || product.price || 0,
+        name: product.name,
+        image: (product.images && product.images[0]) || '/placeholder-product.jpg',
+        size: selectedVariant.size,
+        color: selectedVariant.color,
+        maxInventory: selectedVariant.inventory || 0,
       });
     } catch (err) {
       console.error('Failed to add to cart:', err);
@@ -70,7 +87,7 @@ export default function ProductPage({}: ProductPageProps) {
   };
 
   const handleQuantityChange = (newQuantity: number) => {
-    if (newQuantity >= 1 && newQuantity <= (selectedVariant?.inventory || 0)) {
+    if (newQuantity >= 1 && newQuantity <= availableQty) {
       setQuantity(newQuantity);
     }
   };
@@ -217,21 +234,21 @@ export default function ProductPage({}: ProductPageProps) {
                 <span className="px-4 py-2 border-x border-gray-300">{quantity}</span>
                 <button
                   onClick={() => handleQuantityChange(quantity + 1)}
-                  disabled={quantity >= (selectedVariant?.inventory || 0)}
+                  disabled={quantity >= availableQty}
                   className="px-3 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50"
                 >
                   +
                 </button>
               </div>
               <span className="text-sm text-gray-600">
-                {selectedVariant?.inventory || 0} in stock
+                {availableQty} in stock{reservedQty > 0 ? ` (reserved: ${reservedQty})` : ''}
               </span>
             </div>
 
             <div className="flex space-x-4">
               <Button
                 onClick={handleAddToCart}
-                disabled={!selectedVariant || selectedVariant.inventory === 0 || cartLoading}
+                disabled={!selectedVariant || availableQty === 0 || cartLoading}
                 className="flex-1 flex items-center justify-center space-x-2"
               >
                 <ShoppingCart className="w-5 h-5" />

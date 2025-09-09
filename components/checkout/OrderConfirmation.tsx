@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { OrderSummary } from './OrderSummary'
 import { PaystackPayment } from './PaystackPayment'
+import { useCart } from '@/lib/cart/context'
 
 interface Order {
   _id: string
-  userId: string
+  userId: string | { _id: string; email?: string; name?: string }
   items: Array<{
     productId: string
     variantId?: string
@@ -56,6 +57,14 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
   const [showPayment, setShowPayment] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
   const [verificationError, setVerificationError] = useState<string | null>(null)
+  const { clearCart } = useCart()
+  const [cartCleared, setCartCleared] = useState(false)
+
+  // Prefer account email populated by API (userId.email), fallback to shipping email if present
+  const paymentEmail: string | undefined =
+    typeof order.userId === 'object' && order.userId?.email
+      ? (order.userId.email as string)
+      : order.shippingAddress?.email
 
   // Verify payment if reference is provided
   useEffect(() => {
@@ -97,6 +106,11 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
   const handlePaymentSuccess = async (reference: string) => {
     await verifyPayment(reference)
     setShowPayment(false)
+    // Clear cart once when payment is successful
+    if (!cartCleared) {
+      await clearCart()
+      setCartCleared(true)
+    }
   }
 
   const handlePaymentError = (error: string) => {
@@ -108,6 +122,13 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
     setShowPayment(true)
     setVerificationError(null)
   }
+
+  // If page loads with a paid status (e.g., after redirect), ensure cart is cleared once
+  useEffect(() => {
+    if ((paymentStatus === 'paid' || isSuccess) && !cartCleared) {
+      clearCart().finally(() => setCartCleared(true))
+    }
+  }, [paymentStatus, isSuccess, cartCleared, clearCart])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -210,6 +231,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
               {order.paystackReference && (
                 <p><span className="font-medium">Payment Reference:</span> {order.paystackReference}</p>
               )}
+              <p><span className="font-medium">Email:</span> {paymentEmail || order.shippingAddress.email}</p>
             </div>
           </div>
 
@@ -278,7 +300,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
           ) : showPayment ? (
             <PaystackPayment
               amount={order.total}
-              email={order.shippingAddress.email}
+              email={paymentEmail || order.shippingAddress.email}
               orderId={order._id}
               onSuccess={handlePaymentSuccess}
               onError={handlePaymentError}
@@ -312,12 +334,12 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button asChild variant="outline">
-              <Link href="/">Continue Shopping</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/account/orders">View All Orders</Link>
-            </Button>
+            <Link href="/">
+              <Button variant="outline">Continue Shopping</Button>
+            </Link>
+            <Link href="/account/orders">
+              <Button variant="outline">View All Orders</Button>
+            </Link>
           </div>
         </div>
       )}

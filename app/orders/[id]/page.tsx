@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { headers, cookies } from 'next/headers'
 import { OrderConfirmation } from '@/components/checkout/OrderConfirmation'
 
 interface OrderPageProps {
@@ -14,8 +15,16 @@ export const metadata: Metadata = {
 
 async function getOrder(orderId: string) {
   try {
-    const response = await fetch(`${process.env.NEXTAUTH_URL}/api/orders/${orderId}`, {
-      cache: 'no-store'
+    const hdrs = await headers()
+    const proto = hdrs.get('x-forwarded-proto') || 'http'
+    const host = hdrs.get('host') || 'localhost:3000'
+    const url = `${proto}://${host}/api/orders/${orderId}`
+    const cookieStore = await cookies()
+    const cookieHeader = cookieStore.toString()
+
+    const response = await fetch(url, {
+      cache: 'no-store',
+      headers: cookieHeader ? { cookie: cookieHeader } : undefined,
     })
     
     if (!response.ok) {

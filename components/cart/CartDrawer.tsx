@@ -4,6 +4,7 @@ import React, { useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { CartItem, CartItemData } from './CartItem'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface CartDrawerProps {
   isOpen: boolean
@@ -57,12 +58,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
     }
   }, [isOpen])
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN'
-    }).format(price)
-  }
+  const formatPrice = (price: number) => formatCurrency(price)
 
   const getItemKey = (productId: string, variantId?: string) => {
     return variantId ? `${productId}-${variantId}` : productId
@@ -76,14 +72,14 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black bg-opacity-50 transition-opacity"
+        className="fixed inset-0 z-40 bg-transparent transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Drawer */}
       <div
-        className="fixed right-0 top-0 z-50 h-full w-full max-w-md transform bg-white shadow-xl transition-transform duration-300 ease-in-out translate-x-0"
+        className="fixed right-0 inset-y-2 z-50 h-auto w-full max-w-md transform bg-white shadow-xl transition-transform duration-300 ease-in-out translate-x-0 pb-[max(env(safe-area-inset-bottom),16px)] rounded-lg overflow-hidden"
         role="dialog"
         aria-modal="true"
         aria-labelledby="cart-drawer-title"
@@ -133,6 +129,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
               <div className="py-4">
                 {items.map((item) => {
                   const itemKey = getItemKey(item.productId, item.variantId)
+                  const cap = typeof item.maxInventory === 'number' ? item.maxInventory : undefined
                   return (
                     <CartItem
                       key={itemKey}
@@ -141,6 +138,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
                       onRemove={onRemoveItem}
                       isUpdating={updatingItems.has(itemKey)}
                       isRemoving={removingItems.has(itemKey)}
+                      availableQty={cap}
                     />
                   )
                 })}
@@ -150,7 +148,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({
 
           {/* Footer - Checkout Section */}
           {items.length > 0 && (
-            <div className="border-t border-gray-200 bg-gray-50 px-4 py-4">
+            <div className="sticky bottom-0 border-t border-gray-200 bg-gray-50 px-4 py-4">
               {/* Subtotal */}
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-base font-medium text-gray-900">Subtotal</span>

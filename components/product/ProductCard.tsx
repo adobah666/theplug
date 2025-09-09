@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils/currency'
+import { useCart } from '@/lib/cart/hooks'
 
 interface ProductCardProps {
   product: {
@@ -76,7 +77,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
     return null
   }
 
-  const isOutOfStock = product.inventory === 0
+  // Client-side availability (subtract items already in cart for this product)
+  const { state } = useCart()
+  const reservedQty = state.items
+    .filter((it) => it.productId === product._id)
+    .reduce((sum, it) => sum + (it.quantity || 0), 0)
+  const availableQty = Math.max(0, (product.inventory || 0) - reservedQty)
+  const isOutOfStock = availableQty === 0
 
   if (viewMode === 'list') {
     return (

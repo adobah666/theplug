@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface PaystackPaymentProps {
   amount: number
@@ -101,8 +102,8 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
       const handler = window.PaystackPop.setup({
         key: publicKey,
         email: email,
-        amount: amount * 100, // Paystack expects amount in kobo
-        currency: 'NGN',
+        amount: amount * 100, // Paystack expects the smallest currency unit (pesewas for GHS)
+        currency: 'GHS',
         ref: reference,
         metadata: {
           orderId: orderId
@@ -128,12 +129,7 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
     }
   }
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN'
-    }).format(amount)
-  }
+  const formatAmount = (amount: number) => formatCurrency(amount)
 
   return (
     <div className="space-y-4">
@@ -176,7 +172,7 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
 
         <div className="mt-6 text-xs text-gray-500">
           <p>• Your payment is secured by Paystack</p>
-          <p>• You will be redirected to complete the payment</p>
+          <p>• A Paystack popup will open to complete the payment</p>
           <p>• Do not refresh or close this page during payment</p>
         </div>
       </div>
