@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
           sampleProduct: { $first: '$$ROOT' }
         }
       },
+      // Only keep brands that actually have products
+      { $match: { productCount: { $gt: 0 } } },
       {
         $project: {
           name: '$_id',

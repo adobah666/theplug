@@ -4,6 +4,7 @@ import Product from '@/lib/db/models/Product'
 import Category from '@/lib/db/models/Category'
 import { ApiResponse } from '@/types'
 import mongoose from 'mongoose'
+import { initializeClient, getProductsIndex } from '@/lib/meilisearch/client'
 
 interface FacetCounts {
   categories: Array<{ value: string; label: string; count: number }>
@@ -34,11 +35,6 @@ export async function GET(request: NextRequest) {
     // Build base query for all facet calculations
     const baseQuery: any = {}
 
-    // Text search
-    if (query) {
-      baseQuery.$text = { $search: query }
-    }
-
     // Price range filter
     if (minPrice !== undefined || maxPrice !== undefined) {
       baseQuery.price = {}
@@ -63,7 +59,23 @@ export async function GET(request: NextRequest) {
           as: 'categoryInfo'
         }
       },
-      { $unwind: '$categoryInfo' },
+      { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+      // Apply a regex-based text filter after category lookup so we can match on category fields too
+      ...(query ? [{
+        $match: {
+          $or: [
+            { name: { $regex: query, $options: 'i' } },
+            { brand: { $regex: query, $options: 'i' } },
+            { description: { $regex: query, $options: 'i' } },
+            { searchableText: { $regex: query, $options: 'i' } },
+            { 'variants.sku': { $regex: query, $options: 'i' } },
+            { 'variants.color': { $regex: query, $options: 'i' } },
+            { 'variants.size': { $regex: query, $options: 'i' } },
+            { 'categoryInfo.name': { $regex: query, $options: 'i' } },
+            { 'categoryInfo.slug': { $regex: query, $options: 'i' } }
+          ]
+        }
+      }] : []),
       {
         $facet: {
           // Category facets (exclude current category filter)
@@ -75,6 +87,7 @@ export async function GET(request: NextRequest) {
                 count: { $sum: 1 }
               }
             },
+            { $match: { _id: { $nin: [null, ''] } } },
             { $sort: { count: -1 } },
             { $limit: 20 },
             {
@@ -211,7 +224,62 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const [facetResults] = await Product.aggregate(facetPipeline as any)
+    let [facetResults] = await Product.aggregate(facetPipeline as any)
+
+    // Fallback: if everything is empty, compute basic facets without text filtering
+    if (
+      facetResults &&
+      (!facetResults.categories?.length && !facetResults.brands?.length && !facetResults.sizes?.length && !facetResults.colors?.length)
+    ) {
+      const fallbackPipeline: any[] = [
+        {
+          $lookup: {
+            from: 'categories',
+            localField: 'category',
+            foreignField: '_id',
+            as: 'categoryInfo'
+          }
+        },
+        { $unwind: { path: '$categoryInfo', preserveNullAndEmptyArrays: true } },
+        {
+          $facet: {
+            categories: [
+              { $group: { _id: '$categoryInfo.slug', label: { $first: '$categoryInfo.name' }, count: { $sum: 1 } } },
+              { $match: { _id: { $nin: [null, ''] } } },
+              { $sort: { count: -1 } },
+              { $limit: 20 },
+              { $project: { value: '$_id', label: 1, count: 1, _id: 0 } }
+            ],
+            brands: [
+              { $group: { _id: { $toLower: '$brand' }, label: { $first: '$brand' }, count: { $sum: 1 } } },
+              { $match: { _id: { $nin: [null, ''] } } },
+              { $sort: { count: -1 } },
+              { $limit: 20 },
+              { $project: { value: '$_id', label: 1, count: 1, _id: 0 } }
+            ],
+            sizes: [
+              { $unwind: '$variants' },
+              { $group: { _id: { $toLower: '$variants.size' }, label: { $first: { $toUpper: '$variants.size' } }, count: { $sum: 1 } } },
+              { $match: { _id: { $nin: [null, ''] } } },
+              { $sort: { count: -1 } },
+              { $limit: 20 },
+              { $project: { value: '$_id', label: 1, count: 1, _id: 0 } }
+            ],
+            colors: [
+              { $unwind: '$variants' },
+              { $group: { _id: { $toLower: '$variants.color' }, label: { $first: { $toUpper: '$variants.color' } }, count: { $sum: 1 } } },
+              { $match: { _id: { $nin: [null, ''] } } },
+              { $sort: { count: -1 } },
+              { $limit: 20 },
+              { $project: { value: '$_id', label: 1, count: 1, _id: 0 } }
+            ],
+            priceRange: [ { $group: { _id: null, min: { $min: '$price' }, max: { $max: '$price' } } } ],
+            ratings: [ { $bucket: { groupBy: '$rating', boundaries: [0,1,2,3,4,5], default: 5, output: { count: { $sum: 1 } } } } ]
+          }
+        }
+      ]
+      ;[facetResults] = await Product.aggregate(fallbackPipeline as any)
+    }
 
     // Process rating distribution
     const ratingCounts: Record<string, number> = {}
@@ -233,14 +301,45 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Format response
-    const facets: FacetCounts = {
-      categories: facetResults.categories || [],
-      brands: facetResults.brands || [],
-      sizes: facetResults.sizes || [],
-      colors: facetResults.colors || [],
-      priceRange: facetResults.priceRange[0] || { min: 0, max: 100000 },
+    let facets: FacetCounts = {
+      categories: facetResults?.categories || [],
+      brands: facetResults?.brands || [],
+      sizes: facetResults?.sizes || [],
+      colors: facetResults?.colors || [],
+      priceRange: (facetResults?.priceRange && facetResults.priceRange[0]) || { min: 0, max: 100000 },
       ratings: ratingCounts
+    }
+
+    // If Mongo yielded empty facets, fall back to Meilisearch facetDistribution
+    if (
+      facets.categories.length === 0 &&
+      facets.brands.length === 0 &&
+      facets.sizes.length === 0 &&
+      facets.colors.length === 0
+    ) {
+      try {
+        await initializeClient()
+        const index = getProductsIndex()
+        const ms = await index.search('', {
+          facets: ['category', 'brand', 'variants.size', 'variants.color'],
+          limit: 0
+        })
+        const cat = ms.facetDistribution?.['category'] || {}
+        const br = ms.facetDistribution?.['brand'] || {}
+        const sz = ms.facetDistribution?.['variants.size'] || {}
+        const co = ms.facetDistribution?.['variants.color'] || {}
+
+        facets = {
+          ...facets,
+          categories: Object.entries(cat).map(([value, count]: any) => ({ value, label: value, count } as any)),
+          brands: Object.entries(br).map(([value, count]: any) => ({ value: String(value).toLowerCase(), label: String(value), count } as any)),
+          sizes: Object.entries(sz).map(([value, count]: any) => ({ value: String(value).toLowerCase(), label: String(value).toUpperCase(), count } as any)),
+          colors: Object.entries(co).map(([value, count]: any) => ({ value: String(value).toLowerCase(), label: String(value).toUpperCase(), count } as any))
+        }
+      } catch (e) {
+        // If Meilisearch is unavailable, keep Mongo facets
+        console.warn('Meilisearch facets fallback failed:', e)
+      }
     }
 
     return NextResponse.json<ApiResponse>({

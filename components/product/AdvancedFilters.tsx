@@ -51,6 +51,12 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
       
       // Build current filter params for facet calculation
       const params = new URLSearchParams(searchParams.toString())
+      // Exclude non-facet params to avoid over-filtering facets
+      params.delete('q')
+      params.delete('sort')
+      params.delete('order')
+      params.delete('page')
+      params.delete('view')
       
       const response = await fetch(`/api/products/search/facets?${params.toString()}`)
       

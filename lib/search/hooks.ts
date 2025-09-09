@@ -238,8 +238,15 @@ export function useFilterFacets(searchState: SearchState): UseFilterFacetsReturn
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Memoize the query string to avoid triggering effects due to object identity changes
-  const facetsQueryString = useMemo(() => buildSearchParams(searchState).toString(), [searchState])
+  // Memoize the facets query string: exclude q, sort, order, and page so facets are broader
+  const facetsQueryString = useMemo(() => {
+    const params = buildSearchParams(searchState)
+    params.delete('q')
+    params.delete('sort')
+    params.delete('order')
+    params.delete('page')
+    return params.toString()
+  }, [searchState])
 
   // Fetch filter facets
   const fetchFacets = useCallback(async () => {

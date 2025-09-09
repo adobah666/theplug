@@ -71,6 +71,7 @@ export default function CategoryPage({}: CategoryPageProps) {
   const [totalProducts, setTotalProducts] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [heroImages, setHeroImages] = useState<string[]>([]);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   
   const categoryInfo = CATEGORY_INFO[category] || {
@@ -159,6 +160,32 @@ export default function CategoryPage({}: CategoryPageProps) {
     fetchProducts();
   }, [category, currentPage, sortBy, priceRange, subcategory, brand, size, color]);
 
+  // Fetch top popular items for hero collage
+  useEffect(() => {
+    const fetchHero = async () => {
+      try {
+        const params = new URLSearchParams({
+          category,
+          sort: 'popularity',
+          order: 'desc',
+          page: '1',
+          limit: '4'
+        })
+        const res = await fetch(`/api/products/search?${params.toString()}`, { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        const list: any[] = json?.data?.data || []
+        const imgs: string[] = list
+          .flatMap((p: any) => (Array.isArray(p?.images) ? p.images : []))
+          .filter((src: any) => typeof src === 'string' && src.length > 0)
+          .slice(0, 4)
+        setHeroImages(imgs)
+      } catch {
+        setHeroImages([])
+      }
+    }
+    fetchHero()
+  }, [category])
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -199,18 +226,37 @@ export default function CategoryPage({}: CategoryPageProps) {
 
       {/* Category Header */}
       <div className="mb-8">
-        <div 
-          className="relative h-48 md:h-64 bg-gray-200 rounded-lg overflow-hidden mb-6"
-          style={{
-            backgroundImage: `url(${categoryInfo.image})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        >
-          <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-            <div className="text-center text-white">
-              <h1 className="text-4xl md:text-5xl font-bold mb-2">{categoryInfo.name}</h1>
-              <p className="text-lg md:text-xl opacity-90">{categoryInfo.description}</p>
+        <div className="relative h-48 md:h-64 lg:h-72 rounded-lg overflow-hidden mb-6 bg-gray-200">
+          {/* Collage background */}
+          <div className="absolute inset-0">
+            {heroImages.length > 0 ? (
+              <div className="grid grid-cols-3 md:grid-cols-4 h-full w-full">
+                {(heroImages.length ? heroImages : [categoryInfo.image]).map((src, i) => (
+                  <div
+                    key={`hero-img-${i}`}
+                    className="h-full w-full bg-center bg-cover"
+                    style={{ backgroundImage: `url(${src})` }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div
+                className="h-full w-full bg-center bg-cover"
+                style={{ backgroundImage: `url(${categoryInfo.image})` }}
+              />
+            )}
+          </div>
+
+          {/* Blur + dark overlay */}
+          <div className="absolute inset-0 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-black/40" />
+          </div>
+
+          {/* Title/description overlay */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center text-white px-4">
+              <h1 className="text-3xl md:text-5xl font-bold mb-2">{categoryInfo.name}</h1>
+              <p className="text-base md:text-xl opacity-90">{categoryInfo.description}</p>
             </div>
           </div>
         </div>

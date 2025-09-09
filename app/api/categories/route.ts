@@ -9,9 +9,32 @@ import mongoose from 'mongoose'
 export async function GET() {
   try {
     await connectDB()
-    const categories = await Category.find({ isActive: true })
-      .sort({ name: 1 })
-      .lean()
+    // Only return categories that have at least 1 product
+    const categories = await Category.aggregate([
+      { $match: { isActive: true } },
+      {
+        $lookup: {
+          from: 'products',
+          localField: '_id',
+          foreignField: 'category',
+          as: 'products'
+        }
+      },
+      {
+        $addFields: { productCount: { $size: '$products' } }
+      },
+      { $match: { productCount: { $gt: 0 } } },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          slug: 1,
+          productCount: 1
+        }
+      },
+      { $sort: { name: 1 } }
+    ])
+
     return NextResponse.json({ success: true, data: { categories } })
   } catch (err) {
     console.error('List categories error:', err)
