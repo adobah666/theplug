@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // For guest users, use session ID from cookies
     if (!userId) {
-      sessionId = request.cookies.get('sessionId')?.value
+      sessionId = request.cookies.get('sessionId')?.value || null
       if (!sessionId) {
         // No session ID, return empty cart
         return NextResponse.json<ApiResponse>({
@@ -44,10 +44,7 @@ export async function GET(request: NextRequest) {
 
     // Find cart
     const cartQuery = userId ? { userId } : { sessionId }
-    const cart = await Cart.findOne(cartQuery).populate({
-      path: 'items.productId',
-      select: 'name price images inventory variants'
-    })
+    const cart = await Cart.findOne(cartQuery)
 
     if (!cart) {
       return NextResponse.json<ApiResponse>({

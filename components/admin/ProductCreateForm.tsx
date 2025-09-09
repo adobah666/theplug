@@ -217,17 +217,30 @@ export default function ProductCreateForm() {
 
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw new Error(json?.error || 'Failed to create product')
+        // Prefer detailed server validation errors when available
+        const detailed = (json?.data && (json.data.errors || json.data.message)) || json?.error || json?.message
+        const message = Array.isArray(detailed) ? detailed.join('\n') : (detailed || 'Failed to create product')
+        throw new Error(message)
       }
 
       setSuccess('Product created successfully')
-      // Reset form
+      // Notify product table to refresh
+      try {
+        const created = json?.data?.product || json?.product || null
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('admin:product:created', { detail: created }))
+        }
+      } catch {}
+
+      // Reset form fields but keep category/brand to avoid invalid required state
       setName('')
       setDescription('')
       setPrice('')
       setImages([])
-      setCategory('')
-      setBrand('')
+      // Keep selected category if any, otherwise default to first available
+      setCategory(prev => (prev && prev.length > 0 ? prev : (categories[0]?._id || '')))
+      // Keep selected brand if any, otherwise default to first available
+      setBrand(prev => (prev && prev.length > 0 ? prev : (brands[0]?.name || '')))
       setInventory('')
       setVariants([])
     } catch (err) {

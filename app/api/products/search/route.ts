@@ -31,12 +31,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     
     // Extract search parameters
+    const rawMin = (searchParams.get('minPrice') || '').trim()
+    const rawMax = (searchParams.get('maxPrice') || '').trim()
+    const parsedMin = rawMin !== '' ? Number(rawMin) : undefined
+    const parsedMax = rawMax !== '' ? Number(rawMax) : undefined
+
     const params: SearchParams = {
       q: searchParams.get('q') || undefined,
       category: searchParams.get('category') || undefined,
       brand: searchParams.get('brand') || undefined,
-      minPrice: searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : undefined,
-      maxPrice: searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined,
+      minPrice: (parsedMin !== undefined && !Number.isNaN(parsedMin)) ? parsedMin : undefined,
+      maxPrice: (parsedMax !== undefined && !Number.isNaN(parsedMax)) ? parsedMax : undefined,
       size: searchParams.get('size') || undefined,
       color: searchParams.get('color') || undefined,
       minRating: searchParams.get('minRating') ? parseFloat(searchParams.get('minRating')!) : undefined,
@@ -69,11 +74,15 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    if (params.minPrice !== undefined && params.maxPrice !== undefined && params.minPrice > params.maxPrice) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        error: 'Minimum price cannot be greater than maximum price'
-      }, { status: 400 })
+    if (
+      params.minPrice !== undefined && !Number.isNaN(params.minPrice) &&
+      params.maxPrice !== undefined && !Number.isNaN(params.maxPrice) &&
+      params.minPrice > params.maxPrice
+    ) {
+      // Be forgiving: swap instead of erroring
+      const tmp = params.minPrice
+      params.minPrice = params.maxPrice
+      params.maxPrice = tmp
     }
 
     // Validate rating
@@ -87,9 +96,18 @@ export async function GET(request: NextRequest) {
     // Build MongoDB query
     const query: any = {}
 
-    // Text search
+    // Text search (partial match via regex for admin needs)
     if (params.q) {
-      query.$text = { $search: params.q }
+      const escaped = params.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const rx = new RegExp(escaped, 'i')
+      query.$or = [
+        { name: rx },
+        { brand: rx },
+        { description: rx },
+        { 'variants.sku': rx },
+        { 'variants.color': rx },
+        { 'variants.size': rx },
+      ]
     }
 
     // Category filter
@@ -178,7 +196,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build sort object
-    const sortObj: Record<string, 1 | -1> = {}
+    const sortObj: Record<string, any> = {}
     const order = params.order === 'asc' ? 1 : -1
 
     switch (params.sort) {
@@ -201,11 +219,12 @@ export async function GET(request: NextRequest) {
         break
       case 'relevance':
       default:
-        if (params.q) {
-          // If there's a text search, sort by text score
-          sortObj.score = { $meta: 'textScore' } as any
+        // With regex search, compute a relevance score and sort by it when q is present
+        if (!params.q) {
+          sortObj.createdAt = -1
         } else {
-          // Default to newest first
+          // We'll add a $addFields stage to compute `relevance`, then sort by it desc
+          sortObj.relevance = -1
           sortObj.createdAt = -1
         }
         break
@@ -218,10 +237,66 @@ export async function GET(request: NextRequest) {
       { $match: query }
     ]
 
-    // Add text score for relevance sorting
-    if (params.q && params.sort === 'relevance') {
+    // When searching, compute a relevance score for better ranking
+    if (params.q) {
+      const escaped = params.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const startsWithPattern = `^${escaped}`
+      const containsPattern = `${escaped}`
+
       aggregationPipeline.push({
-        $addFields: { score: { $meta: 'textScore' } }
+        $addFields: {
+          relevance: {
+            $add: [
+              // High weight for name/brand startsWith
+              { $cond: [{ $regexMatch: { input: "$name", regex: startsWithPattern, options: "i" } }, 100, 0] },
+              { $cond: [{ $regexMatch: { input: "$brand", regex: startsWithPattern, options: "i" } }, 80, 0] },
+
+              // Medium weight for name/brand contains
+              { $cond: [{ $regexMatch: { input: "$name", regex: containsPattern, options: "i" } }, 60, 0] },
+              { $cond: [{ $regexMatch: { input: "$brand", regex: containsPattern, options: "i" } }, 50, 0] },
+
+              // Variants fields contains (any element true)
+              {
+                $cond: [
+                  {
+                    $anyElementTrue: {
+                      $map: {
+                        input: { $ifNull: ["$variants", []] },
+                        as: "v",
+                        in: {
+                          $or: [
+                            { $regexMatch: { input: "$$v.sku", regex: containsPattern, options: "i" } },
+                            { $regexMatch: { input: "$$v.color", regex: containsPattern, options: "i" } },
+                            { $regexMatch: { input: "$$v.size", regex: containsPattern, options: "i" } }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  40,
+                  0
+                ]
+              },
+
+              // Low weight for description contains
+              { $cond: [{ $regexMatch: { input: "$description", regex: containsPattern, options: "i" } }, 20, 0] },
+
+              // Position boost: earlier match in name gets more points (100 - index)
+              {
+                $let: {
+                  vars: { pos: { $indexOfCP: [ { $toLower: "$name" }, { $toLower: containsPattern } ] } },
+                  in: {
+                    $cond: [
+                      { $and: [ { $ne: ["$$pos", -1] }, { $gte: [100, "$$pos"] } ] },
+                      { $subtract: [100, "$$pos"] },
+                      0
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
       })
     }
 

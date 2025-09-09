@@ -27,6 +27,13 @@ export default function ProductTable() {
   const [search, setSearch] = useState('')
   const [pendingSearch, setPendingSearch] = useState('')
 
+  // Filters
+  const [categories, setCategories] = useState<Array<{ _id: string; name: string }>>([])
+  const [categoryFilter, setCategoryFilter] = useState<string>('')
+  const [brandsFilter, setBrandsFilter] = useState<string>('')
+  const [minPrice, setMinPrice] = useState<string>('')
+  const [maxPrice, setMaxPrice] = useState<string>('')
+
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit])
 
   const load = async () => {
@@ -44,6 +51,25 @@ export default function ProductTable() {
         url = `/api/products/search?${qs.toString()}`
       } else {
         url = `/api/products?${qs.toString()}`
+      }
+
+      // Apply filters (search endpoint supports these; list endpoint ignores unknown params)
+      if (categoryFilter) qs.set('category', categoryFilter)
+      if (brandsFilter) qs.set('brand', brandsFilter)
+      // Normalize numeric filters
+      const mn = minPrice.trim() === '' ? undefined : Number(minPrice)
+      const mx = maxPrice.trim() === '' ? undefined : Number(maxPrice)
+      let useMin = (mn !== undefined && !Number.isNaN(mn)) ? mn : undefined
+      let useMax = (mx !== undefined && !Number.isNaN(mx)) ? mx : undefined
+      if (useMin !== undefined && useMax !== undefined && useMin > useMax) {
+        // swap to be forgiving
+        const tmp = useMin; useMin = useMax; useMax = tmp
+      }
+      if (useMin !== undefined) qs.set('minPrice', String(useMin))
+      if (useMax !== undefined) qs.set('maxPrice', String(useMax))
+      // Always hit search endpoint when any filter is applied
+      if (categoryFilter || brandsFilter || minPrice || maxPrice || search.trim().length > 0) {
+        url = `/api/products/search?${qs.toString()}`
       }
 
       const res = await fetch(url, { cache: 'no-store' })
@@ -83,12 +109,53 @@ export default function ProductTable() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, search, categoryFilter, brandsFilter, minPrice, maxPrice])
+
+  // Load categories for filter dropdown
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/categories', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        const list = (json?.data?.categories || []) as Array<{ _id: string; name: string }>
+        list.sort((a, b) => a.name.localeCompare(b.name))
+        setCategories(list)
+      } catch {
+        setCategories([])
+      }
+    })()
+  }, [])
+
+  // Listen for product creation events to auto-refresh the list
+  useEffect(() => {
+    const onCreated = (e: Event) => {
+      // If the new item belongs on current page+filter, easiest is to reload
+      load()
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('admin:product:created', onCreated)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('admin:product:created', onCreated)
+      }
+    }
   }, [page, search])
 
   const onSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setPage(1)
     setSearch(pendingSearch)
+  }
+
+  const onClearFilters = () => {
+    setCategoryFilter('')
+    setBrandsFilter('')
+    setMinPrice('')
+    setMaxPrice('')
+    setPendingSearch('')
+    setSearch('')
+    setPage(1)
   }
 
   const onDelete = async (id: string) => {
@@ -290,10 +357,35 @@ export default function ProductTable() {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={onSearchSubmit} className="flex gap-2">
-        <Input placeholder="Search products..." value={pendingSearch} onChange={e => setPendingSearch(e.target.value)} />
-        <Button type="submit">Search</Button>
-        <Button type="button" variant="ghost" onClick={() => { setPendingSearch(''); setSearch(''); }}>Clear</Button>
+      {/* Filter bar */}
+      <form onSubmit={onSearchSubmit} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
+        <div className="md:col-span-2">
+          <label className="block text-xs text-gray-600 mb-1">Search</label>
+          <Input placeholder="Search products..." value={pendingSearch} onChange={e => setPendingSearch(e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Category</label>
+          <select className="w-full border rounded-md p-2 bg-white" value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1) }}>
+            <option value="">All</option>
+            {categories.map(c => (<option key={c._id} value={c._id}>{c.name}</option>))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Brand</label>
+          <Input placeholder="e.g. Nike" value={brandsFilter} onChange={e => { setBrandsFilter(e.target.value); setPage(1) }} />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Min Price</label>
+          <Input type="number" min="0" value={minPrice} onChange={e => { setMinPrice(e.target.value); setPage(1) }} />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Max Price</label>
+          <Input type="number" min="0" value={maxPrice} onChange={e => { setMaxPrice(e.target.value); setPage(1) }} />
+        </div>
+        <div className="flex gap-2 md:col-span-6">
+          <Button type="submit">Apply</Button>
+          <Button type="button" variant="ghost" onClick={onClearFilters}>Clear</Button>
+        </div>
       </form>
 
       {loading && items.length === 0 ? (

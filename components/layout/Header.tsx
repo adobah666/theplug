@@ -52,23 +52,7 @@ const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white">
-      {/* Top bar */}
-      <div className="border-b border-gray-100 bg-gray-50 px-4 py-2">
-        <div className="mx-auto flex max-w-7xl items-center justify-between text-sm">
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-600">Free shipping on orders over $50</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link href="/help" className="text-gray-600 hover:text-gray-900">
-              Help
-            </Link>
-            <Link href="/track-order" className="text-gray-600 hover:text-gray-900">
-              Track Order
-            </Link>
-          </div>
-        </div>
-      </div>
-
+      
       {/* Main header */}
       <div className="px-4 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">

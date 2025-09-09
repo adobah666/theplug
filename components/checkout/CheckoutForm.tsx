@@ -39,6 +39,38 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
     }
   }, [])
 
+  // Prefill from default saved address when authenticated
+  useEffect(() => {
+    let ignore = false
+    ;(async () => {
+      if (!session?.user) return
+      try {
+        const res = await fetch('/api/auth/addresses', { cache: 'no-store' })
+        if (!res.ok) return
+        const list = await res.json()
+        const addresses = Array.isArray(list) ? list : []
+        if (addresses.length === 0) return
+        const def = addresses.find((a: any) => a.isDefault) || addresses[0]
+        if (!def) return
+        if (ignore) return
+        setShippingAddress(prev => prev ?? {
+          firstName: def.firstName || '',
+          lastName: def.lastName || '',
+          email: (session.user as any)?.email || '',
+          phone: '',
+          street: def.street || '',
+          city: def.city || '',
+          state: def.state || '',
+          zipCode: def.postalCode || '',
+          country: def.country || 'Ghana'
+        })
+      } catch {
+        // ignore
+      }
+    })()
+    return () => { ignore = true }
+  }, [session])
+
   // Calculate order totals
   const subtotal = cartState.subtotal
   const shipping = subtotal > 50000 ? 0 : 2500 // Free shipping over ₦50,000
@@ -47,12 +79,34 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
   const total = subtotal + shipping + tax
 
   // Handle shipping form submission
-  const handleShippingSubmit = useCallback((data: ShippingAddress) => {
+  const handleShippingSubmit = useCallback(async (data: ShippingAddress, options?: { saveAddress?: boolean }) => {
     setShippingAddress(data)
     setCompletedSteps(prev => [...prev.filter(step => step !== 'shipping'), 'shipping'])
     setCurrentStep('payment')
     setError(null)
-  }, [])
+
+    // Persist address if requested and user is authenticated
+    try {
+      if (options?.saveAddress && session?.user) {
+        await fetch('/api/auth/addresses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            street: data.street,
+            city: data.city,
+            state: data.state,
+            postalCode: data.zipCode,
+            country: data.country,
+            isDefault: true,
+          })
+        })
+      }
+    } catch {
+      // Non-blocking: ignore save errors to not disrupt checkout flow
+    }
+  }, [session])
 
   // Handle payment form submission
   const handlePaymentSubmit = useCallback((data: PaymentMethod) => {
@@ -82,8 +136,10 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
         body: JSON.stringify({
           // Map items to the server's expected IOrderItem shape
           items: cartState.items.map(item => ({
-            productId: item.productId,
-            variantId: item.variantId,
+            productId: typeof (item as any).productId === 'string'
+              ? (item as any).productId
+              : ((item as any).productId?._id || String((item as any).productId || '')),
+            variantId: typeof item.variantId === 'string' ? item.variantId : (item as any).variantId || undefined,
             productName: item.name,
             productImage: item.image,
             size: item.size,

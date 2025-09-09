@@ -8,7 +8,7 @@ import { validateShippingAddress, formatValidationErrors } from '@/lib/checkout/
 
 interface ShippingAddressFormProps {
   initialData?: Partial<ShippingAddress>
-  onSubmit: (data: ShippingAddress) => void
+  onSubmit: (data: ShippingAddress, options?: { saveAddress?: boolean }) => void
   onBack?: () => void
   isLoading?: boolean
 }
@@ -53,7 +53,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
       return
     }
 
-    onSubmit(validation.data)
+    onSubmit(validation.data, { saveAddress })
   }
 
   const ghanaRegions = [
