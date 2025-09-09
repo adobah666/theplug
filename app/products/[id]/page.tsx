@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Star, Heart, Share2, ShoppingCart, Truck, Shield, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -19,6 +19,7 @@ interface ProductPageProps {}
 
 export default function ProductPage({}: ProductPageProps) {
   const params = useParams();
+  const router = useRouter();
   const productId = params.id as string;
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
@@ -27,8 +28,9 @@ export default function ProductPage({}: ProductPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const { addItem, state } = useCart();
+  const { addItem, refreshCart, state } = useCart();
   const cartLoading = state.isLoading;
+  const [buyNowLoading, setBuyNowLoading] = useState(false);
 
   // Compute client-side reserved quantity for the selected variant from cart
   const reservedQty = (() => {
@@ -83,6 +85,31 @@ export default function ProductPage({}: ProductPageProps) {
       });
     } catch (err) {
       console.error('Failed to add to cart:', err);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    if (!product || !selectedVariant || availableQty === 0) return;
+    try {
+      setBuyNowLoading(true);
+      await addItem({
+        productId: product._id,
+        variantId: selectedVariant._id,
+        quantity,
+        price: selectedVariant.price || product.price || 0,
+        name: product.name,
+        image: (product.images && product.images[0]) || '/placeholder-product.jpg',
+        size: selectedVariant.size,
+        color: selectedVariant.color,
+        maxInventory: selectedVariant.inventory || 0,
+      });
+      // Ensure server-side cart (session-based) is hydrated before navigating
+      await refreshCart();
+      router.push('/checkout');
+    } catch (err) {
+      console.error('Failed to start checkout:', err);
+    } finally {
+      setBuyNowLoading(false);
     }
   };
 
@@ -253,6 +280,13 @@ export default function ProductPage({}: ProductPageProps) {
               >
                 <ShoppingCart className="w-5 h-5" />
                 <span>{cartLoading ? 'Adding...' : 'Add to Cart'}</span>
+              </Button>
+              <Button
+                onClick={handleBuyNow}
+                disabled={!selectedVariant || availableQty === 0 || buyNowLoading}
+                className="flex-1 flex items-center justify-center"
+              >
+                {buyNowLoading ? 'Processing...' : 'Buy Now'}
               </Button>
               
               <Button

@@ -95,7 +95,9 @@ export async function PUT(
       return NextResponse.json<ApiResponse>({ success: false, error: 'Admin privileges required' }, { status: 403 })
     }
 
-    const { id } = params
+    const { id } = 'then' in (context.params as any)
+      ? await (context.params as Promise<{ id: string }>)
+      : (context.params as { id: string })
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {

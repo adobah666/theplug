@@ -178,7 +178,7 @@ const initialState: CartState = {
   items: [],
   subtotal: 0,
   itemCount: 0,
-  isLoading: false,
+  isLoading: true,
   error: null,
   updatingItems: new Set(),
   removingItems: new Set()
@@ -203,9 +203,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         if (savedCart) {
           const cartData = JSON.parse(savedCart)
           dispatch({ type: 'SET_CART', payload: cartData })
+        } else {
+          // No saved cart; mark loading complete to avoid empty-cart flash
+          dispatch({ type: 'SET_LOADING', payload: false })
         }
       } catch (error) {
         console.error('Failed to load cart from localStorage:', error)
+        dispatch({ type: 'SET_LOADING', payload: false })
       }
     }
 
@@ -233,7 +237,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Network error' }))
-      throw new Error(errorData.message || `HTTP ${response.status}`)
+      // Our API typically returns { success: false, error: string }
+      const msg = (errorData && (errorData.error || errorData.message)) || `HTTP ${response.status}`
+      throw new Error(msg)
     }
 
     return response.json()
@@ -261,7 +267,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           color: item.color
         })
       })
-      
+      // Ensure client state matches server (and picks up session cookie for guests)
+      await refreshCart()
       dispatch({ type: 'SET_LOADING', payload: false })
     } catch (error) {
       // Revert optimistic update on error
@@ -280,10 +287,22 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       // Optimistic update
       dispatch({ type: 'UPDATE_ITEM', payload: { productId, variantId, quantity } })
       
-      // API call
+      // Resolve itemId required by the API
+      let target = state.items.find(i => i.productId === productId && i.variantId === variantId)
+      if (!target || !target._id) {
+        // Ensure we have latest server state (with _id)
+        await refreshCart()
+        target = state.items.find(i => i.productId === productId && i.variantId === variantId)
+      }
+      const itemId = target?._id
+      if (!itemId) {
+        throw new Error('Unable to locate cart item to update')
+      }
+      
+      // API call with itemId
       await apiCall('/api/cart/update', {
         method: 'PUT',
-        body: JSON.stringify({ productId, variantId, quantity })
+        body: JSON.stringify({ itemId, quantity })
       })
       
       dispatch({ type: 'SET_UPDATING_ITEM', payload: { key: itemKey, isUpdating: false } })
@@ -305,12 +324,26 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       // Optimistic update
       dispatch({ type: 'REMOVE_ITEM', payload: { productId, variantId } })
       
+      // Resolve itemId required by the API
+      let target = state.items.find(i => i.productId === productId && i.variantId === variantId)
+      if (!target || !target._id) {
+        // Ensure we have latest server state (with _id)
+        await refreshCart()
+        target = state.items.find(i => i.productId === productId && i.variantId === variantId)
+      }
+      const itemId = target?._id
+      if (!itemId) {
+        throw new Error('Unable to locate cart item to remove')
+      }
+      
       // API call
       await apiCall('/api/cart/remove', {
         method: 'DELETE',
-        body: JSON.stringify({ productId, variantId })
+        body: JSON.stringify({ itemId })
       })
       
+      // Ensure client reflects server after removal
+      await refreshCart()
       dispatch({ type: 'SET_REMOVING_ITEM', payload: { key: itemKey, isRemoving: false } })
     } catch (error) {
       // Revert optimistic update on error
@@ -344,7 +377,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       dispatch({ type: 'SET_LOADING', payload: true })
       
       const response = await apiCall('/api/cart', { method: 'GET' })
-      dispatch({ type: 'SET_CART', payload: response.data?.items || [] })
+      // API returns { success, data: { cart: { items, ... } } }
+      const items = response?.data?.cart?.items || []
+      dispatch({ type: 'SET_CART', payload: items })
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to load cart' })
     }

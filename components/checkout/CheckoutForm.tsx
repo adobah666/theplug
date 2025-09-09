@@ -1,6 +1,6 @@
-'use client'
+"use client"
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ProgressIndicator } from './ProgressIndicator'
 import { ShippingAddressForm } from './ShippingAddressForm'
@@ -17,7 +17,7 @@ interface CheckoutFormProps {
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
   const router = useRouter()
-  const { state: cartState } = useCart()
+  const { state: cartState, refreshCart } = useCart()
   const { session } = useAuth()
   
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping')
@@ -28,6 +28,16 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
   // Form data state
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
+
+  // Hydrate cart once on mount to avoid infinite loop when empty
+  const didHydrateRef = useRef(false)
+  useEffect(() => {
+    if (didHydrateRef.current) return
+    didHydrateRef.current = true
+    if (cartState.items.length === 0) {
+      refreshCart().catch(() => {})
+    }
+  }, [])
 
   // Calculate order totals
   const subtotal = cartState.subtotal
@@ -146,7 +156,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
     setCurrentStep('payment')
   }, [])
 
-  // Redirect if cart is empty
+  // Redirect/notify if cart is empty (after hydration)
   if (cartState.items.length === 0 && !cartState.isLoading) {
     return (
       <div className="text-center py-12">
