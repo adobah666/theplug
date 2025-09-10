@@ -100,15 +100,33 @@ const ProductGrid: React.FC<ProductGridProps> = ({
     <div className={className}>
       {/* Products grid */}
       <div className={gridClasses}>
-        {products.map((product) => (
-          <ProductCard
-            key={product._id}
-            product={product}
-            onAddToCart={onAddToCart}
-            onAddToWishlist={onAddToWishlist}
-            viewMode={viewMode}
-          />
-        ))}
+        {products.map((p) => {
+          const id = String((p as any)?._id ?? (p as any)?.id ?? (p as any)?.objectID ?? '')
+          const images = Array.isArray((p as any)?.images) && (p as any).images.length > 0
+            ? (p as any).images
+            : ((p as any)?.image ? [(p as any).image] : ['/images/placeholder.png'])
+          const cardProduct = {
+            _id: id,
+            name: (p as any)?.name || '',
+            description: (p as any)?.description || '',
+            price: Number((p as any)?.price || 0),
+            images,
+            brand: (p as any)?.brand || (p as any)?.category?.name || '',
+            rating: (p as any)?.rating ?? 0,
+            reviewCount: (p as any)?.reviewCount ?? 0,
+            inventory: (p as any)?.inventory ?? 0,
+          }
+
+          return (
+            <ProductCard
+              key={id || (p as any)?._id}
+              product={cardProduct}
+              onAddToCart={onAddToCart}
+              onAddToWishlist={onAddToWishlist}
+              viewMode={viewMode}
+            />
+          )
+        })}
       </div>
 
       {/* Load more button */}
