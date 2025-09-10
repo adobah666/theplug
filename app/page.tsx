@@ -353,11 +353,11 @@ function HomePageContent({ featuredProducts, categories, categorySlides }: HomeP
         subtitle="Find exactly what you're looking for in our curated collections"
       />
 
-      {/* Customer Testimonials */}
-      <Testimonials />
+      {/* Customer Testimonials *
+      <Testimonials />/}
 
       {/* Newsletter Signup */}
-      <Newsletter />
+      {/* <Newsletter /> */}
     </>
   )
 }
