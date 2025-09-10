@@ -53,7 +53,7 @@ export async function createOrder(request: CreateOrderRequest): Promise<OrderCre
       }
     }
 
-    // Validate inventory for all items
+    // Validate inventory for all items (but don't reserve yet)
     const inventoryValidation = await validateOrderInventory(orderItems, session)
     if (!inventoryValidation.success) {
       return {
@@ -62,8 +62,7 @@ export async function createOrder(request: CreateOrderRequest): Promise<OrderCre
       }
     }
 
-    // Reserve inventory for all items
-    await reserveInventory(orderItems, session)
+    // Note: Inventory will be reserved only after successful payment verification
 
     // Calculate totals
     const subtotal = orderItems.reduce((sum, item) => sum + item.totalPrice, 0)
@@ -89,15 +88,7 @@ export async function createOrder(request: CreateOrderRequest): Promise<OrderCre
 
     await order.save({ session })
 
-    // Clear the user's cart after successful order creation
-    // If the order came from a specific cartId, delete that cart.
-    if (request.cartId) {
-      await Cart.findByIdAndDelete(request.cartId).session(session)
-    }
-    // Additionally, ensure any remaining carts for this user are removed.
-    // This covers cases where the order was created from explicit items (no cartId)
-    // and prevents old items from reappearing on the next session/cart refresh.
-    await Cart.deleteMany({ userId: new mongoose.Types.ObjectId(request.userId) }).session(session)
+    // Do NOT clear the cart yet. We only clear carts after successful payment verification.
 
     await session.commitTransaction()
 
@@ -207,12 +198,14 @@ async function validateOrderInventory(
 /**
  * Reserves inventory for order items
  */
-async function reserveInventory(
+export async function reserveInventory(
   orderItems: IOrderItem[], 
-  session: mongoose.ClientSession
+  session: mongoose.ClientSession | null
 ): Promise<void> {
   for (const item of orderItems) {
-    const product = await Product.findById(item.productId).session(session)
+    const product = session
+      ? await Product.findById(item.productId).session(session)
+      : await Product.findById(item.productId)
     
     if (!product) {
       throw new Error(`Product ${item.productId} not found`)
@@ -239,7 +232,11 @@ async function reserveInventory(
       product.inventory -= item.quantity
     }
 
-    await product.save({ session })
+    if (session) {
+      await product.save({ session })
+    } else {
+      await product.save()
+    }
   }
 }
 

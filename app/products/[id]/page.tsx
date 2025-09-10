@@ -12,7 +12,9 @@ import { ProductVariantSelector } from '@/components/product/ProductVariantSelec
 import { RelatedProducts } from '@/components/product/RelatedProducts';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { useCart } from '@/lib/cart/hooks';
-import { Product, ProductVariant } from '@/types';
+// Using generic types locally for product/variant to avoid tight coupling to types module
+import { ReviewsList } from '@/components/product/ReviewsList';
+import { ReviewForm } from '@/components/product/ReviewForm';
 import { formatCurrency } from '@/lib/utils/currency';
 
 interface ProductPageProps {}
@@ -21,8 +23,8 @@ export default function ProductPage({}: ProductPageProps) {
   const params = useParams();
   const router = useRouter();
   const productId = params.id as string;
-  const [product, setProduct] = useState<Product | null>(null);
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [product, setProduct] = useState<any | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,11 @@ export default function ProductPage({}: ProductPageProps) {
   const cartLoading = state.isLoading;
   const [buyNowLoading, setBuyNowLoading] = useState(false);
   const [viewTracked, setViewTracked] = useState(false);
+  // Reviews state
+  const [reviews, setReviews] = useState<any[]>([])
+  const [canReview, setCanReview] = useState(false)
+  const [myReview, setMyReview] = useState<any | null>(null)
+  const [reviewsLoading, setReviewsLoading] = useState(false)
 
   // Compute client-side reserved quantity and available quantity
   const reservedQty = (() => {
@@ -75,6 +82,55 @@ export default function ProductPage({}: ProductPageProps) {
       fetchProduct();
     }
   }, [productId]);
+
+  // Load reviews and eligibility
+  useEffect(() => {
+    if (!productId) return
+    let ignore = false
+    const load = async () => {
+      try {
+        setReviewsLoading(true)
+        const [r1, r2] = await Promise.all([
+          fetch(`/api/products/${productId}/reviews`, { cache: 'no-store', credentials: 'include' }),
+          fetch(`/api/products/${productId}/reviews/eligibility`, { cache: 'no-store', credentials: 'include' })
+        ])
+        if (!ignore) {
+          if (r1.ok) {
+            const d1 = await r1.json()
+            setReviews(d1?.data?.reviews || [])
+          }
+          if (r2.ok) {
+            const d2 = await r2.json()
+            setCanReview(!!d2?.data?.canReview)
+            setMyReview(d2?.data?.myReview || null)
+          }
+        }
+      } catch {
+      } finally {
+        if (!ignore) setReviewsLoading(false)
+      }
+    }
+    load()
+    return () => { ignore = true }
+  }, [productId])
+
+  const refreshReviews = async () => {
+    try {
+      const [r1, r2] = await Promise.all([
+        fetch(`/api/products/${productId}/reviews`, { cache: 'no-store', credentials: 'include' }),
+        fetch(`/api/products/${productId}/reviews/eligibility`, { cache: 'no-store', credentials: 'include' })
+      ])
+      if (r1.ok) {
+        const d1 = await r1.json()
+        setReviews(d1?.data?.reviews || [])
+      }
+      if (r2.ok) {
+        const d2 = await r2.json()
+        setCanReview(!!d2?.data?.canReview)
+        setMyReview(d2?.data?.myReview || null)
+      }
+    } catch {}
+  }
 
   // Track product view once per mount
   useEffect(() => {
@@ -231,7 +287,7 @@ export default function ProductPage({}: ProductPageProps) {
           {/* Image Thumbnails */}
           {product.images && product.images.length > 1 && (
             <div className="flex space-x-2 overflow-x-auto">
-              {product.images.map((image, index) => (
+              {product.images.map((image: string, index: number) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImageIndex(index)}
@@ -378,7 +434,7 @@ export default function ProductPage({}: ProductPageProps) {
         </div>
       </div>
 
-      {/* Product Description */}
+      {/* Product Description and Reviews */}
       <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <Card className="p-6">
@@ -387,8 +443,51 @@ export default function ProductPage({}: ProductPageProps) {
               <p className="text-gray-700 leading-relaxed">{product.description}</p>
             </div>
           </Card>
+
+          {/* Reviews Section */}
+          <Card className="p-6 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Customer Reviews</h2>
+              <div className="text-sm text-gray-600">
+                Average: {(typeof product.rating === 'number' ? product.rating.toFixed(1) : (product.rating || 0))} · {product.reviewCount ?? 0} reviews
+              </div>
+            </div>
+            {reviewsLoading ? (
+              <div className="py-8 flex justify-center"><LoadingSpinner /></div>
+            ) : (
+              <ReviewsList reviews={reviews} />
+            )}
+            {canReview && (
+              <div className="mt-8 border-t pt-6">
+                <h3 className="text-lg font-semibold mb-2">Write a review</h3>
+                <ReviewForm
+                  productId={product._id}
+                  existingRating={myReview?.rating}
+                  existingTitle={myReview?.title}
+                  existingComment={myReview?.comment}
+                  onSubmitted={async () => {
+                    await refreshReviews()
+                    // Also refresh product to update rating/count
+                    try {
+                      const res = await fetch(`/api/products/${productId}`, { cache: 'no-store' })
+                      if (res.ok) {
+                        const json = await res.json()
+                        setProduct(json?.data?.product || json?.product || json)
+                      }
+                    } catch {}
+                  }}
+                />
+              </div>
+            )}
+            {!canReview && (
+              <div className="mt-6 text-sm text-gray-600">
+                Only customers who purchased this product can leave a review.
+              </div>
+            )}
+          </Card>
         </div>
 
+        {/* Right column product details */}
         <div className="space-y-6">
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4">Product Details</h3>

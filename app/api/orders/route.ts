@@ -100,33 +100,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Increment analytics for successful purchase
-    try {
-      const order = result.order!
-      if (order && order.items && order.items.length > 0) {
-        // Build bulk updates for counters and popularity score
-        const ops = order.items.map(it => ({
-          updateOne: {
-            filter: { _id: new mongoose.Types.ObjectId(it.productId) },
-            update: { $inc: { purchaseCount: it.quantity, popularityScore: 5 * it.quantity } }
-          }
-        }))
-        if (ops.length > 0) {
-          await Product.bulkWrite(ops)
-        }
-        // Log ProductEvent per item
-        try {
-          await ProductEvent.insertMany(order.items.map(it => ({
-            productId: new mongoose.Types.ObjectId(it.productId),
-            type: 'purchase',
-            quantity: it.quantity,
-            userId: order.userId
-          })))
-        } catch {}
-      }
-    } catch (analyticsErr) {
-      console.error('Failed to record purchase analytics:', analyticsErr)
-    }
+    // Note: Do NOT increment analytics here. This should only happen after successful payment.
 
     // Send order confirmation email
     try {

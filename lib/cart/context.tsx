@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useReducer, useEffect, ReactNode, useRef } from 'react'
 import { CartItemData } from '@/components/cart/CartItem'
 
 // Cart state interface
@@ -194,10 +194,12 @@ interface CartProviderProps {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState)
+  // Track the last time the client mutated cart (to avoid stale refresh overwrites)
+  const lastClientMutationTsRef = useRef<number>(0)
 
-  // Load cart from localStorage on mount
+  // Load cart from localStorage on mount, then refresh from server
   useEffect(() => {
-    const loadCartFromStorage = () => {
+    const loadCartFromStorage = async () => {
       try {
         const savedCart = localStorage.getItem('cart')
         if (savedCart) {
@@ -205,6 +207,16 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           dispatch({ type: 'SET_CART', payload: cartData })
         } else {
           // No saved cart; mark loading complete to avoid empty-cart flash
+          dispatch({ type: 'SET_LOADING', payload: false })
+        }
+        
+        // Always refresh from server to sync with server state
+        // This catches cases where server cart was cleared (e.g., after payment)
+        try {
+          await refreshCart()
+        } catch (error) {
+          // If server refresh fails, keep localStorage data
+          console.warn('Failed to refresh cart from server:', error)
           dispatch({ type: 'SET_LOADING', payload: false })
         }
       } catch (error) {
@@ -232,6 +244,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         'Content-Type': 'application/json',
         ...options.headers
       },
+      credentials: 'include',
       ...options
     })
 
@@ -248,13 +261,15 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   // Add item to cart
   const addItem = async (item: Omit<CartItemData, '_id'>) => {
     try {
+      // Record client mutation timestamp to guard against stale refresh responses
+      lastClientMutationTsRef.current = Date.now()
       dispatch({ type: 'SET_LOADING', payload: true })
       
       // Optimistic update
       dispatch({ type: 'ADD_ITEM', payload: item as CartItemData })
       
       // API call
-      await apiCall('/api/cart/add', {
+      const res = await apiCall('/api/cart/add', {
         method: 'POST',
         body: JSON.stringify({
           productId: item.productId,
@@ -267,8 +282,14 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           color: item.color
         })
       })
-      // Ensure client state matches server (and picks up session cookie for guests)
-      await refreshCart()
+      // Use server response to set cart (avoids race where cookie isn't yet read by GET)
+      const serverItems = res?.data?.cart?.items
+      if (Array.isArray(serverItems)) {
+        dispatch({ type: 'SET_CART', payload: serverItems })
+      } else {
+        // Fallback: refresh if server didn't return items
+        await refreshCart()
+      }
       dispatch({ type: 'SET_LOADING', payload: false })
     } catch (error) {
       // Revert optimistic update on error
@@ -364,6 +385,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       // API call (if you have a clear cart endpoint)
       // await apiCall('/api/cart/clear', { method: 'DELETE' })
       
+      // Ensure localStorage is cleared to avoid stale rehydration on navigation
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('cart')
+        }
+      } catch {}
+
       dispatch({ type: 'SET_LOADING', payload: false })
     } catch (error) {
       await refreshCart()
@@ -375,11 +403,35 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const refreshCart = async () => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true })
+      const requestStartedAt = Date.now()
       
       const response = await apiCall('/api/cart', { method: 'GET' })
       // API returns { success, data: { cart: { items, ... } } }
       const items = response?.data?.cart?.items || []
+      // Avoid clobbering a non-empty client cart with an empty server cart due to timing/cookie races
+      if (
+        Array.isArray(items) && items.length === 0 && (
+          // If client recently mutated after this refresh started, ignore this empty response
+          lastClientMutationTsRef.current > requestStartedAt ||
+          // Or if client already has items, keep them
+          state.items.length > 0
+        )
+      ) {
+        // Keep client state; just stop loading
+        dispatch({ type: 'SET_LOADING', payload: false })
+        return
+      }
+
       dispatch({ type: 'SET_CART', payload: items })
+
+      // If server cart is empty, also clear localStorage to prevent rehydration on future mounts
+      if (Array.isArray(items) && items.length === 0) {
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('cart')
+          }
+        } catch {}
+      }
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error instanceof Error ? error.message : 'Failed to load cart' })
     }

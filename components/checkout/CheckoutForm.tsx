@@ -195,14 +195,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
 
       // For bank transfer, redirect to order page immediately
       if (paymentMethod.type === 'bank_transfer') {
-        // Clear client-side cart before navigating
-        try {
-          await clearCart()
-          // Extra safety: ensure localStorage is clean
-          if (typeof window !== 'undefined') {
-            window.localStorage.removeItem('cart')
-          }
-        } catch {}
         if (onOrderComplete) {
           onOrderComplete(orderId)
         } else {
@@ -212,13 +204,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
       }
 
       // For card payment, redirect to order page where Paystack payment will be handled
-      // Clear client-side cart prior to navigation
-      try {
-        await clearCart()
-        if (typeof window !== 'undefined') {
-          window.localStorage.removeItem('cart')
-        }
-      } catch {}
       if (onOrderComplete) {
         onOrderComplete(orderId)
       } else {

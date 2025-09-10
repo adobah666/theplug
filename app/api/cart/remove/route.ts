@@ -3,6 +3,8 @@ import connectDB from '@/lib/db/connection'
 import Cart from '@/lib/db/models/Cart'
 import { verifyToken } from '@/lib/auth/jwt'
 import { ApiResponse } from '@/types'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth/config'
 
 interface RemoveFromCartRequest {
   itemId: string
@@ -23,24 +25,29 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Get user ID from token or use session ID for guest users
+    // Prefer NextAuth session userId, then Authorization token; else guest sessionId cookie
     let userId: string | null = null
     let sessionId: string | null = null
 
-    const authHeader = request.headers.get('authorization')
-    if (authHeader?.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.substring(7)
-        const decoded = verifyToken(token)
-        userId = decoded.userId
-      } catch (error) {
-        // Invalid token, treat as guest user
+    const session = await getServerSession(authOptions)
+    if (session && (session.user as any)?.id) {
+      userId = (session.user as any).id
+    } else {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        try {
+          const token = authHeader.substring(7)
+          const decoded = verifyToken(token)
+          userId = decoded.userId
+        } catch (error) {
+          // Invalid token, treat as guest user
+        }
       }
     }
 
     // For guest users, use session ID from cookies
     if (!userId) {
-      sessionId = request.cookies.get('sessionId')?.value
+      sessionId = request.cookies.get('sessionId')?.value || null
       if (!sessionId) {
         return NextResponse.json<ApiResponse>({
           success: false,

@@ -4,15 +4,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '../../../../lib/db/connection';
-import Order from '../../../../lib/db/models/Order';
-import { authenticateToken } from '../../../../lib/auth/middleware';
+import connectDB from '@/lib/db/connection';
+import Order from '@/lib/db/models/Order';
+import Cart from '@/lib/db/models/Cart';
+import Product from '@/lib/db/models/Product';
+import ProductEvent from '@/lib/db/models/ProductEvent';
+import { reserveInventory } from '@/lib/orders/service';
+import { authenticateToken } from '@/lib/auth/middleware';
 import { 
   verifyPayment, 
   isPaymentSuccessful, 
   validatePaymentAmount,
   koboToNaira 
-} from '../../../../lib/paystack';
+} from '@/lib/paystack';
 
 interface PaymentVerifyRequest {
   reference: string;
@@ -80,6 +84,14 @@ export async function POST(request: NextRequest) {
 
     // Check if payment was successful
     if (isPaymentSuccessful(verificationResult)) {
+      // Reserve inventory now that payment is confirmed
+      try {
+        await reserveInventory(order.items as any, null) // no transaction session here
+      } catch (inventoryError) {
+        console.error('Failed to reserve inventory after payment:', inventoryError)
+        // Continue with order update but log the issue
+      }
+
       // Update order status
       order.paymentStatus = 'paid';
       order.status = 'confirmed';
@@ -97,7 +109,46 @@ export async function POST(request: NextRequest) {
 
       await order.save();
 
-      return NextResponse.json({
+      // Increment analytics for successful purchase
+      try {
+        if (order.items && order.items.length > 0) {
+          const ops = order.items.map((it: any) => ({
+            updateOne: {
+              filter: { _id: it.productId },
+              update: { $inc: { purchaseCount: it.quantity, popularityScore: 5 * it.quantity } }
+            }
+          }))
+          if (ops.length > 0) {
+            await Product.bulkWrite(ops)
+          }
+          // Log ProductEvent per item
+          try {
+            await ProductEvent.insertMany(order.items.map((it: any) => ({
+              productId: it.productId,
+              type: 'purchase',
+              quantity: it.quantity,
+              userId: order.userId
+            })))
+          } catch {}
+        }
+      } catch (analyticsErr) {
+        console.error('Failed to record purchase analytics:', analyticsErr)
+      }
+
+      // Clear server-side carts for this user after successful payment
+      let sessionIdCookie: string | undefined
+      try {
+        await Cart.deleteMany({ userId: order.userId })
+        // Also clear any guest carts tied to the current sessionId cookie
+        sessionIdCookie = request.cookies.get('sessionId')?.value
+        if (sessionIdCookie) {
+          await Cart.deleteMany({ sessionId: sessionIdCookie })
+        }
+      } catch (cartErr) {
+        console.error('Failed to clear cart(s) after payment:', cartErr)
+      }
+
+      const successResponse = NextResponse.json({
         success: true,
         message: 'Payment verified successfully',
         data: {
@@ -109,7 +160,14 @@ export async function POST(request: NextRequest) {
           paidAt: order.paidAt,
           reference: reference,
         },
-      });
+      })
+
+      // Expire the guest sessionId cookie if present (prevents stale guest cart rehydration)
+      if (sessionIdCookie) {
+        successResponse.cookies.set('sessionId', '', { maxAge: 0, httpOnly: true, sameSite: 'lax' })
+      }
+
+      return successResponse
     } else {
       // Payment failed
       order.paymentStatus = 'failed';
