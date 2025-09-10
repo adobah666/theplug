@@ -3,6 +3,7 @@ import { Hero } from '@/components/layout/Hero'
 import { FeaturedProducts } from '@/components/product/FeaturedProducts'
 import { TrendingSection } from '@/components/product/TrendingSection'
 import { CategoryShowcase } from '@/components/layout/CategoryShowcase'
+import { CategoryProductsRow } from '@/components/product/CategoryProductsRow'
 import { PromotionalBanner } from '@/components/layout/PromotionalBanner'
 import { Newsletter } from '@/components/layout/Newsletter'
 import { Testimonials } from '@/components/layout/Testimonials'
@@ -352,6 +353,16 @@ function HomePageContent({ featuredProducts, categories, categorySlides }: HomeP
         title="Shop by Category"
         subtitle="Find exactly what you're looking for in our curated collections"
       />
+
+      {/* Per-Category Latest Rows */}
+      {categories.length > 0 && categories.map((cat) => (
+        <CategoryProductsRow
+          key={cat.id}
+          categorySlug={cat.id}
+          categoryName={cat.name}
+          limit={20}
+        />
+      ))}
 
       {/* Customer Testimonials *
       <Testimonials />/}
