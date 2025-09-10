@@ -151,51 +151,120 @@ const PromotionalBanner: React.FC<PromotionalBannerProps> = ({
     const total = categorySlides.length
     const current = Math.max(0, Math.min(currentIndex, total - 1))
     return (
-      <section className="relative overflow-hidden">
-        <div className="bg-white">
-          <div className="relative mx-auto max-w-7xl px-4 py-10 sm:py-14">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-gray-900 text-2xl sm:text-3xl font-bold">Latest in {categorySlides[current].categoryName}</h2>
-              <div className="flex gap-2">
-                <Link href={`/categories/${categorySlides[current].categorySlug}`} className="hidden sm:inline-block text-sm text-blue-600 hover:text-blue-700 mr-3">View all</Link>
-                <button onClick={() => setCurrentIndex((current - 1 + total) % total)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full p-2 shadow-sm ring-1 ring-gray-300" aria-label="Prev">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                </button>
-                <button onClick={() => setCurrentIndex((current + 1) % total)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full p-2 shadow-sm ring-1 ring-gray-300" aria-label="Next">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                </button>
-              </div>
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <div className="absolute inset-0 opacity-30">
+          <div className="w-full h-full" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f1f5f9' fill-opacity='0.4'%3E%3Ccircle cx='7' cy='7' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+          }}></div>
+        </div>
+        
+        <div className="relative mx-auto max-w-7xl px-4 py-16 sm:py-20">
+          {/* Header with improved typography */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full text-sm font-medium text-indigo-600 mb-4 shadow-sm">
+              ✨ Featured Collection
             </div>
-            <div className="overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-gray-200">
-              <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${current * 100}%)` }}>
-                {categorySlides.map((slide, i) => (
-                  <div key={slide.categorySlug + i} className="w-full flex-shrink-0 px-3 py-4" style={{ minWidth: '100%' }}>
-                    {/* Centered wrapped row with max width to force wrapping */}
-                    <div className="mx-auto flex flex-wrap justify-center gap-5 max-w-[1100px]">
-                      {slide.products.map(p => (
-                        <Link key={p.id} href={p.href} className="group relative rounded-lg overflow-hidden bg-white transition-colors border border-gray-200 w-[180px] sm:w-[200px] md:w-[220px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-200">
-                          <div className="relative aspect-[4/3] w-full">
-                            <Image src={p.image} alt={p.name} fill className="object-cover" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-70 group-hover:opacity-60 transition-opacity" />
-                            <div className="absolute bottom-2 left-2 right-2">
-                              <div className="text-white text-sm font-semibold truncate drop-shadow">{p.name}</div>
-                              <div className="text-yellow-300 text-sm font-bold drop-shadow">₦{p.price.toLocaleString()}</div>
+            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+              Latest in <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">{categorySlides[current].categoryName}</span>
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Discover our handpicked selection of trending items in this category
+            </p>
+          </div>
+
+          {/* Navigation Controls */}
+          <div className="flex justify-center items-center gap-4 mb-8">
+            <button 
+              onClick={() => setCurrentIndex((current - 1 + total) % total)} 
+              className="group bg-white/90 backdrop-blur-sm hover:bg-white text-gray-700 hover:text-indigo-600 rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-200 border border-white/20"
+              aria-label="Previous category"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            
+            <div className="flex gap-2">
+              {categorySlides.map((_, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => setCurrentIndex(i)} 
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    i === current 
+                      ? 'bg-indigo-600 scale-125 shadow-lg' 
+                      : 'bg-white/60 hover:bg-white/80 hover:scale-110'
+                  }`} 
+                  aria-label={`Go to ${categorySlides[i].categoryName}`} 
+                />
+              ))}
+            </div>
+            
+            <button 
+              onClick={() => setCurrentIndex((current + 1) % total)} 
+              className="group bg-white/90 backdrop-blur-sm hover:bg-white text-gray-700 hover:text-indigo-600 rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-200 border border-white/20"
+              aria-label="Next category"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Products Carousel */}
+          <div className="relative overflow-hidden rounded-3xl bg-white/60 backdrop-blur-sm shadow-2xl border border-white/20">
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5"></div>
+            
+            <div className="relative flex transition-transform duration-700 ease-out" style={{ transform: `translateX(-${current * 100}%)` }}>
+              {categorySlides.map((slide, i) => (
+                <div key={slide.categorySlug + i} className="w-full flex-shrink-0 p-8" style={{ minWidth: '100%' }}>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 max-w-6xl mx-auto">
+                    {slide.products.slice(0, 12).map(p => (
+                      <Link 
+                        key={p.id} 
+                        href={p.href} 
+                        className="group relative rounded-2xl overflow-hidden bg-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-gray-100"
+                      >
+                        <div className="relative aspect-square w-full">
+                          <Image 
+                            src={p.image} 
+                            alt={p.name} 
+                            fill 
+                            className="object-cover group-hover:scale-110 transition-transform duration-500" 
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          
+                          {/* Floating price tag */}
+                          <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm text-gray-900 px-2 py-1 rounded-full text-xs font-bold shadow-lg">
+                            ₦{p.price.toLocaleString()}
+                          </div>
+                          
+                          {/* Product info overlay */}
+                          <div className="absolute bottom-0 left-0 right-0 p-3 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                            <div className="text-white">
+                              <div className="font-semibold text-sm truncate mb-1">{p.name}</div>
+                              <div className="text-xs opacity-90">View Details →</div>
                             </div>
                           </div>
-                        </Link>
-                      ))}
-                    </div>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-            {total > 1 && (
-              <div className="flex justify-center mt-4 space-x-2">
-                {categorySlides.map((_, i) => (
-                  <button key={i} onClick={() => setCurrentIndex(i)} className={`w-2.5 h-2.5 rounded-full ${i === current ? 'bg-gray-800' : 'bg-gray-300'}`} aria-label={`Go to slide ${i+1}`} />
-                ))}
-              </div>
-            )}
+          </div>
+
+          {/* View All CTA */}
+          <div className="text-center mt-8">
+            <Link 
+              href={`/search?category=${categorySlides[current].categorySlug}`}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+            >
+              Explore All {categorySlides[current].categoryName}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
           </div>
         </div>
       </section>
