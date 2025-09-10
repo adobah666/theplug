@@ -331,7 +331,7 @@ function HomePageContent({ featuredProducts, categories, categorySlides }: HomeP
       <Hero featuredProducts={heroProducts} />
 
       {/* Promotional Banner - category-based slides */}
-      <PromotionalBanner categorySlides={categorySlides} />
+      {/* <PromotionalBanner categorySlides={categorySlides} /> */}
 
       {/* Featured Products 
       <FeaturedProducts 

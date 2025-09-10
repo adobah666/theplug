@@ -178,7 +178,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className="pr-20 pl-10 py-3 sm:py-2 text-base sm:text-sm"
+          className="pr-28 sm:pr-20 pl-4 sm:pl-10 py-3 sm:py-2 text-base sm:text-sm"
           style={{ fontSize: '16px' }} // Prevents zoom on iOS
           aria-label="Search products"
           aria-expanded={showSuggestionsList}
@@ -186,9 +186,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           role="combobox"
         />
         
-        {/* Search icon */}
+        {/* Search icon (hidden on mobile to prevent placeholder overlap) */}
         <Search 
-          className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" 
+          className="hidden sm:block absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" 
           aria-hidden="true"
         />
         

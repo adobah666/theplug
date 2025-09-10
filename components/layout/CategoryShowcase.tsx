@@ -25,60 +25,11 @@ const CategoryShowcase: React.FC<CategoryShowcaseProps> = ({
   title = "Shop by Category",
   subtitle = "Explore our diverse collection across different fashion categories"
 }) => {
-  const defaultCategories: Category[] = [
-    {
-      id: 'clothing',
-      name: 'Clothing',
-      description: 'Discover the latest trends in fashion',
-      image: '/images/categories/clothing.jpg',
-      href: '/search?category=clothing',
-      productCount: 1250,
-      isPopular: true
-    },
-    {
-      id: 'shoes',
-      name: 'Shoes',
-      description: 'Step up your style game',
-      image: '/images/categories/shoes.jpg',
-      href: '/search?category=shoes',
-      productCount: 850,
-      isPopular: true
-    },
-    {
-      id: 'accessories',
-      name: 'Accessories',
-      description: 'Complete your look with perfect accessories',
-      image: '/images/categories/accessories.jpg',
-      href: '/search?category=accessories',
-      productCount: 650
-    },
-    {
-      id: 'bags',
-      name: 'Bags',
-      description: 'Carry your essentials in style',
-      image: '/images/categories/bags.jpg',
-      href: '/search?category=bags',
-      productCount: 420
-    },
-    {
-      id: 'jewelry',
-      name: 'Jewelry',
-      description: 'Shine bright with our jewelry collection',
-      image: '/images/categories/jewelry.jpg',
-      href: '/search?category=jewelry',
-      productCount: 380
-    },
-    {
-      id: 'sportswear',
-      name: 'Sportswear',
-      description: 'Active wear for your active lifestyle',
-      image: '/images/categories/sportswear.jpg',
-      href: '/search?category=sportswear',
-      productCount: 520
-    }
-  ]
+  const displayCategories = categories
 
-  const displayCategories = categories.length > 0 ? categories : defaultCategories
+  if (!displayCategories || displayCategories.length === 0) {
+    return null
+  }
 
   return (
     <section className="py-16 bg-gray-50">
@@ -95,21 +46,13 @@ const CategoryShowcase: React.FC<CategoryShowcaseProps> = ({
 
         {/* Categories Grid */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {displayCategories.map((category, index) => (
+          {displayCategories.slice(0, 8).map((category) => (
             <Link
               key={category.id}
-              href={category.href}
-              className={`group relative overflow-hidden rounded-2xl bg-white shadow-sm hover:shadow-xl transition-all duration-300 ${
-                index === 0 ? 'sm:col-span-2 lg:col-span-1' : ''
-              } ${
-                index === 1 ? 'lg:col-span-2' : ''
-              }`}
+              href={`/categories/${encodeURIComponent(category.id)}`}
+              className={`group relative overflow-hidden rounded-2xl bg-white shadow-sm hover:shadow-xl transition-all duration-300`}
             >
-              <div className={`relative ${
-                index === 0 ? 'aspect-[4/3] sm:aspect-[2/1] lg:aspect-[4/3]' : 
-                index === 1 ? 'aspect-[4/3] lg:aspect-[2/1]' : 
-                'aspect-[4/3]'
-              }`}>
+              <div className={`relative aspect-[4/3]`}>
                 {/* Category Image */}
                 <Image
                   src={category.image}
