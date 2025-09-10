@@ -125,7 +125,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
     const lat = Number(center[1])
     const streetLine = [props.house_number, props.street].filter(Boolean).join(' ').trim() || props.address_line1 || streetQuery || ''
     const city = props.city || props.town || props.suburb || formData.city
-    const state = props.state || props.region || formData.state
+    const state = selectRegionName(props.state || props.region || formData.state)
     const zip = props.postcode || formData.zipCode
     const country = props.country || formData.country || 'Ghana'
     setFormData(prev => ({
@@ -152,7 +152,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
       const props = feat?.properties || {}
       const streetLine = [props.house_number, props.street].filter(Boolean).join(' ').trim() || props.address_line1 || ''
       const city = props.city || props.town || props.suburb || ''
-      const state = props.state || props.region || ''
+      const state = selectRegionName(props.state || props.region || '')
       const zip = props.postcode || ''
       const country = props.country || 'Ghana'
       setFormData(prev => ({
@@ -304,6 +304,21 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
     'North East', 'Northern', 'Oti', 'Savannah', 'Upper East', 'Upper West', 'Volta',
     'Western', 'Western North'
   ]
+
+  // Normalize region/state values from geocoders to our select list
+  const selectRegionName = (raw?: string): string => {
+    const input = (raw || '').toLowerCase().replace(/\s*region$/i, '').trim()
+    if (!input) return ''
+    // Try exact match ignoring case and optional 'Region' suffix
+    const exact = ghanaRegions.find(r => r.toLowerCase() === input)
+    if (exact) return exact
+    // Try startsWith/contains when geocoder returns variations
+    const starts = ghanaRegions.find(r => input.startsWith(r.toLowerCase()))
+    if (starts) return starts
+    const contains = ghanaRegions.find(r => r.toLowerCase().includes(input) || input.includes(r.toLowerCase()))
+    if (contains) return contains
+    return raw || ''
+  }
 
   // Show loading state
   if (loadingAddresses) {
