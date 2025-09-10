@@ -56,6 +56,10 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState<string | null>(null)
   const [mapOpen, setMapOpen] = useState(false)
+  const [streetQuery, setStreetQuery] = useState('')
+  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch saved addresses on mount
   useEffect(() => {
@@ -84,6 +88,58 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
     
     fetchAddresses()
   }, [session])
+
+  // Fetch Geoapify autocomplete suggestions
+  const fetchStreetSuggestions = async (query: string) => {
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GEOAPIFY_KEY || 'bd603f696b62465599f055e3b99cd4bc'
+      const params = new URLSearchParams()
+      params.set('text', query)
+      // Bias or filter to Ghana when country is Ghana
+      if ((formData.country || 'Ghana').toLowerCase() === 'ghana') {
+        params.set('filter', 'countrycode:gh')
+      }
+      params.set('limit', '5')
+      params.set('apiKey', apiKey)
+      const url = `https://api.geoapify.com/v1/geocode/autocomplete?${params.toString()}`
+      const res = await fetch(url)
+      if (!res.ok) {
+        setSuggestions([])
+        setShowSuggestions(false)
+        return
+      }
+      const data = await res.json().catch(() => ({} as any))
+      const feats = Array.isArray(data?.features) ? data.features : []
+      setSuggestions(feats)
+      setShowSuggestions(feats.length > 0)
+    } catch (e) {
+      setSuggestions([])
+      setShowSuggestions(false)
+    }
+  }
+
+  const handleSelectSuggestion = (feat: any) => {
+    const props = feat?.properties || {}
+    const center = Array.isArray(feat?.geometry?.coordinates) ? feat.geometry.coordinates : []
+    const lon = Number(center[0])
+    const lat = Number(center[1])
+    const streetLine = [props.house_number, props.street].filter(Boolean).join(' ').trim() || props.address_line1 || streetQuery || ''
+    const city = props.city || props.town || props.suburb || formData.city
+    const state = props.state || props.region || formData.state
+    const zip = props.postcode || formData.zipCode
+    const country = props.country || formData.country || 'Ghana'
+    setFormData(prev => ({
+      ...prev,
+      street: streetLine,
+      city,
+      state,
+      zipCode: zip,
+      country,
+      ...(isNaN(lat) || isNaN(lon) ? {} : { latitude: lat, longitude: lon })
+    }))
+    setSuggestions([])
+    setShowSuggestions(false)
+  }
 
   // Reverse geocode helper used by map confirm
   const reverseGeocodeAndFill = async (lat: number, lon: number) => {
@@ -203,6 +259,20 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
     // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
+    }
+
+    // Trigger autocomplete for street field
+    if (field === 'street') {
+      setStreetQuery(value)
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      if (value && value.trim().length >= 3) {
+        debounceRef.current = setTimeout(() => {
+          fetchStreetSuggestions(value.trim())
+        }, 350)
+      } else {
+        setSuggestions([])
+        setShowSuggestions(false)
+      }
     }
   }
 
@@ -369,8 +439,8 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
             />
           </div>
 
-          {/* Street Address */}
-          <div>
+          {/* Street Address with Autocomplete */}
+          <div className="relative">
             <div className="flex items-end gap-3">
               <div className="flex-1">
                 <Input
@@ -382,17 +452,36 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
                   required
                   disabled={isLoading}
                 />
+                {/* Suggestions Dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-40 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg max-h-64 overflow-auto">
+                    {suggestions.map((s, idx) => {
+                      const p = s?.properties || {}
+                      const primary = p.formatted || [p.house_number, p.street].filter(Boolean).join(' ') || p.address_line1 || 'Unknown address'
+                      const secondary = [p.city || p.town || p.suburb, p.state || p.region, p.postcode, p.country].filter(Boolean).join(', ')
+                      return (
+                        <button
+                          type="button"
+                          key={s?.properties?.place_id || idx}
+                          className="flex w-full text-left px-3 py-2 hover:bg-gray-50"
+                          onClick={() => handleSelectSuggestion(s)}
+                        >
+                          <div className="text-sm">
+                            <div className="text-gray-900">{primary}</div>
+                            {secondary && <div className="text-gray-500">{secondary}</div>}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={handleUseMyLocation} disabled={isLoading || locating} className="whitespace-nowrap h-10">
-                  {locating ? 'Locating…' : 'Use my location'}
-                </Button>
                 <Button type="button" variant="outline" onClick={() => setMapOpen(true)} disabled={isLoading} className="whitespace-nowrap h-10">
                   Adjust on map
                 </Button>
               </div>
             </div>
-            {locError && <p className="mt-1 text-sm text-red-600">{locError}</p>}
             {(formData.latitude && formData.longitude) && (
               <p className="mt-1 text-xs text-gray-500">Lat: {formData.latitude.toFixed(6)}, Lng: {formData.longitude.toFixed(6)}</p>
             )}
@@ -441,6 +530,25 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
               placeholder="GA-123-4567"
               disabled={isLoading}
             />
+          </div>
+
+          {/* Location Accuracy Notice */}
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <p className="mb-1 font-medium">Verify your location</p>
+            <p className="mb-1">
+              Try to place the pin as close as possible to where you are. It doesn’t have to be perfect — a nearby landmark works too.
+            </p>
+            <p>
+              If you need to fine‑tune it,
+              <button
+                type="button"
+                onClick={() => setMapOpen(true)}
+                className="mx-1 underline decoration-red-400 underline-offset-2 hover:text-red-800"
+              >
+                Adjust on map
+              </button>
+              and our rider can call you to confirm directions.
+            </p>
           </div>
 
           {/* Country */}
@@ -534,6 +642,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
         apiKey={process.env.NEXT_PUBLIC_GEOAPIFY_KEY || 'bd603f696b62465599f055e3b99cd4bc'}
         lat={typeof formData.latitude === 'number' ? formData.latitude : undefined}
         lon={typeof formData.longitude === 'number' ? formData.longitude : undefined}
+        initialQuery={[formData.street, formData.city, formData.state, formData.country].filter(Boolean).join(', ')}
         onClose={() => setMapOpen(false)}
         onConfirm={({ lat, lon }) => {
           reverseGeocodeAndFill(lat, lon)
