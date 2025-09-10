@@ -89,10 +89,15 @@ export async function createOrder(request: CreateOrderRequest): Promise<OrderCre
 
     await order.save({ session })
 
-    // Clear the cart if order was created from cart
+    // Clear the user's cart after successful order creation
+    // If the order came from a specific cartId, delete that cart.
     if (request.cartId) {
       await Cart.findByIdAndDelete(request.cartId).session(session)
     }
+    // Additionally, ensure any remaining carts for this user are removed.
+    // This covers cases where the order was created from explicit items (no cartId)
+    // and prevents old items from reappearing on the next session/cart refresh.
+    await Cart.deleteMany({ userId: new mongoose.Types.ObjectId(request.userId) }).session(session)
 
     await session.commitTransaction()
 
@@ -146,7 +151,7 @@ async function convertCartItemsToOrderItems(
 
     // Get variant details if applicable
     if (cartItem.variantId) {
-      const variant = product.variants.find(v => v._id?.toString() === cartItem.variantId)
+      const variant = product.variants.find((v: any) => v._id?.toString() === cartItem.variantId)
       if (!variant) {
         throw new Error(`Variant ${cartItem.variantId} not found for product ${product.name}`)
       }
@@ -215,7 +220,7 @@ async function reserveInventory(
 
     if (item.variantId) {
       // Reserve variant inventory
-      const variantIndex = product.variants.findIndex(v => v._id?.toString() === item.variantId)
+      const variantIndex = product.variants.findIndex((v: any) => v._id?.toString() === item.variantId)
       if (variantIndex === -1) {
         throw new Error(`Variant ${item.variantId} not found`)
       }
@@ -262,7 +267,7 @@ export async function restoreInventory(orderId: string): Promise<void> {
 
       if (item.variantId) {
         // Restore variant inventory
-        const variantIndex = product.variants.findIndex(v => v._id?.toString() === item.variantId)
+        const variantIndex = product.variants.findIndex((v: any) => v._id?.toString() === item.variantId)
         if (variantIndex !== -1) {
           product.variants[variantIndex].inventory += item.quantity
         }

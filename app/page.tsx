@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { Hero } from '@/components/layout/Hero'
 import { FeaturedProducts } from '@/components/product/FeaturedProducts'
+import { TrendingSection } from '@/components/product/TrendingSection'
 import { CategoryShowcase } from '@/components/layout/CategoryShowcase'
 import { PromotionalBanner } from '@/components/layout/PromotionalBanner'
 import { Newsletter } from '@/components/layout/Newsletter'
@@ -152,37 +153,111 @@ async function getFeaturedProducts() {
 }
 
 async function getCategories() {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 50))
-  
-  return [
-    {
-      id: 'clothing',
-      name: 'Clothing',
-      description: 'Discover the latest trends in fashion',
-      image: '/images/categories/clothing.jpg',
-      href: '/search?category=clothing',
-      productCount: 1250,
-      isPopular: true
-    },
-    {
-      id: 'shoes',
-      name: 'Shoes',
-      description: 'Step up your style game',
-      image: '/images/categories/shoes.jpg',
-      href: '/search?category=shoes',
-      productCount: 850,
-      isPopular: true
-    },
-    {
-      id: 'accessories',
-      name: 'Accessories',
-      description: 'Complete your look with perfect accessories',
-      image: '/images/categories/accessories.jpg',
-      href: '/search?category=accessories',
-      productCount: 650
+  try {
+    console.log('[home:getCategories] Fetching real categories with product images')
+    
+    const base = (process.env.NEXT_PUBLIC_SITE_URL && process.env.NEXT_PUBLIC_SITE_URL.trim().length > 0)
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
+    // 1) Get all categories
+    const catRes = await fetch(`${base}/api/categories`, { cache: 'no-store', next: { revalidate: 0 } })
+    if (!catRes.ok) {
+      console.error('[home:getCategories] /api/categories HTTP', catRes.status, catRes.statusText)
+      return []
     }
-  ]
+    
+    const catJson = await catRes.json().catch((e) => { 
+      console.error('[home:getCategories] categories.json error', e); 
+      return {} as any 
+    })
+    
+    const categories: Array<{ slug: string; name: string; _id: string }> = (catJson?.data?.categories || [])
+    console.log('[home:getCategories] Found categories:', categories.length)
+
+    if (categories.length === 0) {
+      return []
+    }
+
+    // 2) For each category, get a random product image and count
+    const categoryPromises = categories.map(async (cat) => {
+      try {
+        // Get products from this category
+        const params = new URLSearchParams({ 
+          category: cat.slug, 
+          sort: 'newest', 
+          order: 'desc', 
+          page: '1', 
+          limit: '20' 
+        })
+        
+        const prodRes = await fetch(`${base}/api/products/search?${params.toString()}`, { 
+          cache: 'no-store', 
+          next: { revalidate: 0 } 
+        })
+        
+        if (!prodRes.ok) {
+          console.warn('[home:getCategories] products search failed for', cat.slug, prodRes.status)
+          return null
+        }
+
+        const prodJson = await prodRes.json().catch((e) => { 
+          console.warn('[home:getCategories] products json failed for', cat.slug, e); 
+          return {} as any 
+        })
+
+        const products: any[] = Array.isArray(prodJson?.data?.data) ? prodJson.data.data : []
+        const totalCount = prodJson?.data?.total || products.length
+
+        console.log('[home:getCategories] Category', cat.slug, 'has', products.length, 'products, total:', totalCount)
+
+        // Find a product with an image
+        const productWithImage = products.find((p: any) => 
+          Array.isArray(p?.images) && p.images.length > 0
+        )
+
+        const randomImage = productWithImage?.images?.[0] || '/images/placeholder.png'
+        
+        // Determine if popular (categories with more products are more popular)
+        const isPopular = totalCount > 50
+
+        return {
+          id: cat.slug,
+          name: cat.name,
+          description: `Explore our ${cat.name.toLowerCase()} collection`,
+          image: randomImage,
+          href: `/search?category=${cat.slug}`,
+          productCount: totalCount,
+          isPopular
+        }
+      } catch (error) {
+        console.error('[home:getCategories] Error processing category', cat.slug, error)
+        return null
+      }
+    })
+
+    const processedCategories = (await Promise.all(categoryPromises))
+      .filter(Boolean)
+      .sort((a, b) => (b?.productCount || 0) - (a?.productCount || 0)) // Sort by product count
+      .slice(0, 6) // Limit to 6 categories for display
+
+    console.log('[home:getCategories] Processed categories:', processedCategories.length)
+    console.log('[home:getCategories] Categories with counts:', 
+      processedCategories.map(c => ({ name: c?.name, count: c?.productCount })))
+
+    return processedCategories.filter(Boolean) as Array<{
+      id: string
+      name: string
+      description: string
+      image: string
+      href: string
+      productCount: number
+      isPopular: boolean
+    }>
+  } catch (error) {
+    console.error('[home:getCategories] Error fetching categories:', error)
+    return []
+  }
 }
 
 // Build slides for the promo banner: one slide per category with latest items (side-by-side)
@@ -257,9 +332,16 @@ function HomePageContent({ featuredProducts, categories, categorySlides }: HomeP
       {/* Promotional Banner - category-based slides */}
       <PromotionalBanner categorySlides={categorySlides} />
 
-      {/* Featured Products */}
+      {/* Featured Products 
       <FeaturedProducts 
         products={featuredProducts}
+        title="Discover Your Perfect Style"
+        subtitle="Handpicked selection from each category"
+      />*/}
+
+      {/* Trending Section - Horizontal Scrolling */}
+      <TrendingSection 
+        excludeIds={featuredProducts.map(p => p.id)}
         title="Trending Now"
         subtitle="Discover what's popular with our customers this week"
       />

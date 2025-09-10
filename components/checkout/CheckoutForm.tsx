@@ -17,7 +17,7 @@ interface CheckoutFormProps {
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
   const router = useRouter()
-  const { state: cartState, refreshCart } = useCart()
+  const { state: cartState, refreshCart, clearCart } = useCart()
   const { session } = useAuth()
   
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('shipping')
@@ -127,48 +127,67 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
     setError(null)
 
     try {
-      // Create order
+      // Get current cart from server to obtain cartId for proper deletion
+      let cartId: string | null = null
+      try {
+        const cartResponse = await fetch('/api/cart', { method: 'GET' })
+        if (cartResponse.ok) {
+          const cartData = await cartResponse.json()
+          cartId = cartData?.data?.cart?.id
+        }
+      } catch {
+        // Continue without cartId if cart fetch fails
+      }
+
+      // Create order - prefer cartId over items for proper cart deletion
+      const orderPayload: any = {
+        shippingAddress: {
+          street: shippingAddress.street,
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          ...(shippingAddress.zipCode ? { zipCode: shippingAddress.zipCode } : {}),
+          country: shippingAddress.country,
+          recipientName: `${shippingAddress.firstName} ${shippingAddress.lastName}`.trim(),
+          recipientPhone: shippingAddress.phone,
+        },
+        paymentMethod: paymentMethod.type,
+        subtotal,
+        shipping,
+        tax,
+        total
+      }
+
+      // Use cartId if available, otherwise fall back to items
+      if (cartId) {
+        orderPayload.cartId = cartId
+      } else {
+        orderPayload.items = cartState.items.map(item => ({
+          productId: typeof (item as any).productId === 'string'
+            ? (item as any).productId
+            : ((item as any).productId?._id || String((item as any).productId || '')),
+          variantId: typeof item.variantId === 'string' ? item.variantId : (item as any).variantId || undefined,
+          productName: item.name,
+          productImage: item.image,
+          size: item.size,
+          color: item.color,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          totalPrice: item.price * item.quantity,
+        }))
+      }
+
       const orderResponse = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          // Map items to the server's expected IOrderItem shape
-          items: cartState.items.map(item => ({
-            productId: typeof (item as any).productId === 'string'
-              ? (item as any).productId
-              : ((item as any).productId?._id || String((item as any).productId || '')),
-            variantId: typeof item.variantId === 'string' ? item.variantId : (item as any).variantId || undefined,
-            productName: item.name,
-            productImage: item.image,
-            size: item.size,
-            color: item.color,
-            quantity: item.quantity,
-            unitPrice: item.price,
-            totalPrice: item.price * item.quantity,
-          })),
-          // Map shipping address to API contract
-          shippingAddress: {
-            street: shippingAddress.street,
-            city: shippingAddress.city,
-            state: shippingAddress.state,
-            ...(shippingAddress.zipCode ? { zipCode: shippingAddress.zipCode } : {}),
-            country: shippingAddress.country,
-            recipientName: `${shippingAddress.firstName} ${shippingAddress.lastName}`.trim(),
-            recipientPhone: shippingAddress.phone,
-          },
-          paymentMethod: paymentMethod.type,
-          subtotal,
-          shipping,
-          tax,
-          total
-        })
+        body: JSON.stringify(orderPayload)
       })
 
       if (!orderResponse.ok) {
-        const errorData = await orderResponse.json()
-        throw new Error(errorData.error || errorData.message || 'Failed to create order')
+        const errorData = await orderResponse.json().catch(() => ({}))
+        const details = Array.isArray(errorData?.details) ? `\n${errorData.details.join('\n')}` : ''
+        throw new Error((errorData.error || errorData.message || 'Failed to create order') + details)
       }
 
       const orderData = await orderResponse.json()
@@ -176,6 +195,14 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
 
       // For bank transfer, redirect to order page immediately
       if (paymentMethod.type === 'bank_transfer') {
+        // Clear client-side cart before navigating
+        try {
+          await clearCart()
+          // Extra safety: ensure localStorage is clean
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem('cart')
+          }
+        } catch {}
         if (onOrderComplete) {
           onOrderComplete(orderId)
         } else {
@@ -185,6 +212,13 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
       }
 
       // For card payment, redirect to order page where Paystack payment will be handled
+      // Clear client-side cart prior to navigation
+      try {
+        await clearCart()
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem('cart')
+        }
+      } catch {}
       if (onOrderComplete) {
         onOrderComplete(orderId)
       } else {
