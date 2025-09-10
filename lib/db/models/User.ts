@@ -12,6 +12,8 @@ export interface IAddress {
   postalCode: string
   country: string
   isDefault: boolean
+  latitude?: number
+  longitude?: number
 }
 
 // Wishlist item interface
@@ -102,6 +104,14 @@ const AddressSchema = new Schema<IAddress>({
   isDefault: {
     type: Boolean,
     default: false
+  },
+  latitude: {
+    type: Number,
+    required: false
+  },
+  longitude: {
+    type: Number,
+    required: false
   }
 })
 

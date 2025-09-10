@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
       postalCode,
       country,
       isDefault,
+      latitude,
+      longitude,
     } = addressData;
 
     if (!firstName || !lastName || !street || !city || !state || !postalCode || !country) {
@@ -68,6 +70,8 @@ export async function POST(request: NextRequest) {
       postalCode,
       country,
       isDefault: isDefault || false,
+      ...(typeof latitude === 'number' ? { latitude } : {}),
+      ...(typeof longitude === 'number' ? { longitude } : {}),
     };
 
     // If this is set as default, unset other default addresses

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ShippingAddress } from '@/types/checkout'
 import { validateShippingAddress, formatValidationErrors } from '@/lib/checkout/validation'
+import { MapPickerModal } from './MapPickerModal'
 
 interface SavedAddress {
   id: string
@@ -52,6 +53,9 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saveAddress, setSaveAddress] = useState(false)
+  const [locating, setLocating] = useState(false)
+  const [locError, setLocError] = useState<string | null>(null)
+  const [mapOpen, setMapOpen] = useState(false)
 
   // Fetch saved addresses on mount
   useEffect(() => {
@@ -80,6 +84,82 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
     
     fetchAddresses()
   }, [session])
+
+  // Reverse geocode helper used by map confirm
+  const reverseGeocodeAndFill = async (lat: number, lon: number) => {
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GEOAPIFY_KEY || 'bd603f696b62465599f055e3b99cd4bc'
+      const url = `https://api.geoapify.com/v1/geocode/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&apiKey=${apiKey}`
+      const res = await fetch(url)
+      const data = await res.json().catch(() => ({}))
+      const feat = Array.isArray(data?.features) && data.features.length > 0 ? data.features[0] : null
+      const props = feat?.properties || {}
+      const streetLine = [props.house_number, props.street].filter(Boolean).join(' ').trim() || props.address_line1 || ''
+      const city = props.city || props.town || props.suburb || ''
+      const state = props.state || props.region || ''
+      const zip = props.postcode || ''
+      const country = props.country || 'Ghana'
+      setFormData(prev => ({
+        ...prev,
+        street: streetLine || prev.street,
+        city: city || prev.city,
+        state: state || prev.state,
+        zipCode: zip || prev.zipCode,
+        country: country || prev.country,
+        latitude: lat,
+        longitude: lon,
+      }))
+    } catch (e) {
+      // If reverse geocode fails, at least set coords
+      setFormData(prev => ({ ...prev, latitude: lat, longitude: lon }))
+    }
+  }
+
+  // Use browser geolocation + Geoapify reverse geocoding
+  const handleUseMyLocation = async () => {
+    setLocError(null)
+    if (!('geolocation' in navigator)) {
+      setLocError('Geolocation is not supported by your browser.')
+      return
+    }
+    setLocating(true)
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000 })
+      })
+      const lat = pos.coords.latitude
+      const lon = pos.coords.longitude
+
+      const apiKey = process.env.NEXT_PUBLIC_GEOAPIFY_KEY || 'bd603f696b62465599f055e3b99cd4bc'
+      const url = `https://api.geoapify.com/v1/geocode/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&apiKey=${apiKey}`
+      const res = await fetch(url)
+      const data = await res.json().catch(() => ({}))
+      const feat = Array.isArray(data?.features) && data.features.length > 0 ? data.features[0] : null
+      const props = feat?.properties || {}
+
+      // Build address parts with sensible fallbacks
+      const streetLine = [props.house_number, props.street].filter(Boolean).join(' ').trim() || props.address_line1 || ''
+      const city = props.city || props.town || props.suburb || ''
+      const state = props.state || props.region || ''
+      const zip = props.postcode || ''
+      const country = props.country || 'Ghana'
+
+      setFormData(prev => ({
+        ...prev,
+        street: streetLine || prev.street,
+        city: city || prev.city,
+        state: state || prev.state,
+        zipCode: zip || prev.zipCode,
+        country: country || prev.country,
+        latitude: lat,
+        longitude: lon,
+      }))
+    } catch (err: any) {
+      setLocError(err?.message || 'Failed to get current location')
+    } finally {
+      setLocating(false)
+    }
+  }
 
   // Handle address selection
   const handleAddressSelect = (addressId: string) => {
@@ -290,15 +370,33 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
           </div>
 
           {/* Street Address */}
-          <Input
-            label="Street Address"
-            value={formData.street}
-            onChange={(e) => handleInputChange('street', e.target.value)}
-            error={errors.street}
-            placeholder="Enter your full street address"
-            required
-            disabled={isLoading}
-          />
+          <div>
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <Input
+                  label="Street Address"
+                  value={formData.street}
+                  onChange={(e) => handleInputChange('street', e.target.value)}
+                  error={errors.street}
+                  placeholder="Enter your full street address"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={handleUseMyLocation} disabled={isLoading || locating} className="whitespace-nowrap h-10">
+                  {locating ? 'Locating…' : 'Use my location'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setMapOpen(true)} disabled={isLoading} className="whitespace-nowrap h-10">
+                  Adjust on map
+                </Button>
+              </div>
+            </div>
+            {locError && <p className="mt-1 text-sm text-red-600">{locError}</p>}
+            {(formData.latitude && formData.longitude) && (
+              <p className="mt-1 text-xs text-gray-500">Lat: {formData.latitude.toFixed(6)}, Lng: {formData.longitude.toFixed(6)}</p>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             {/* City */}
@@ -429,6 +527,19 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
           </Button>
         </div>
       )}
+
+      {/* Map Picker Modal */}
+      <MapPickerModal
+        open={mapOpen}
+        apiKey={process.env.NEXT_PUBLIC_GEOAPIFY_KEY || 'bd603f696b62465599f055e3b99cd4bc'}
+        lat={typeof formData.latitude === 'number' ? formData.latitude : undefined}
+        lon={typeof formData.longitude === 'number' ? formData.longitude : undefined}
+        onClose={() => setMapOpen(false)}
+        onConfirm={({ lat, lon }) => {
+          reverseGeocodeAndFill(lat, lon)
+          setMapOpen(false)
+        }}
+      />
     </div>
   )
 }

@@ -10,6 +10,8 @@ export interface ShippingAddress {
   state: string
   zipCode?: string
   country: string
+  latitude?: number
+  longitude?: number
 }
 
 export interface PaymentMethod {

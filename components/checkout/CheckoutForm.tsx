@@ -100,6 +100,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
             postalCode: data.zipCode,
             country: data.country,
             isDefault: true,
+            ...(typeof data.latitude === 'number' ? { latitude: data.latitude } : {}),
+            ...(typeof data.longitude === 'number' ? { longitude: data.longitude } : {}),
           })
         })
       }
