@@ -185,12 +185,61 @@ async function getCategories() {
   ]
 }
 
+// Build slides for the promo banner: one slide per category with latest items (side-by-side)
+async function getCategorySlides() {
+  try {
+    const base = (process.env.NEXT_PUBLIC_SITE_URL && process.env.NEXT_PUBLIC_SITE_URL.trim().length > 0)
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
+    const catRes = await fetch(`${base}/api/categories`, { cache: 'no-store', next: { revalidate: 0 } })
+    const catJson = await catRes.json().catch(() => ({} as any))
+    const cats: Array<{ slug: string; name: string }> = (catJson?.data?.categories || []).map((c: any) => ({ slug: c.slug, name: c.name }))
+
+    // Limit to a reasonable number of slides (e.g., 5)
+    const topCats = cats.slice(0, 5)
+
+    const slidePromises = topCats.map(async (cat) => {
+      // Try newest first (API accepts 'newest'), then fall back to popularity
+      const newestParams = new URLSearchParams({ category: cat.slug, sort: 'newest', order: 'desc', page: '1', limit: '24' })
+      const newestRes = await fetch(`${base}/api/products/search?${newestParams.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+      const newestJson = await newestRes.json().catch(() => ({} as any))
+      let items: any[] = Array.isArray(newestJson?.data?.data) ? newestJson.data.data : []
+      if (items.length === 0) {
+        const popParams = new URLSearchParams({ category: cat.slug, sort: 'popularity', order: 'desc', page: '1', limit: '24' })
+        const popRes = await fetch(`${base}/api/products/search?${popParams.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+        const popJson = await popRes.json().catch(() => ({} as any))
+        items = Array.isArray(popJson?.data?.data) ? popJson.data.data : []
+      }
+      const withImages = items.filter((p: any) => Array.isArray(p?.images) && p.images.length > 0)
+      console.log('[home:getCategorySlides] cat', cat.slug, 'items=', items.length, 'withImages=', withImages.length)
+      const pool = withImages.length >= 6 ? withImages : items
+      const products = pool.slice(0, 8).map((p: any) => ({
+        id: String(p?._id || p?.id || ''),
+        name: p?.name || '',
+        price: Number(p?.price || 0),
+        image: (Array.isArray(p?.images) && p.images[0]) || '/images/placeholder.png',
+        href: `/products/${String(p?._id || p?.id || '')}`
+      }))
+      return { categorySlug: cat.slug, categoryName: cat.name, products }
+    })
+
+    const slides = (await Promise.all(slidePromises)).filter(s => s.products && s.products.length > 0)
+    return slides
+  } catch {
+    return []
+  }
+}
+
+type CategorySlides = Array<{ categorySlug: string; categoryName: string; products: Array<{ id: string; name: string; price: number; image: string; href: string }> }>
+
 interface HomePageContentProps {
   featuredProducts: Awaited<ReturnType<typeof getFeaturedProducts>>
   categories: Awaited<ReturnType<typeof getCategories>>
+  categorySlides: CategorySlides
 }
 
-function HomePageContent({ featuredProducts, categories }: HomePageContentProps) {
+function HomePageContent({ featuredProducts, categories, categorySlides }: HomePageContentProps) {
   // Prepare hero featured products (first 4 products)
   const heroProducts = featuredProducts.slice(0, 4).map(product => ({
     id: product.id,
@@ -205,8 +254,8 @@ function HomePageContent({ featuredProducts, categories }: HomePageContentProps)
       {/* Hero Section */}
       <Hero featuredProducts={heroProducts} />
 
-      {/* Promotional Banner */}
-      <PromotionalBanner />
+      {/* Promotional Banner - category-based slides */}
+      <PromotionalBanner categorySlides={categorySlides} />
 
       {/* Featured Products */}
       <FeaturedProducts 
@@ -234,9 +283,10 @@ function HomePageContent({ featuredProducts, categories }: HomePageContentProps)
 export default async function Home() {
   try {
     // Fetch data in parallel
-    const [featuredProducts, categories] = await Promise.all([
+    const [featuredProducts, categories, categorySlides] = await Promise.all([
       getFeaturedProducts(),
-      getCategories()
+      getCategories(),
+      getCategorySlides()
     ])
 
     return (
@@ -251,6 +301,7 @@ export default async function Home() {
           <HomePageContent 
             featuredProducts={featuredProducts}
             categories={categories}
+            categorySlides={categorySlides}
           />
         </Suspense>
       </div>

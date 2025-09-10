@@ -20,10 +20,15 @@ interface Promotion {
   isActive?: boolean
 }
 
+interface SlideProduct { id: string; name: string; price: number; image: string; href: string }
+interface CategorySlide { categorySlug: string; categoryName: string; products: SlideProduct[] }
+
 interface PromotionalBannerProps {
   promotions?: Promotion[]
   autoRotate?: boolean
   rotationInterval?: number
+  // New: when provided, overrides promotions and shows category slides
+  categorySlides?: CategorySlide[]
 }
 
 // Default promotions defined outside component to prevent re-creation
@@ -68,7 +73,8 @@ const getDefaultPromotions = (): Promotion[] => [
 const PromotionalBanner: React.FC<PromotionalBannerProps> = ({
   promotions,
   autoRotate = true,
-  rotationInterval = 8000
+  rotationInterval = 8000,
+  categorySlides = []
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [timeLeft, setTimeLeft] = useState<{ [key: string]: string }>({})
@@ -80,8 +86,19 @@ const PromotionalBanner: React.FC<PromotionalBannerProps> = ({
       : getDefaultPromotions().filter(p => p.isActive !== false)
   }, [promotions])
 
+  const usingCategorySlides = Array.isArray(categorySlides) && categorySlides.length > 0
+
   // Auto-rotation
   useEffect(() => {
+    if (usingCategorySlides) {
+      if (autoRotate && categorySlides.length > 1) {
+        const interval = setInterval(() => {
+          setCurrentIndex(prev => (prev + 1) % categorySlides.length)
+        }, rotationInterval)
+        return () => clearInterval(interval)
+      }
+      return
+    }
     if (autoRotate && activePromotions.length > 1) {
       const interval = setInterval(() => {
         setCurrentIndex(prev => (prev + 1) % activePromotions.length)
@@ -89,10 +106,11 @@ const PromotionalBanner: React.FC<PromotionalBannerProps> = ({
 
       return () => clearInterval(interval)
     }
-  }, [autoRotate, activePromotions.length, rotationInterval])
+  }, [autoRotate, activePromotions.length, rotationInterval, usingCategorySlides, categorySlides.length])
 
-  // Countdown timer
+  // Countdown timer (only for promotions mode)
   useEffect(() => {
+    if (usingCategorySlides) return
     const updateCountdown = () => {
       const newTimeLeft: { [key: string]: string } = {}
 
@@ -122,10 +140,65 @@ const PromotionalBanner: React.FC<PromotionalBannerProps> = ({
     const interval = setInterval(updateCountdown, 1000)
 
     return () => clearInterval(interval)
-  }, [activePromotions])
+  }, [activePromotions, usingCategorySlides])
 
-  if (activePromotions.length === 0) {
+  if (!usingCategorySlides && activePromotions.length === 0) {
     return null
+  }
+
+  // Category slides mode
+  if (usingCategorySlides) {
+    const total = categorySlides.length
+    const current = Math.max(0, Math.min(currentIndex, total - 1))
+    return (
+      <section className="relative overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-700">
+          <div className="relative mx-auto max-w-7xl px-4 py-10 sm:py-14">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white text-2xl sm:text-3xl font-bold">Latest in {categorySlides[current].categoryName}</h2>
+              <div className="flex gap-2">
+                <button onClick={() => setCurrentIndex((current - 1 + total) % total)} className="bg-white/20 hover:bg-white/30 rounded-full p-2" aria-label="Prev">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <button onClick={() => setCurrentIndex((current + 1) % total)} className="bg-white/20 hover:bg-white/30 rounded-full p-2" aria-label="Next">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </button>
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-lg border border-white/10 bg-white/5 backdrop-blur-sm">
+              <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${current * 100}%)` }}>
+                {categorySlides.map((slide, i) => (
+                  <div key={slide.categorySlug + i} className="w-full flex-shrink-0 px-3 py-4" style={{ minWidth: '100%' }}>
+                    {/* Centered wrapped row with max width to force wrapping */}
+                    <div className="mx-auto flex flex-wrap justify-center gap-5 max-w-[1100px]">
+                      {slide.products.map(p => (
+                        <Link key={p.id} href={p.href} className="group relative rounded-md overflow-hidden bg-white/10 hover:bg-white/20 transition-colors border border-white/10 w-[180px] sm:w-[200px] md:w-[220px]">
+                          <div className="relative aspect-[4/3] w-full">
+                            <Image src={p.image} alt={p.name} fill className="object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                            <div className="absolute bottom-2 left-2 right-2">
+                              <div className="text-white text-sm font-semibold truncate">{p.name}</div>
+                              <div className="text-yellow-300 text-sm font-bold">₦{p.price.toLocaleString()}</div>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {total > 1 && (
+              <div className="flex justify-center mt-4 space-x-2">
+                {categorySlides.map((_, i) => (
+                  <button key={i} onClick={() => setCurrentIndex(i)} className={`w-2.5 h-2.5 rounded-full ${i === current ? 'bg-white' : 'bg-white/40'}`} aria-label={`Go to slide ${i+1}`} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    )
   }
 
   const currentPromotion = activePromotions[currentIndex]
