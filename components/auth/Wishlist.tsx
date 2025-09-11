@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { useAuth } from '@/lib/auth/hooks';
@@ -22,25 +23,38 @@ interface WishlistItem {
 }
 
 export function Wishlist() {
-  const { user } = useAuth();
-  const { addToCart } = useCart();
+  const { session, status } = useAuth();
+  const { addItem } = useCart();
+  const router = useRouter();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removingItems, setRemovingItems] = useState<Set<string>>(new Set());
+  const [addingItems, setAddingItems] = useState<Set<string>>(new Set());
+  const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (user) {
+    if (status === 'authenticated') {
       fetchWishlist();
+    } else if (status === 'unauthenticated') {
+      // Not logged in; stop spinner and show message
+      setIsLoading(false);
     }
-  }, [user]);
+  }, [status]);
 
   const fetchWishlist = async () => {
     try {
-      const response = await fetch('/api/wishlist');
+      const response = await fetch('/api/wishlist', { credentials: 'include' });
       if (!response.ok) throw new Error('Failed to fetch wishlist');
       const data = await response.json();
       setItems(data);
+      // initialize quantities to 1 for each item
+      const q: Record<string, number> = {}
+      for (const it of data as WishlistItem[]) {
+        q[it.id] = q[it.id] ?? 1
+      }
+      setQuantities(q)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load wishlist');
     } finally {
@@ -70,39 +84,38 @@ export function Wishlist() {
     }
   };
 
-  const handleAddToCart = async (item: WishlistItem) => {
+  const handleBuyNow = async (item: WishlistItem) => {
     try {
-      await addToCart({
+      // mark adding
+      setAddingItems(prev => new Set(prev).add(item.id))
+      await addItem({
         productId: item.productId,
-        quantity: 1,
+        variantId: undefined,
+        quantity: Math.max(1, quantities[item.id] ?? 1),
+        price: item.price,
+        name: item.name,
+        image: item.image,
+        size: undefined,
+        color: undefined,
+        maxInventory: undefined,
       });
-      
+      // Navigate to checkout and carry wishlist item id to remove after purchase
+      router.push(`/checkout?wishlistItemId=${encodeURIComponent(item.id)}`)
+
       // Optionally remove from wishlist after adding to cart
       // await handleRemoveFromWishlist(item.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add to cart');
+    } finally {
+      setAddingItems(prev => {
+        const n = new Set(prev)
+        n.delete(item.id)
+        return n
+      })
     }
   };
 
-  const handleMoveAllToCart = async () => {
-    const inStockItems = items.filter(item => item.inStock);
-    
-    try {
-      await Promise.all(
-        inStockItems.map(item =>
-          addToCart({
-            productId: item.productId,
-            quantity: 1,
-          })
-        )
-      );
-      
-      // Optionally clear wishlist after moving all to cart
-      // setItems([]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to move items to cart');
-    }
-  };
+  // Removed bulk move action to keep flow focused on Buy Now per item
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -110,6 +123,17 @@ export function Wishlist() {
 
   if (error) {
     return <ErrorMessage message={error} />;
+  }
+
+  if (status === 'unauthenticated') {
+    return (
+      <Card className="p-8 text-center">
+        <p className="text-gray-600 mb-4">Please sign in to view your wishlist.</p>
+        <a href="/login">
+          <Button>Sign In</Button>
+        </a>
+      </Card>
+    );
   }
 
   return (
@@ -133,11 +157,7 @@ export function Wishlist() {
                 {items.filter(item => item.inStock).length} items in stock
               </p>
             </div>
-            {items.some(item => item.inStock) && (
-              <Button onClick={handleMoveAllToCart}>
-                Move All to Cart
-              </Button>
-            )}
+            {/* Bulk action removed intentionally */}
           </div>
 
           {/* Wishlist Items */}
@@ -187,13 +207,32 @@ export function Wishlist() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col gap-2 sm:w-32">
+                  <div className={`flex flex-col gap-2 sm:w-40 ${addedItems.has(item.id) ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {/* Quantity selector */}
+                    <div className="flex items-center justify-between border rounded-md overflow-hidden">
+                      <button
+                        className="px-3 py-2 text-gray-600 hover:text-gray-800"
+                        onClick={() => setQuantities(q => ({ ...q, [item.id]: Math.max(1, (q[item.id] ?? 1) - 1) }))}
+                        aria-label="Decrease quantity"
+                      >
+                        -
+                      </button>
+                      <span className="px-4 select-none">{quantities[item.id] ?? 1}</span>
+                      <button
+                        className="px-3 py-2 text-gray-600 hover:text-gray-800"
+                        onClick={() => setQuantities(q => ({ ...q, [item.id]: Math.max(1, (q[item.id] ?? 1) + 1) }))}
+                        aria-label="Increase quantity"
+                      >
+                        +
+                      </button>
+                    </div>
+
                     <Button
-                      onClick={() => handleAddToCart(item)}
-                      disabled={!item.inStock}
+                      onClick={() => handleBuyNow(item)}
+                      disabled={!item.inStock || addingItems.has(item.id)}
                       className="w-full"
                     >
-                      {item.inStock ? 'Add to Cart' : 'Out of Stock'}
+                      {!item.inStock ? 'Out of Stock' : (addingItems.has(item.id) ? 'Going to Checkout…' : 'Buy Now')}
                     </Button>
                     
                     <Button

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useCallback, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ProgressIndicator } from './ProgressIndicator'
 import { ShippingAddressForm } from './ShippingAddressForm'
 import { PaymentMethodForm } from './PaymentMethodForm'
@@ -17,6 +17,8 @@ interface CheckoutFormProps {
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const wishlistItemId = searchParams?.get('wishlistItemId') || null
   const { state: cartState, refreshCart, clearCart } = useCart()
   const { session } = useAuth()
   
@@ -194,6 +196,13 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
 
       const orderData = await orderResponse.json()
       const orderId = orderData.order?.id || orderData.data?._id
+
+      // If arriving from wishlist with a specific item, remove it now
+      if (wishlistItemId) {
+        try {
+          await fetch(`/api/wishlist/${encodeURIComponent(wishlistItemId)}`, { method: 'DELETE' })
+        } catch {}
+      }
 
       // For bank transfer, redirect to order page immediately
       if (paymentMethod.type === 'bank_transfer') {
