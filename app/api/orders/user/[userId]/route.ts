@@ -3,6 +3,9 @@ import connectDB from '@/lib/db/connection'
 import { authenticateToken } from '@/lib/auth/middleware'
 import { getUserOrders } from '@/lib/orders/service'
 import mongoose from 'mongoose'
+import { getServerSession } from 'next-auth'
+import type { Session } from 'next-auth'
+import { authOptions } from '@/lib/auth/config'
 
 // GET /api/orders/user/[userId] - Get orders for a specific user
 export async function GET(
@@ -12,13 +15,25 @@ export async function GET(
   try {
     await connectDB()
 
-    // Verify authentication
-    const authResult = await authenticateToken(request)
-    if (!authResult.success || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+    // Verify authentication: accept Bearer token OR NextAuth session
+    let authedUserId: string | null = null
+    const authHeader = request.headers.get('authorization')
+    if (authHeader) {
+      const authResult = await authenticateToken(request)
+      if (authResult.success && authResult.userId) {
+        authedUserId = authResult.userId
+      }
+    }
+
+    if (!authedUserId) {
+      const session = (await getServerSession(authOptions as any)) as Session | null
+      const sUser = (session?.user ?? null) as any
+      const sid = sUser?.id || sUser?._id || null
+      if (sid) authedUserId = String(sid)
+    }
+
+    if (!authedUserId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const { userId } = params
@@ -32,7 +47,7 @@ export async function GET(
     }
 
     // Users can only access their own orders
-    if (authResult.userId! !== userId) {
+    if (authedUserId !== userId) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }

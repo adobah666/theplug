@@ -6,7 +6,8 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
-import { useAuth } from '@/lib/auth/hooks';
+import { useAuthUser } from '@/lib/auth/hooks';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface OrderItem {
   id: string;
@@ -27,6 +28,7 @@ interface Order {
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   total: number;
   createdAt: string;
+  estimatedDelivery?: string;
   items: OrderItem[];
   shippingAddress: {
     firstName: string;
@@ -49,23 +51,30 @@ const statusColors = {
 };
 
 export function OrderHistory() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuthUser();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      fetchOrders();
+    if (authLoading) return;
+    if (!user) {
+      setIsLoading(false);
+      setError('Please sign in to view your orders.');
+      return;
     }
-  }, [user]);
+    fetchOrders();
+  }, [user, authLoading]);
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch(`/api/orders/user/${user?.id}`);
+      const uid = (user as any)?.id || (user as any)?._id;
+      if (!uid) throw new Error('User ID not found');
+      const response = await fetch(`/api/orders/user/${uid}`);
       if (!response.ok) throw new Error('Failed to fetch orders');
       const data = await response.json();
-      setOrders(data);
+      const list = Array.isArray(data?.orders) ? data.orders : Array.isArray(data) ? data : [];
+      setOrders(list);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load orders');
     } finally {
@@ -116,6 +125,11 @@ export function OrderHistory() {
                 <p className="text-gray-600 text-sm">
                   Placed on {new Date(order.createdAt).toLocaleDateString()}
                 </p>
+                {order.estimatedDelivery && order.status !== 'delivered' && order.status !== 'cancelled' && (
+                  <p className="text-blue-600 text-sm font-medium">
+                    Est. delivery: {new Date(order.estimatedDelivery).toLocaleDateString()}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-4 mt-2 lg:mt-0">
                 <span
@@ -126,7 +140,7 @@ export function OrderHistory() {
                   {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                 </span>
                 <span className="font-semibold">
-                  ₦{order.total.toLocaleString()}
+                  {formatCurrency(order.total)}
                 </span>
               </div>
             </div>
@@ -150,7 +164,7 @@ export function OrderHistory() {
                         </p>
                       )}
                       <p className="text-sm text-gray-600">
-                        Qty: {item.quantity} × ₦{item.price.toLocaleString()}
+                        Qty: {item.quantity} × {formatCurrency(item.price)}
                       </p>
                     </div>
                   </div>

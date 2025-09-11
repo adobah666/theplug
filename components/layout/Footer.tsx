@@ -88,7 +88,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-gray-900 text-white">
       {/* Newsletter signup */}
-      <div className="border-b border-gray-800">
+      {/* <div className="border-b border-gray-800">
         <div className="mx-auto max-w-7xl px-4 py-12">
           <div className="text-center">
             <h3 className="text-2xl font-bold">Stay in the loop</h3>
@@ -107,7 +107,7 @@ const Footer: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Main footer content */}
       <div className="mx-auto max-w-7xl px-4 py-12">
@@ -131,43 +131,7 @@ const Footer: React.FC = () => {
           ))}
         </div>
 
-        {/* Payment methods and social links */}
-        <div className="mt-12 border-t border-gray-800 pt-8">
-          <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
-            {/* Payment methods */}
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-300">We accept:</span>
-              <div className="flex items-center space-x-2">
-                <div className="h-8 w-12 rounded bg-white flex items-center justify-center">
-                  <span className="text-xs font-bold text-gray-900">VISA</span>
-                </div>
-                <div className="h-8 w-12 rounded bg-white flex items-center justify-center">
-                  <span className="text-xs font-bold text-gray-900">MC</span>
-                </div>
-                <div className="h-8 w-12 rounded bg-white flex items-center justify-center">
-                  <span className="text-xs font-bold text-gray-900">AMEX</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Social links */}
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-300">Follow us:</span>
-              <div className="flex space-x-3">
-                {socialLinks.map((social) => (
-                  <Link
-                    key={social.name}
-                    href={social.href}
-                    className="text-gray-400 hover:text-white transition-colors"
-                    aria-label={social.name}
-                  >
-                    {social.icon}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+       
 
         {/* Copyright */}
         <div className="mt-8 border-t border-gray-800 pt-8 text-center">

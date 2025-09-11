@@ -323,6 +323,41 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
         </div>
       )}
 
+      {/* Tracking Section */}
+      {(order as any).trackingNumber || (order as any).trackingUrl ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Tracking Information</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            {(order as any).trackingNumber && (
+              <div>
+                <p className="text-sm text-gray-600">Tracking Number</p>
+                <p className="font-mono font-medium">{(order as any).trackingNumber}</p>
+              </div>
+            )}
+            {(order as any).trackingUrl && (
+              <Button
+                variant="outline"
+                onClick={() => window.open((order as any).trackingUrl, '_blank')}
+              >
+                Track Package
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Tracking</h2>
+          <p className="text-sm text-gray-600">
+            Tracking details will appear here once your order ships. You'll receive an email and can also view updates on your orders page.
+          </p>
+          <div className="mt-4 flex gap-3">
+            <Link href="/account/orders">
+              <Button variant="outline">Go to My Orders</Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Success Actions */}
       {paymentStatus === 'paid' && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
