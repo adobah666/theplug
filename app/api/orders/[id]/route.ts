@@ -9,7 +9,7 @@ import { authOptions } from '@/lib/auth/config'
 // GET /api/orders/[id] - Get order details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB()
@@ -33,7 +33,7 @@ export async function GET(
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Validate order ID format
     if (!mongoose.Types.ObjectId.isValid(id)) {

@@ -7,13 +7,13 @@ import mongoose from 'mongoose'
 // PUT /api/admin/reviews/[id]/moderate - Moderate a review (admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB()
 
     // Verify authentication
-    const authResult = await verifyToken(request)
+    const authResult = await authenticateToken(request)
     if (!authResult.success) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -25,7 +25,8 @@ export async function PUT(
     // For now, we'll assume authenticated users can access this endpoint
     // In production, you should verify the user has admin privileges
 
-    const reviewId = params.id
+    const { id: reviewId } = await params
+
     const body = await request.json()
     const { status, reason } = body
 

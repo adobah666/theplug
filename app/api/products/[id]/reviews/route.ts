@@ -10,10 +10,10 @@ import Product from '@/lib/db/models/Product'
 import { ApiResponse } from '@/types'
 
 // GET /api/products/[id]/reviews
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
-    const productId = params.id
+    const { id: productId } = await params
 
     if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
       return NextResponse.json<ApiResponse>({ success: false, error: 'Invalid product id' }, { status: 400 })
@@ -50,7 +50,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 // POST /api/products/[id]/reviews
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
 
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json<ApiResponse>({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const productId = params.id
+    const { id: productId } = await params
     if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
       return NextResponse.json<ApiResponse>({ success: false, error: 'Invalid product id' }, { status: 400 })
     }

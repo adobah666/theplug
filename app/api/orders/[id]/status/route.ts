@@ -8,8 +8,9 @@ import mongoose from 'mongoose'
 // PUT /api/orders/[id]/status - Update order status
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+
   try {
     await connectDB()
 
@@ -22,7 +23,8 @@ export async function PUT(
       )
     }
 
-    const { id } = params
+    const { id } = await params
+
     const body = await request.json()
     const { status, cancelReason } = body
 

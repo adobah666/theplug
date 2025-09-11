@@ -9,13 +9,13 @@ import Order from '@/lib/db/models/Order'
 import { ApiResponse } from '@/types'
 
 // GET /api/products/[id]/reviews/eligibility
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
 
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id
-    const productId = params.id
+    const { id: productId } = await params
 
     if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
       return NextResponse.json<ApiResponse>({ success: false, error: 'Invalid product id' }, { status: 400 })

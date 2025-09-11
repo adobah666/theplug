@@ -12,7 +12,7 @@ import connectDB from '@/lib/db/connection';
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
@@ -39,7 +39,8 @@ export async function PUT(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const addressIndex = user.addresses?.findIndex((addr: any) => addr.id === params.id);
+    const { id } = await params;
+    const addressIndex = user.addresses?.findIndex((addr: any) => addr.id === id);
     if (addressIndex === -1 || addressIndex === undefined) {
       return NextResponse.json({ error: 'Address not found' }, { status: 404 });
     }
@@ -48,7 +49,7 @@ export async function PUT(
     if (isDefault) {
       user.addresses = user.addresses!.map((addr: any) => ({
         ...addr,
-        isDefault: addr.id === params.id,
+        isDefault: addr.id === id,
       }));
     }
 
@@ -86,7 +87,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET });
@@ -99,12 +100,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const addressIndex = user.addresses?.findIndex((addr: any) => addr.id === params.id);
+    const { id } = await params;
+    const addressIndex = user.addresses?.findIndex((addr: any) => addr.id === id);
     if (addressIndex === -1 || addressIndex === undefined) {
       return NextResponse.json({ error: 'Address not found' }, { status: 404 });
     }
 
-    user.addresses = user.addresses!.filter((addr: any) => addr.id !== params.id);
+    user.addresses = user.addresses!.filter((addr: any) => addr.id !== id);
     await user.save();
 
     return NextResponse.json({ message: 'Address deleted successfully' });

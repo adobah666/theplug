@@ -12,6 +12,7 @@ interface MobileNavDrawerProps {
 
 const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) => {
   const { user, logout } = useAuthUser()
+  const [openOrdersCount, setOpenOrdersCount] = useState<number>(0)
 
   const [categories, setCategories] = useState<Array<{ name: string; slug: string }>>([])
 
@@ -25,6 +26,27 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) =>
         const list = (json?.data?.categories || []) as Array<{ name: string; slug: string }>
         list.sort((a, b) => a.name.localeCompare(b.name))
         if (mounted) setCategories(list)
+      } catch {
+        // ignore
+      }
+    })()
+    ;(async () => {
+      try {
+        if (!user) {
+          if (mounted) setOpenOrdersCount(0)
+          return
+        }
+        const uid = (user as any)?.id || (user as any)?._id
+        if (!uid) return
+        const res = await fetch(`/api/orders/user/${uid}?limit=100`, { cache: 'no-store' })
+        if (!res.ok) return
+        const json = await res.json().catch(() => ({} as any))
+        const list = Array.isArray(json?.orders) ? json.orders : []
+        const count = list.filter((o: any) => {
+          const st = String(o?.status || '').toLowerCase()
+          return st !== 'delivered' && st !== 'cancelled'
+        }).length
+        if (mounted) setOpenOrdersCount(count)
       } catch {
         // ignore
       }
@@ -69,6 +91,31 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) =>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
+            {/* Primary Orders entry at top */}
+            <div className="p-4 border-b border-gray-200">
+              {user ? (
+                <Link
+                  href="/account/orders"
+                  className="relative flex items-center justify-between p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors text-blue-700 font-medium"
+                  onClick={onClose}
+                >
+                  <span>Order History</span>
+                  {openOrdersCount > 0 && (
+                    <span className="ml-2 inline-flex min-w-[22px] justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white">
+                      {openOrdersCount}
+                    </span>
+                  )}
+                </Link>
+              ) : (
+                <Link
+                  href="/track-order"
+                  className="relative flex items-center justify-between p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors text-blue-700 font-medium"
+                  onClick={onClose}
+                >
+                  <span>Track Order</span>
+                </Link>
+              )}
+            </div>
             {/* User section */}
             {user ? (
               <div className="p-4 border-b border-gray-200">
@@ -147,10 +194,15 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) =>
                   </Link>
                   <Link
                     href="/account/orders"
-                    className="block p-3 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
+                    className="relative flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
                     onClick={onClose}
                   >
-                    Order History
+                    <span>Order History</span>
+                    {openOrdersCount > 0 && (
+                      <span className="ml-2 inline-flex min-w-[22px] justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white">
+                        {openOrdersCount}
+                      </span>
+                    )}
                   </Link>
                   <Link
                     href="/account/wishlist"

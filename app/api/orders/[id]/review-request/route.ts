@@ -8,8 +8,9 @@ import mongoose from 'mongoose'
 // POST /api/orders/[id]/review-request - Send review request email
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+
   try {
     await connectDB()
 
@@ -22,7 +23,7 @@ export async function POST(
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Validate order ID format
     if (!mongoose.Types.ObjectId.isValid(id)) {

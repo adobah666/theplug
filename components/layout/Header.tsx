@@ -16,6 +16,7 @@ const Header: React.FC = () => {
   
   const { state, updateQuantity, removeItem } = useCart()
   const { user, logout } = useAuthUser()
+  const [openOrdersCount, setOpenOrdersCount] = useState<number>(0)
 
   const [categories, setCategories] = useState<Array<{ name: string; slug: string }>>([])
   const [brands, setBrands] = useState<Array<{ name: string; slug?: string }>>([])
@@ -47,8 +48,30 @@ const Header: React.FC = () => {
         // ignore
       }
     })()
+    // Fetch unfinished orders count for logged-in user
+    ;(async () => {
+      try {
+        if (!user) {
+          if (mounted) setOpenOrdersCount(0)
+          return
+        }
+        const uid = (user as any)?.id || (user as any)?._id
+        if (!uid) return
+        const res = await fetch(`/api/orders/user/${uid}?limit=100`, { cache: 'no-store' })
+        if (!res.ok) return
+        const json = await res.json().catch(() => ({} as any))
+        const list = Array.isArray(json?.orders) ? json.orders : []
+        const count = list.filter((o: any) => {
+          const st = String(o?.status || '').toLowerCase()
+          return st === 'confirmed' || st === 'processing'
+        }).length
+        if (mounted) setOpenOrdersCount(count)
+      } catch {
+        // ignore errors
+      }
+    })()
     return () => { mounted = false }
-  }, [])
+  }, [user])
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white">
@@ -104,21 +127,63 @@ const Header: React.FC = () => {
               <span className="text-sm">Wishlist</span>
             </Link>
 
-            {/* Cart */}
-            <CartIcon 
-              itemCount={state.itemCount}
-              onClick={() => setIsCartOpen(true)}
-            />
-
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 text-gray-700 hover:text-gray-900"
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            {/* Orders with badge */}
+            <Link href="/account/orders" className="hidden md:flex items-center space-x-2 text-gray-700 hover:text-gray-900 relative">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
               </svg>
-            </button>
+              <span className="text-sm">Orders</span>
+              {openOrdersCount > 0 && (
+                <span className="absolute -top-2 -right-2 rounded-full bg-blue-600 text-white text-[10px] leading-none px-1.5 py-1">
+                  {openOrdersCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Cart (icon only on mobile) */}
+            <div className="md:hidden w-12 flex flex-col items-center justify-center">
+              <CartIcon 
+                itemCount={state.itemCount}
+                onClick={() => setIsCartOpen(true)}
+              />
+            </div>
+            <div className="hidden md:block">
+              <CartIcon 
+                itemCount={state.itemCount}
+                onClick={() => setIsCartOpen(true)}
+              />
+            </div>
+
+            {/* Orders icon (mobile) */}
+            <Link
+              href="/account/orders"
+              className="relative md:hidden w-12 px-0 py-1 text-gray-700 hover:text-gray-900 flex flex-col items-center justify-center"
+              aria-label="Orders"
+            >
+              {/* Package icon */}
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 7.5l-9 4.5-9-4.5m18 0L12 3 3 7.5m18 0V16.5L12 21l-9-4.5V7.5m9 4.5V21" />
+              </svg>
+              <span className="mt-0.5 text-[10px] leading-none">My Orders</span>
+              {openOrdersCount > 0 && (
+                <span className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 rounded-full bg-blue-600 text-white text-[10px] leading-none px-1.5 py-0.5">
+                  {openOrdersCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Mobile menu button (icon only) */}
+            <div className="md:hidden w-12 flex flex-col items-center justify-center">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 text-gray-700 hover:text-gray-900"
+                aria-label="Menu"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 

@@ -7,13 +7,14 @@ import mongoose from 'mongoose'
 // POST /api/reviews/[id]/report - Report a review for inappropriate content
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+
   try {
     await connectDB()
 
     // Verify authentication
-    const authResult = await verifyToken(request)
+    const authResult = await authenticateToken(request)
     if (!authResult.success) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -21,7 +22,8 @@ export async function POST(
       )
     }
 
-    const reviewId = params.id
+    const { id: reviewId } = await params
+
     const body = await request.json()
     const { reason } = body
 

@@ -25,10 +25,11 @@ interface OrderItem {
 interface Order {
   id: string;
   orderNumber: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'confirmed';
   total: number;
   createdAt: string;
   estimatedDelivery?: string;
+  paymentStatus?: 'pending' | 'paid' | 'failed';
   items: OrderItem[];
   shippingAddress: {
     firstName: string;
@@ -42,12 +43,19 @@ interface Order {
   trackingNumber?: string;
 }
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   processing: 'bg-blue-100 text-blue-800',
   shipped: 'bg-purple-100 text-purple-800',
   delivered: 'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-800',
+  confirmed: 'bg-sky-100 text-sky-800',
+};
+
+const paymentStatusColors: Record<string, string> = {
+  pending: 'bg-orange-100 text-orange-800',
+  paid: 'bg-green-100 text-green-800',
+  failed: 'bg-red-100 text-red-800',
 };
 
 export function OrderHistory() {
@@ -115,8 +123,10 @@ export function OrderHistory() {
           </Link>
         </Card>
       ) : (
-        orders.map((order) => (
-          <Card key={order.id} className="p-6">
+        orders.map((order) => {
+          const orderId = (order as any).id || (order as any)._id || ''
+          return (
+          <Card key={orderId} className="p-6">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
               <div>
                 <h3 className="font-semibold text-lg">
@@ -131,15 +141,26 @@ export function OrderHistory() {
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-4 mt-2 lg:mt-0">
+              <div className="flex items-center gap-2 mt-2 lg:mt-0">
                 <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    statusColors[order.status]
+                  className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
+                    statusColors[order.status] || 'bg-gray-100 text-gray-800'
                   }`}
+                  title="Order status"
                 >
                   {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                 </span>
-                <span className="font-semibold">
+                {order.paymentStatus && (
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
+                      paymentStatusColors[order.paymentStatus] || 'bg-gray-100 text-gray-800'
+                    }`}
+                    title="Payment status"
+                  >
+                    {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                  </span>
+                )}
+                <span className="ml-2 font-semibold">
                   {formatCurrency(order.total)}
                 </span>
               </div>
@@ -147,34 +168,41 @@ export function OrderHistory() {
 
             <div className="border-t pt-4">
               <div className="grid gap-4">
-                {order.items.map((item) => (
-                  <div key={item.id} className="flex items-center gap-4">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium">{item.name}</h4>
-                      {item.variant && (
+                {order.items.map((item, index) => {
+                  const orderIdForItem = orderId
+                  const displayName = item.name || (item as any).productName || 'Item'
+                  const displayImage = item.image || (item as any).productImage || '/placeholder-image.jpg'
+                  const unitPrice = (item as any).unitPrice ?? item.price ?? 0
+                  const key = item.id || `${orderIdForItem}-${index}`
+                  return (
+                    <div key={key} className="flex items-center gap-4">
+                      <img
+                        src={displayImage}
+                        alt={displayName}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                      <div className="flex-1">
+                        <h4 className="font-medium">{displayName}</h4>
+                        {item.variant && (
+                          <p className="text-sm text-gray-600">
+                            {item.variant.size && `Size: ${item.variant.size}`}
+                            {item.variant.size && item.variant.color && ', '}
+                            {item.variant.color && `Color: ${item.variant.color}`}
+                          </p>
+                        )}
                         <p className="text-sm text-gray-600">
-                          {item.variant.size && `Size: ${item.variant.size}`}
-                          {item.variant.size && item.variant.color && ', '}
-                          {item.variant.color && `Color: ${item.variant.color}`}
+                          Qty: {item.quantity} × {formatCurrency(unitPrice)}
                         </p>
-                      )}
-                      <p className="text-sm text-gray-600">
-                        Qty: {item.quantity} × {formatCurrency(item.price)}
-                      </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
             <div className="border-t pt-4 mt-4 flex flex-col sm:flex-row gap-3">
-              <Link href={`/orders/${order.id}`}>
-                <Button variant="outline" className="w-full sm:w-auto">
+              <Link href={orderId ? `/orders/${orderId}` : '#'}>
+                <Button variant="outline" className="w-full sm:w-auto" disabled={!orderId}>
                   View Details
                 </Button>
               </Link>
@@ -188,7 +216,7 @@ export function OrderHistory() {
               {order.status === 'delivered' && (
                 <Button
                   variant="outline"
-                  onClick={() => handleReorder(order.id)}
+                  onClick={() => handleReorder(orderId)}
                   className="w-full sm:w-auto"
                 >
                   Reorder
@@ -196,7 +224,7 @@ export function OrderHistory() {
               )}
             </div>
           </Card>
-        ))
+        )})
       )}
     </div>
   );

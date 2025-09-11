@@ -21,7 +21,7 @@ const CartIcon: React.FC<CartIconProps> = ({
     >
       <div className="relative">
         <svg 
-          className="h-6 w-6" 
+          className="h-5 w-5 md:h-6 md:w-6" 
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24"
@@ -36,7 +36,7 @@ const CartIcon: React.FC<CartIconProps> = ({
         </svg>
         {itemCount > 0 && (
           <span 
-            className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white"
+            className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white"
             aria-label={`${itemCount} items in cart`}
           >
             {itemCount > 99 ? '99+' : itemCount}

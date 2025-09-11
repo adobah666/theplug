@@ -6,12 +6,14 @@ import mongoose from 'mongoose'
 // GET /api/reviews/product/[id] - Get reviews for a specific product
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+
   try {
     await connectDB()
 
-    const productId = params.id
+    const { id: productId } = await params
+
     const { searchParams } = new URL(request.url)
     
     // Parse query parameters

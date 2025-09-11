@@ -10,7 +10,7 @@ import { authOptions } from '@/lib/auth/config'
 // GET /api/orders/user/[userId] - Get orders for a specific user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     await connectDB()
@@ -36,7 +36,7 @@ export async function GET(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const { userId } = params
+    const { userId } = await params
 
     // Validate user ID format
     if (!mongoose.Types.ObjectId.isValid(userId)) {

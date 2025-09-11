@@ -5,7 +5,7 @@ import User from '@/lib/db/models/User';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions as any);
@@ -17,12 +17,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const itemExists = user.wishlist?.some(item => item.id === params.id);
+    const { id } = await params;
+    const itemExists = user.wishlist?.some((item: any) => item.id === id);
     if (!itemExists) {
       return NextResponse.json({ error: 'Wishlist item not found' }, { status: 404 });
     }
 
-    user.wishlist = user.wishlist!.filter(item => item.id !== params.id);
+    user.wishlist = user.wishlist!.filter((item: any) => item.id !== id);
     await user.save();
 
     return NextResponse.json({ message: 'Item removed from wishlist' });

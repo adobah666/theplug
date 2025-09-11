@@ -4,7 +4,7 @@ import User from '@/lib/db/models/User';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = await getToken({ req: request as any, secret: process.env.NEXTAUTH_SECRET });
@@ -17,7 +17,8 @@ export async function PUT(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const addressExists = user.addresses?.some(addr => addr.id === params.id);
+    const { id } = await params;
+    const addressExists = user.addresses?.some(addr => addr.id === id);
     if (!addressExists) {
       return NextResponse.json({ error: 'Address not found' }, { status: 404 });
     }
@@ -25,7 +26,7 @@ export async function PUT(
     // Set all addresses to non-default, then set the specified one as default
     user.addresses = user.addresses!.map((addr: any) => ({
       ...addr,
-      isDefault: addr.id === params.id,
+      isDefault: addr.id === id,
     }));
 
     await user.save();

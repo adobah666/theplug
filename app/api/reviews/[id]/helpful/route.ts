@@ -7,13 +7,14 @@ import mongoose from 'mongoose'
 // POST /api/reviews/[id]/helpful - Mark a review as helpful
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+
   try {
     await connectDB()
 
     // Verify authentication
-    const authResult = await verifyToken(request)
+    const authResult = await authenticateToken(request)
     if (!authResult.success) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -21,7 +22,7 @@ export async function POST(
       )
     }
 
-    const reviewId = params.id
+    const { id: reviewId } = await params
 
     // Validate reviewId format
     if (!mongoose.Types.ObjectId.isValid(reviewId)) {

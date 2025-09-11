@@ -30,7 +30,7 @@ export async function PATCH(
       }, { status: 400 })
     }
 
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
+    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']
     if (!validStatuses.includes(status)) {
       return NextResponse.json({
         success: false,
@@ -53,6 +53,16 @@ export async function PATCH(
       const deliveryDate = new Date()
       deliveryDate.setDate(deliveryDate.getDate() + 4) // 4 days average
       updateData.estimatedDelivery = deliveryDate
+    }
+
+    // Auto-generate a tracking number if moving to shipped without one
+    if (status === 'shipped' && !updateData.trackingNumber) {
+      const ts = new Date()
+      const y = ts.getFullYear()
+      const m = String(ts.getMonth() + 1).padStart(2, '0')
+      const d = String(ts.getDate()).padStart(2, '0')
+      const rand = Math.random().toString(36).slice(2, 8).toUpperCase()
+      updateData.trackingNumber = `TPG-${y}${m}${d}-${rand}`
     }
 
     const order = await Order.findByIdAndUpdate(
