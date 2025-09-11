@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, X, Filter, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface FilterFacet {
   value: string
@@ -434,7 +435,7 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                         />
                       </div>
                       <div className="text-xs text-gray-500">
-                        ₦{section.min?.toLocaleString()} - ₦{section.max?.toLocaleString()}
+                        {formatCurrency(section.min ?? 0)} - {formatCurrency(section.max ?? 0)}
                       </div>
                     </div>
                   ) : (
@@ -525,7 +526,7 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             {/* Price range filter */}
             {(filters.minPrice || filters.maxPrice) && (
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                ₦{filters.minPrice || '0'} - ₦{filters.maxPrice || '∞'}
+                {formatCurrency(Number(filters.minPrice) || 0)} - {filters.maxPrice ? formatCurrency(Number(filters.maxPrice)) : '∞'}
                 <button
                   onClick={() => resetFilter('price')}
                   className="ml-1 hover:text-blue-600"

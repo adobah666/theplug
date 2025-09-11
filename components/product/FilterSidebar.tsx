@@ -6,6 +6,7 @@ import { useRouter, useSearchParams, useParams } from 'next/navigation'
 import { ChevronDown, ChevronUp, X, Filter } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface FilterOption {
   value: string
@@ -290,7 +291,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
                       />
                     </div>
                     <div className="text-xs text-gray-500">
-                      ₦{section.min?.toLocaleString()} - ₦{section.max?.toLocaleString()}
+                      {formatCurrency(section.min ?? 0)} - {formatCurrency(section.max ?? 0)}
                     </div>
                   </div>
                 ) : (
@@ -380,7 +381,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
             {/* Price range filter */}
             {(filters.minPrice || filters.maxPrice) && (
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                ₦{filters.minPrice || '0'} - ₦{filters.maxPrice || '∞'}
+                {formatCurrency(Number(filters.minPrice) || 0)} - {filters.maxPrice ? formatCurrency(Number(filters.maxPrice)) : '∞'}
                 <button
                   onClick={() => {
                     setPriceRange({ min: '', max: '' })

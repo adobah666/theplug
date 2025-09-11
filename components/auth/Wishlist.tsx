@@ -9,6 +9,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { useAuth } from '@/lib/auth/hooks';
 import { useCart } from '@/lib/cart/hooks';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface WishlistItem {
   id: string;
@@ -185,11 +186,11 @@ export function Wishlist() {
                     
                     <div className="flex items-center gap-2">
                       <span className="font-semibold">
-                        ₦{item.price.toLocaleString()}
+                        {formatCurrency(item.price)}
                       </span>
                       {item.originalPrice && item.originalPrice > item.price && (
                         <span className="text-sm text-gray-500 line-through">
-                          ₦{item.originalPrice.toLocaleString()}
+                          {formatCurrency(item.originalPrice)}
                         </span>
                       )}
                     </div>

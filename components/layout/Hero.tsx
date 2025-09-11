@@ -4,6 +4,7 @@ import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface HeroProps {
   featuredProducts?: Array<{
@@ -51,11 +52,11 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
             {/* Stats */}
             <div className="mt-12 grid grid-cols-3 gap-4 text-center lg:text-left">
               <div>
-                <div className="text-2xl font-bold text-indigo-600">10K+</div>
+                <div className="text-2xl font-bold text-indigo-600">1K+</div>
                 <div className="text-sm text-gray-500">Products</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-indigo-600">50K+</div>
+                <div className="text-2xl font-bold text-indigo-600">10K+</div>
                 <div className="text-sm text-gray-500">Happy Customers</div>
               </div>
               <div>
@@ -89,7 +90,7 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
                         {product.name}
                       </h3>
                       <p className="text-yellow-300 font-bold">
-                        ₦{product.price.toLocaleString()}
+                        {formatCurrency(product.price)}
                       </p>
                     </div>
                   </div>

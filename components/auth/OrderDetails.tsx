@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { formatCurrency } from '@/lib/utils/currency';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
 interface OrderItem {
@@ -179,7 +180,7 @@ export function OrderDetails({ orderId }: OrderDetailsProps) {
                 </p>
               </div>
               <div className="text-right">
-                <p className="font-medium">₦{item.price.toLocaleString()}</p>
+                <p className="font-medium">{formatCurrency(item.price)}</p>
                 <p className="text-sm text-gray-600">each</p>
               </div>
             </div>
@@ -193,19 +194,19 @@ export function OrderDetails({ orderId }: OrderDetailsProps) {
         <div className="space-y-2">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>₦{order.subtotal.toLocaleString()}</span>
+            <span>{formatCurrency(order.subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span>Shipping</span>
-            <span>₦{order.shipping.toLocaleString()}</span>
+            <span>{formatCurrency(order.shipping)}</span>
           </div>
           <div className="flex justify-between">
             <span>Tax</span>
-            <span>₦{order.tax.toLocaleString()}</span>
+            <span>{formatCurrency(order.tax)}</span>
           </div>
           <div className="border-t pt-2 flex justify-between font-semibold text-lg">
             <span>Total</span>
-            <span>₦{order.total.toLocaleString()}</span>
+            <span>{formatCurrency(order.total)}</span>
           </div>
         </div>
         <div className="mt-4 pt-4 border-t">

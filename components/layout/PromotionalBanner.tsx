@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface Promotion {
   id: string
@@ -60,7 +61,7 @@ const getDefaultPromotions = (): Promotion[] => [
   {
     id: 'free-shipping',
     title: 'Free Shipping',
-    subtitle: 'On Orders Over ₦15,000',
+    subtitle: 'On Orders Over GH₵15,000',
     description: 'No minimum purchase required for premium members',
     ctaText: 'Learn More',
     ctaLink: '/shipping',
@@ -235,7 +236,7 @@ const PromotionalBanner: React.FC<PromotionalBannerProps> = ({
                           
                           {/* Floating price tag */}
                           <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm text-gray-900 px-2 py-1 rounded-full text-xs font-bold shadow-lg">
-                            ₦{p.price.toLocaleString()}
+                            {formatCurrency(p.price)}
                           </div>
                           
                           {/* Product info overlay */}
