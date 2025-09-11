@@ -237,6 +237,31 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   }, [state.items])
 
+  // Listen for cart changes from other tabs/contexts (e.g., logout clears localStorage)
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'cart') {
+        try {
+          const value = e.newValue
+          if (!value) {
+            // cart key removed
+            dispatch({ type: 'CLEAR_CART' })
+            return
+          }
+          const parsed = JSON.parse(value)
+          if (Array.isArray(parsed) && parsed.length === 0) {
+            dispatch({ type: 'CLEAR_CART' })
+          }
+        } catch {}
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', onStorage)
+      return () => window.removeEventListener('storage', onStorage)
+    }
+    return
+  }, [])
+
   // API call helper with error handling
   const apiCall = async (url: string, options: RequestInit) => {
     const response = await fetch(url, {

@@ -70,6 +70,12 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
+    // Clear cart client-side to avoid persisting previous user's items
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('cart')
+      }
+    } catch {}
     await signOut({ redirect: false })
   }
 

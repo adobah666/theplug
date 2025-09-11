@@ -257,9 +257,10 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
             productId: item.productId,
             variantId: item.variantId,
             quantity: item.quantity,
-            price: item.price,
-            name: item.name,
-            image: item.image || '/placeholder-image.jpg',
+            // API returns unitPrice and productName/productImage
+            price: (item as any).unitPrice ?? (item as any).price ?? 0,
+            name: (item as any).productName ?? (item as any).name ?? 'Item',
+            image: (item as any).productImage || (item as any).image || '/placeholder-image.jpg',
             size: item.size,
             color: item.color
           }))}
