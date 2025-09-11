@@ -37,7 +37,8 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>('')
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
-  const [loadingAddresses, setLoadingAddresses] = useState(false)
+  // Start in loading state to prevent flashing the new-address form before we know
+  const [loadingAddresses, setLoadingAddresses] = useState(true)
 
   const [formData, setFormData] = useState<ShippingAddress>({
     firstName: initialData.firstName || '',
@@ -63,20 +64,81 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
 
   // Fetch saved addresses on mount
   useEffect(() => {
-    if (!session?.user) return
-    
     const fetchAddresses = async () => {
+      if (!session?.user) {
+        // No auth: stop loading and leave form visible
+        setLoadingAddresses(false)
+        return
+      }
       try {
         setLoadingAddresses(true)
-        const res = await fetch('/api/auth/addresses')
+        const res = await fetch('/api/auth/addresses', { cache: 'no-store', credentials: 'include' })
         if (res.ok) {
           const addresses = await res.json()
-          setSavedAddresses(Array.isArray(addresses) ? addresses : [])
-          
-          // If no addresses, show form immediately
-          if (!addresses || addresses.length === 0) {
+          const list: SavedAddress[] = Array.isArray(addresses) ? addresses : []
+          setSavedAddresses(list)
+          if (!list || list.length === 0) {
+            // Try to migrate addresses from order history first
+            try {
+              const migrateRes = await fetch('/api/auth/addresses/migrate', { 
+                method: 'POST',
+                cache: 'no-store',
+                credentials: 'include'
+              })
+              if (migrateRes.ok) {
+                const migrateData = await migrateRes.json()
+                if (migrateData.addressesAdded > 0) {
+                  // Refetch addresses after migration
+                  const res2 = await fetch('/api/auth/addresses', { cache: 'no-store', credentials: 'include' })
+                  if (res2.ok) {
+                    const addresses2 = await res2.json()
+                    const list2: SavedAddress[] = Array.isArray(addresses2) ? addresses2 : []
+                    setSavedAddresses(list2)
+                    if (list2.length > 0) {
+                      const def = list2.find(a => a.isDefault) || list2[0]
+                      setSelectedAddressId(def.id)
+                      setFormData(prev => ({
+                        ...prev,
+                        firstName: def.firstName,
+                        lastName: def.lastName,
+                        email: prev.email,
+                        phone: '',
+                        street: def.street,
+                        city: def.city,
+                        state: def.state,
+                        zipCode: def.postalCode,
+                        country: def.country,
+                      }))
+                      return
+                    }
+                  }
+                }
+              }
+            } catch {
+              // Migration failed, continue with empty addresses
+            }
+            // No addresses even after migration: show new-address form
             setShowNewAddressForm(true)
+          } else {
+            // Preselect default (or first) and hydrate form to enable quick-continue
+            setShowNewAddressForm(false)
+            const def = list.find(a => a.isDefault) || list[0]
+            setSelectedAddressId(def.id)
+            setFormData(prev => ({
+              ...prev,
+              firstName: def.firstName,
+              lastName: def.lastName,
+              email: prev.email,
+              phone: '',
+              street: def.street,
+              city: def.city,
+              state: def.state,
+              zipCode: def.postalCode,
+              country: def.country,
+            }))
           }
+        } else {
+          setShowNewAddressForm(true)
         }
       } catch (error) {
         console.error('Failed to fetch addresses:', error)
@@ -85,7 +147,6 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
         setLoadingAddresses(false)
       }
     }
-    
     fetchAddresses()
   }, [session])
 
@@ -320,7 +381,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
     return raw || ''
   }
 
-  // Show loading state
+  // Show loading state while fetching addresses for authenticated users
   if (loadingAddresses) {
     return (
       <div className="flex justify-center py-8">
@@ -336,9 +397,9 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
         <div>
           <h3 className="text-lg font-medium text-gray-900 mb-4">Choose Address</h3>
           <div className="space-y-3">
-            {savedAddresses.map((address) => (
+            {savedAddresses.map((address, idx) => (
               <div
-                key={address.id}
+                key={address.id || `${address.firstName}-${address.lastName}-${address.street}-${idx}`}
                 className={`border rounded-lg p-4 cursor-pointer transition-colors ${
                   selectedAddressId === address.id
                     ? 'border-blue-500 bg-blue-50'
@@ -472,7 +533,7 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
                   <div className="absolute z-40 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg max-h-64 overflow-auto">
                     {suggestions.map((s, idx) => {
                       const p = s?.properties || {}
-                      const primary = p.formatted || [p.house_number, p.street].filter(Boolean).join(' ') || p.address_line1 || 'Unknown address'
+                      const primary = p.formatted || [p.house_number, p.street].filter(Boolean).join(' ') || p.address_line1 || streetQuery || ''
                       const secondary = [p.city || p.town || p.suburb, p.state || p.region, p.postcode, p.country].filter(Boolean).join(', ')
                       return (
                         <button

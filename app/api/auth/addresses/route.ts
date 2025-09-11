@@ -48,9 +48,10 @@ export async function POST(request: NextRequest) {
       longitude,
     } = addressData;
 
-    if (!firstName || !lastName || !street || !city || !state || !postalCode || !country) {
+    // Allow postalCode to be optional (especially for Ghana where GPS code may be omitted)
+    if (!firstName || !lastName || !street || !city || !state || !country) {
       return NextResponse.json(
-        { error: 'All address fields are required' },
+        { error: 'Missing required address fields' },
         { status: 400 }
       );
     }
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
       street,
       city,
       state,
-      postalCode,
+      postalCode: postalCode || '',
       country,
       isDefault: isDefault || false,
       ...(typeof latitude === 'number' ? { latitude } : {}),

@@ -499,32 +499,7 @@ export default function ProductPage({}: ProductPageProps) {
             </div>
           </div>
 
-          {/* Product Features */}
-          <div className="border-t pt-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-3">
-                <Truck className="w-6 h-6 text-blue-600" />
-                <div>
-                  <p className="font-medium text-sm">Free Shipping</p>
-                  <p className="text-xs text-gray-600">On orders over ₦50,000</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <RotateCcw className="w-6 h-6 text-blue-600" />
-                <div>
-                  <p className="font-medium text-sm">Easy Returns</p>
-                  <p className="text-xs text-gray-600">30-day return policy</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Shield className="w-6 h-6 text-blue-600" />
-                <div>
-                  <p className="font-medium text-sm">Secure Payment</p>
-                  <p className="text-xs text-gray-600">SSL encrypted checkout</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          
         </div>
       </div>
 

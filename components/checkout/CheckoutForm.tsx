@@ -90,9 +90,11 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
     // Persist address if requested and user is authenticated
     try {
       if (options?.saveAddress && session?.user) {
-        await fetch('/api/auth/addresses', {
+        const saveRes = await fetch('/api/auth/addresses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          cache: 'no-store',
           body: JSON.stringify({
             firstName: data.firstName,
             lastName: data.lastName,
@@ -106,6 +108,10 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
             ...(typeof data.longitude === 'number' ? { longitude: data.longitude } : {}),
           })
         })
+        if (!saveRes.ok) {
+          // Log but don't block checkout
+          try { console.warn('Save address failed', await saveRes.json()) } catch {}
+        }
       }
     } catch {
       // Non-blocking: ignore save errors to not disrupt checkout flow
@@ -141,7 +147,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
       // Get current cart from server to obtain cartId for proper deletion
       let cartId: string | null = null
       try {
-        const cartResponse = await fetch('/api/cart', { method: 'GET' })
+        const cartResponse = await fetch('/api/cart', { method: 'GET', credentials: 'include', cache: 'no-store' })
         if (cartResponse.ok) {
           const cartData = await cartResponse.json()
           cartId = cartData?.data?.cart?.id

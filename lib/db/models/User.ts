@@ -92,8 +92,9 @@ const AddressSchema = new Schema<IAddress>({
   },
   postalCode: {
     type: String,
-    required: [true, 'Postal code is required'],
-    trim: true
+    required: false,
+    trim: true,
+    default: ''
   },
   country: {
     type: String,
