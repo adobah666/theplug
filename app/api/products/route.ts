@@ -152,11 +152,11 @@ export async function POST(request: NextRequest) {
     const { name, description, price, images, category, brand } = body
     let { variants, inventory } = body
 
-    // Validate required fields
-    if (!name || !description || !price || !images || !category || !brand) {
+    // Validate required fields (description is optional)
+    if (!name || !price || !images || !category || !brand) {
       return NextResponse.json<ApiResponse>({
         success: false,
-        error: 'Name, description, price, images, category, and brand are required'
+        error: 'Name, price, images, category, and brand are required'
       }, { status: 400 })
     }
 
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
     // Create new product
     const newProduct = new Product({
       name: name.trim(),
-      description: description.trim(),
+      ...(typeof description === 'string' && description.trim().length > 0 ? { description: description.trim() } : {}),
       price,
       images,
       category: new mongoose.Types.ObjectId(category),

@@ -10,6 +10,9 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { ProductVariantSelector } from '@/components/product/ProductVariantSelector';
 import { RelatedProducts } from '@/components/product/RelatedProducts';
+import { TrendingSection } from '@/components/product/TrendingSection';
+import { RelatedCarousel } from '@/components/product/RelatedCarousel';
+import { YouMayAlsoLike } from '@/components/product/YouMayAlsoLike';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { useCart } from '@/lib/cart/hooks';
 // Using generic types locally for product/variant to avoid tight coupling to types module
@@ -447,6 +450,14 @@ export default function ProductPage({}: ProductPageProps) {
             />
           )}
 
+          {/* Delivery Notice */}
+          <div className="rounded-md bg-blue-50 border border-blue-100 text-blue-800 p-3 flex items-center gap-2">
+            <Truck className="w-4 h-4" />
+            <span className="text-sm">
+              Delivery typically arrives between 1–5 days based on your location. We will send you a message with the exact delivery date a few hours after purchase.
+            </span>
+          </div>
+
           {/* Quantity and Add to Cart */}
           <div className="space-y-4">
             <div className="flex items-center space-x-4">
@@ -511,12 +522,14 @@ export default function ProductPage({}: ProductPageProps) {
       {/* Product Description and Reviews */}
       <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <Card className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Product Description</h2>
-            <div className="prose max-w-none">
-              <p className="text-gray-700 leading-relaxed">{product.description}</p>
-            </div>
-          </Card>
+          {typeof product.description === 'string' && product.description.trim().length > 0 && (
+            <Card className="p-6">
+              <h2 className="text-2xl font-bold mb-4">Product Description</h2>
+              <div className="prose max-w-none">
+                <p className="text-gray-700 leading-relaxed">{product.description}</p>
+              </div>
+            </Card>
+          )}
 
           {/* Reviews Section */}
           <Card className="p-6 mt-6">
@@ -591,12 +604,21 @@ export default function ProductPage({}: ProductPageProps) {
         </div>
       </div>
 
-      {/* Related Products */}
-      <RelatedProducts
-        productId={product._id}
-        category={categorySlug || categoryName}
-        className="mt-16"
-      />
+      {/* Related & You May Like - Horizontal carousels */}
+      <div className="mt-16 space-y-12">
+        <RelatedCarousel
+          productId={product._id}
+          category={categorySlug || categoryName}
+          title="Related Products"
+          subtitle="Customers who viewed this item also explored"
+        />
+
+        <YouMayAlsoLike
+          productId={product._id}
+          category={categorySlug || categoryName}
+          brand={product.brand}
+        />
+      </div>
     </div>
   );
 }

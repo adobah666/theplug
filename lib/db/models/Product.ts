@@ -83,9 +83,8 @@ const ProductSchema = new Schema<IProduct>({
   },
   description: {
     type: String,
-    required: [true, 'Product description is required'],
+    required: false,
     trim: true,
-    minlength: [10, 'Product description must be at least 10 characters long'],
     maxlength: [2000, 'Product description cannot exceed 2000 characters']
   },
   price: {
@@ -150,7 +149,8 @@ const ProductSchema = new Schema<IProduct>({
 ProductSchema.pre('save', function(next) {
   // Create searchable text from name, description, brand, and variant info
   const variantText = this.variants.map(v => `${v.size || ''} ${v.color || ''}`).join(' ')
-  this.searchableText = `${this.name} ${this.description} ${this.brand} ${variantText}`.toLowerCase()
+  const desc = (this as any).description || ''
+  this.searchableText = `${this.name} ${desc} ${this.brand} ${variantText}`.toLowerCase()
   next()
 })
 
@@ -260,6 +260,20 @@ ProductSchema.index({ views: -1 })
 ProductSchema.index({ addToCartCount: -1 })
 ProductSchema.index({ purchaseCount: -1 })
 ProductSchema.index({ popularityScore: -1 })
+
+// In development, Next.js hot reloading can keep an old cached model with an outdated schema.
+// To prevent validation mismatches, delete the cached model in development so we always use the current schema.
+if (process.env.NODE_ENV === 'development') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const models: any = mongoose.models
+    if (models && models.Product) {
+      delete models.Product
+    }
+  } catch {
+    // noop
+  }
+}
 
 // Create and export the model
 const Product = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema)
