@@ -10,7 +10,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Button } from '@/components/ui/Button';
 import { Filter, Grid, List } from 'lucide-react';
-import { Product } from '@/types';
+type ProductListItem = any;
 
 interface BrandPageProps {}
 
@@ -19,7 +19,7 @@ export default function BrandPage({}: BrandPageProps) {
   const searchParams = useSearchParams();
   const brand = params.brand as string;
   
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -57,9 +57,11 @@ export default function BrandPage({}: BrandPageProps) {
           throw new Error('Failed to fetch products');
         }
 
-        const data = await response.json();
-        setProducts(data.products || []);
-        setTotalProducts(data.total || 0);
+        const json = await response.json();
+        const fetchedProducts = json?.data?.data ?? json?.products ?? [];
+        const fetchedTotal = json?.data?.pagination?.total ?? json?.total ?? 0;
+        setProducts(fetchedProducts);
+        setTotalProducts(fetchedTotal);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load products');
       } finally {
@@ -215,7 +217,7 @@ export default function BrandPage({}: BrandPageProps) {
                       return (
                         <Button
                           key={page}
-                          variant={currentPage === page ? 'default' : 'outline'}
+                          variant={currentPage === page ? 'primary' : 'outline'}
                           size="sm"
                           onClick={() => handlePageChange(page)}
                         >
