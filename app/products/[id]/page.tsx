@@ -68,7 +68,12 @@ export default function ProductPage({}: ProductPageProps) {
         }
         const json = await response.json();
         const prod = json?.data?.product || json?.product || json;
-        setProduct(prod);
+        // Normalize images to always be an array for UI rendering
+        const imgs = Array.isArray(prod?.images)
+          ? (prod.images as string[])
+          : (prod?.images ? [prod.images] : []);
+        const normalized = { ...prod, images: imgs.filter(Boolean) };
+        setProduct(normalized);
         if (prod?.variants && prod.variants.length > 0) {
           setSelectedVariant(prod.variants[0]);
         }
@@ -568,10 +573,6 @@ export default function ProductPage({}: ProductPageProps) {
               <div className="flex justify-between">
                 <dt className="text-gray-600">Category:</dt>
                 <dd className="font-medium capitalize">{categoryName || 'N/A'}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-600">SKU:</dt>
-                <dd className="font-medium">{product.sku || 'N/A'}</dd>
               </div>
               {selectedVariant && (
                 <>
