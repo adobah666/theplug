@@ -212,14 +212,14 @@ export default function CategoryPage({}: CategoryPageProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
-      <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
-        <a href="/" className="hover:text-gray-900">Home</a>
-        <span>/</span>
-        <span className="text-gray-900">{categoryInfo.name}</span>
+      <nav className="flex items-center gap-1 text-xs sm:text-sm text-gray-600 mb-6">
+        <a href="/" className="inline-flex items-center leading-none hover:text-gray-900">Home</a>
+        <span className="px-1 text-gray-400 leading-none">/</span>
+        <span className="inline-flex items-center leading-none text-gray-900">{categoryInfo.name}</span>
         {subcategory && (
           <>
-            <span>/</span>
-            <span className="text-gray-900 capitalize">{subcategory}</span>
+            <span className="px-1 text-gray-400 leading-none">/</span>
+            <span className="inline-flex items-center leading-none text-gray-900 capitalize">{subcategory}</span>
           </>
         )}
       </nav>
