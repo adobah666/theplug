@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth/jwt';
-import { Order } from '@/lib/db/models/Order';
-import { Product } from '@/lib/db/models/Product';
-import { User } from '@/lib/db/models/User';
+import Order from '@/lib/db/models/Order';
+import Product from '@/lib/db/models/Product';
+import User from '@/lib/db/models/User';
 
 export async function POST(
   request: NextRequest,

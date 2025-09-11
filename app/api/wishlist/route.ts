@@ -1,28 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth/jwt';
-import { User } from '@/lib/db/models/User';
-import { Product } from '@/lib/db/models/Product';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/config';
+import User from '@/lib/db/models/User';
+import Product from '@/lib/db/models/Product';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const session = await getServerSession(authOptions as any);
+    const userId = (session as any)?.user?.id;
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    const user = await User.findById(payload.userId);
+    const user = await User.findById(userId);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Get full product details for wishlist items
     const wishlistItems = await Promise.all(
-      (user.wishlist || []).map(async (item) => {
+      (user.wishlist || []).map(async (item: any) => {
         const product = await Product.findById(item.productId);
         if (!product) return null;
 
@@ -31,10 +26,9 @@ export async function GET(request: NextRequest) {
           productId: item.productId,
           name: product.name,
           price: product.price,
-          originalPrice: product.originalPrice,
           image: product.images[0],
           brand: product.brand,
-          inStock: product.stock > 0,
+          inStock: (product.inventory || 0) > 0,
           addedAt: item.addedAt,
         };
       })
@@ -55,15 +49,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+    const session = await getServerSession(authOptions as any);
+    const userId = (session as any)?.user?.id;
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { productId } = await request.json();
 
@@ -80,13 +68,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    const user = await User.findById(payload.userId);
+    const user = await User.findById(userId);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Check if product is already in wishlist
-    const existingItem = user.wishlist?.find(item => item.productId === productId);
+    const existingItem = user.wishlist?.find((item: any) => item.productId === productId);
     if (existingItem) {
       return NextResponse.json(
         { error: 'Product already in wishlist' },

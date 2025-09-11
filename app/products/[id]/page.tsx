@@ -30,6 +30,7 @@ export default function ProductPage({}: ProductPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistItemId, setWishlistItemId] = useState<string | null>(null);
   const { addItem, refreshCart, state } = useCart();
   const cartLoading = state.isLoading;
   const [buyNowLoading, setBuyNowLoading] = useState(false);
@@ -82,6 +83,33 @@ export default function ProductPage({}: ProductPageProps) {
       fetchProduct();
     }
   }, [productId]);
+
+  // Load initial wishlist status for this product
+  useEffect(() => {
+    if (!productId) return
+    let ignore = false
+    const loadWishlistStatus = async () => {
+      try {
+        const res = await fetch('/api/wishlist', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        const items = Array.isArray(data)
+          ? data
+          : (Array.isArray(data?.items)
+              ? data.items
+              : (Array.isArray(data?.data)
+                  ? data.data
+                  : (Array.isArray(data?.data?.items) ? data.data.items : [])))
+        const found = items.find((it: any) => it?.productId === productId)
+        if (!ignore) {
+          setIsWishlisted(!!found)
+          setWishlistItemId(found?.id || null)
+        }
+      } catch {}
+    }
+    loadWishlistStatus()
+    return () => { ignore = true }
+  }, [productId])
 
   // Load reviews and eligibility
   useEffect(() => {
@@ -212,6 +240,72 @@ export default function ProductPage({}: ProductPageProps) {
       console.error('Failed to start checkout:', err);
     } finally {
       setBuyNowLoading(false);
+    }
+  };
+
+  // Persist wishlist state via API
+  const toggleWishlist = async () => {
+    if (!product) return;
+    const next = !isWishlisted;
+    setIsWishlisted(next);
+    try {
+      if (next) {
+        // Add to wishlist
+        const res = await fetch('/api/wishlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: product._id })
+        });
+        if (!res.ok) throw new Error('Failed to add to wishlist');
+        // Try to capture created id or re-fetch
+        try {
+          const json = await res.json().catch(() => ({} as any));
+          const createdId = (json as any)?.id || (json as any)?.data?.id || null;
+          if (createdId) {
+            setWishlistItemId(createdId);
+          } else {
+            const r2 = await fetch('/api/wishlist', { cache: 'no-store' });
+            if (r2.ok) {
+              const d2 = await r2.json().catch(() => ({} as any));
+              const items: any[] = Array.isArray(d2)
+                ? d2
+                : (Array.isArray((d2 as any)?.items)
+                    ? (d2 as any).items
+                    : (Array.isArray((d2 as any)?.data)
+                        ? (d2 as any).data
+                        : (Array.isArray((d2 as any)?.data?.items) ? (d2 as any).data.items : [])));
+              const found = items.find((it: any) => it?.productId === product._id);
+              setWishlistItemId(found?.id || null);
+            }
+          }
+        } catch {}
+      } else {
+        // Remove from wishlist
+        let idToDelete = wishlistItemId;
+        if (!idToDelete) {
+          const r0 = await fetch('/api/wishlist', { cache: 'no-store' });
+          if (r0.ok) {
+            const d0 = await r0.json().catch(() => ({} as any));
+            const items0: any[] = Array.isArray(d0)
+              ? d0
+              : (Array.isArray((d0 as any)?.items)
+                  ? (d0 as any).items
+                  : (Array.isArray((d0 as any)?.data)
+                      ? (d0 as any).data
+                      : (Array.isArray((d0 as any)?.data?.items) ? (d0 as any).data.items : [])));
+            const found0 = items0.find((it: any) => it?.productId === product._id);
+            idToDelete = found0?.id || null;
+          }
+        }
+        if (idToDelete) {
+          const res = await fetch(`/api/wishlist/${idToDelete}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Failed to remove from wishlist');
+          setWishlistItemId(null);
+        }
+      }
+    } catch {
+      // revert optimistic UI on error
+      setIsWishlisted((v) => !v);
     }
   };
 
@@ -393,7 +487,7 @@ export default function ProductPage({}: ProductPageProps) {
               
               <Button
                 variant="outline"
-                onClick={() => setIsWishlisted(!isWishlisted)}
+                onClick={toggleWishlist}
                 className="px-4"
               >
                 <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-current text-red-500' : ''}`} />
