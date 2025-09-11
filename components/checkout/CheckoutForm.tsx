@@ -131,6 +131,13 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
     setError(null)
 
     try {
+      // Require authentication before submitting an order
+      if (!session?.user) {
+        setError('Please sign in to place your order')
+        // Redirect to login and return to checkout after auth
+        router.push('/login?callbackUrl=/checkout')
+        return
+      }
       // Get current cart from server to obtain cartId for proper deletion
       let cartId: string | null = null
       try {
@@ -189,6 +196,12 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
       })
 
       if (!orderResponse.ok) {
+        // If unauthorized, prompt login and redirect
+        if (orderResponse.status === 401) {
+          setError('You need to sign in to place your order')
+          router.push('/login?callbackUrl=/checkout')
+          return
+        }
         const errorData = await orderResponse.json().catch(() => ({}))
         const details = Array.isArray(errorData?.details) ? `\n${errorData.details.join('\n')}` : ''
         throw new Error((errorData.error || errorData.message || 'Failed to create order') + details)

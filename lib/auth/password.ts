@@ -23,24 +23,8 @@ export async function comparePassword(password: string, hashedPassword: string):
 export function validatePasswordStrength(password: string): { isValid: boolean; errors: string[] } {
   const errors: string[] = []
   
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long')
-  }
-  
-  if (!/(?=.*[a-z])/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter')
-  }
-  
-  if (!/(?=.*[A-Z])/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter')
-  }
-  
-  if (!/(?=.*\d)/.test(password)) {
-    errors.push('Password must contain at least one number')
-  }
-  
-  if (!/(?=.*[@$!%*?&])/.test(password)) {
-    errors.push('Password must contain at least one special character (@$!%*?&)')
+  if (password.length < 6) {
+    errors.push('Password must be at least 6 characters long')
   }
   
   return {

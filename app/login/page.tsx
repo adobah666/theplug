@@ -1,23 +1,34 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { LoginForm } from '@/components/auth/LoginForm'
 import type { LoginFormData } from '@/lib/auth/validation'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { useState } from 'react'
 import { useAuth } from '@/lib/auth/hooks'
+import { useCart } from '@/lib/cart/context'
 
 export default function LoginPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const { login } = useAuth()
+  const searchParams = useSearchParams()
+  const { state: cartState, refreshCart } = useCart()
 
   const onSubmit = async (data: LoginFormData) => {
     setError(null)
     try {
       await login(data)
-      router.push('/account')
+      // Ensure we have latest cart
+      await refreshCart()
+      const callbackUrl = searchParams?.get('callbackUrl') || ''
+      const hasItems = (cartState?.itemCount || 0) > 0 || (cartState?.items || []).length > 0
+      if (callbackUrl === '/checkout' || hasItems) {
+        router.push(hasItems ? '/checkout' : '/')
+      } else {
+        router.push('/')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to sign in')
       throw e

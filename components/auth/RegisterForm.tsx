@@ -116,7 +116,7 @@ export function RegisterForm({ onSubmit, className }: RegisterFormProps) {
             disabled={isSubmitting}
           />
           <div className="mt-1 text-xs text-gray-500">
-            Password must contain at least one uppercase letter, lowercase letter, and number
+            Password must be at least 6 characters long
           </div>
         </div>
 

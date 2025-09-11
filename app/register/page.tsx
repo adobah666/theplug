@@ -1,23 +1,34 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { RegisterForm } from '@/components/auth/RegisterForm'
 import type { RegisterFormData } from '@/lib/auth/validation'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { useAuth } from '@/lib/auth/hooks'
+import { useCart } from '@/lib/cart/context'
 
 export default function RegisterPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const { register } = useAuth()
+  const { state: cartState, refreshCart } = useCart()
+  const searchParams = useSearchParams()
 
   const onSubmit = async (data: RegisterFormData) => {
     setError(null)
     try {
       await register(data) // will auto-login per context implementation
-      router.push('/account')
+      // Refresh cart after auth to ensure we see any server-side cart
+      await refreshCart()
+      const callbackUrl = searchParams?.get('callbackUrl') || ''
+      const hasItems = (cartState?.itemCount || 0) > 0 || (cartState?.items || []).length > 0
+      if (callbackUrl === '/checkout' || hasItems) {
+        router.push(hasItems ? '/checkout' : '/')
+      } else {
+        router.push('/')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to create account')
       throw e
