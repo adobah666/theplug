@@ -26,6 +26,39 @@ async function getFeaturedProducts() {
     const catList: Array<{ slug: string; name: string }> = (catJson?.data?.categories || []).map((c: any) => ({ slug: c.slug, name: c.name }))
     console.log('[home:getFeatured] categories count=', catList.length, 'slugs=', catList.map(c => c.slug))
 
+    // Helper: ensure we have at least 5 items by topping up from overall popularity (not necessarily unique by category)
+    const ensureAtLeastFive = async (
+      current: Array<{ id: string; name: string; price: number; originalPrice?: number; image: string; category: string; rating?: number; reviewCount?: number; isNew?: boolean; isOnSale?: boolean }>
+    ) => {
+      if (current.length >= 5) return current
+      const needed = 5 - current.length
+      const p = new URLSearchParams({ sort: 'popularity', order: 'desc', page: '1', limit: '50' })
+      const r = await fetch(`${base}/api/products/search?${p.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+      const j = await r.json().catch(() => ({} as any))
+      const list: any[] = Array.isArray(j?.data?.data) ? j.data.data : []
+      const existingIds = new Set(current.map(i => i.id))
+      for (const raw of list) {
+        const id = String(raw?._id || raw?.id || '')
+        if (!id || existingIds.has(id)) continue
+        const img = Array.isArray(raw?.images) && raw.images.length > 0 ? raw.images[0] : '/images/placeholder.png'
+        current.push({
+          id,
+          name: raw?.name || '',
+          price: Number(raw?.price || 0),
+          originalPrice: undefined,
+          image: img,
+          category: raw?.category?.name || raw?.category?.slug || 'misc',
+          rating: raw?.rating ?? 0,
+          reviewCount: raw?.reviewCount ?? 0,
+          isNew: false,
+          isOnSale: false
+        })
+        existingIds.add(id)
+        if (current.length >= 5) break
+      }
+      return current
+    }
+
     // If we don't have any categories (e.g., categories not populated), fallback to overall popularity unique-by-category
     if (!catList || catList.length === 0) {
       const p = new URLSearchParams({ sort: 'popularity', order: 'desc', page: '1', limit: '50' })
@@ -55,7 +88,7 @@ async function getFeaturedProducts() {
       }
       console.log('[home:getFeatured] fallback overall picked count=', picked.length)
       console.log('[home:getFeatured] final picked length=', picked.length, 'categories=', picked.map(p => p.category))
-    return picked
+      return await ensureAtLeastFive(picked)
     }
 
     // 2) For each category, fetch top 1 by popularity
@@ -110,7 +143,7 @@ async function getFeaturedProducts() {
         seen.add(catSlug)
         if (picked.length >= 5) break
       }
-      return picked
+      return await ensureAtLeastFive(picked)
     }
 
     // 3) Sort by popularity across categories and take top 5
@@ -146,7 +179,7 @@ async function getFeaturedProducts() {
       }
     })
     console.log('[home:getFeatured] final picked length=', picked.length, 'categories=', picked.map(p => p.category))
-    return picked
+    return await ensureAtLeastFive(picked)
   } catch (e) {
     // Fallback to empty list on error to avoid breaking homepage
     return []
@@ -317,7 +350,7 @@ interface HomePageContentProps {
 
 function HomePageContent({ featuredProducts, categories, categorySlides }: HomePageContentProps) {
   // Prepare hero featured products (first 4 products)
-  const heroProducts = featuredProducts.slice(0, 4).map(product => ({
+  const heroProducts = featuredProducts.slice(0, 5).map(product => ({
     id: product.id,
     name: product.name,
     price: product.price,

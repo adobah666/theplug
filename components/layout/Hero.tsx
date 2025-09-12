@@ -69,7 +69,7 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
           {/* Featured Products Preview */}
           <div className="relative">
             <div className="grid grid-cols-2 gap-4">
-              {featuredProducts.slice(0, 4).map((product, index) => (
+              {featuredProducts.slice(0, 5).map((product, index) => (
                 <Link
                   key={product.id}
                   href={product.href}

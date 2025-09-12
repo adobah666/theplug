@@ -7,6 +7,8 @@ import ProductEvent from '@/lib/db/models/ProductEvent'
 import { ApiResponse, PaginatedResponse } from '@/types'
 import { authenticateToken } from '@/lib/auth/middleware'
 import mongoose from 'mongoose'
+import { initializeClient } from '@/lib/meilisearch/client'
+import { initializeProductsIndex, indexProduct } from '@/lib/meilisearch/indexing'
 
 interface ProductCreateRequest {
   name: string
@@ -211,6 +213,15 @@ export async function POST(request: NextRequest) {
 
     // Populate category for response
     await newProduct.populate('category', 'name')
+
+    // Best-effort: index in Meilisearch so search picks it up without manual scripts
+    try {
+      await initializeClient()
+      await initializeProductsIndex()
+      await indexProduct(newProduct as any)
+    } catch (e) {
+      console.warn('Meilisearch indexing (create) failed or is unavailable:', e instanceof Error ? e.message : e)
+    }
 
     return NextResponse.json<ApiResponse>({
       success: true,

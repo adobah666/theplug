@@ -4,6 +4,8 @@ import Product from '@/lib/db/models/Product'
 import { ApiResponse } from '@/types'
 import { authenticateToken } from '@/lib/auth/middleware'
 import mongoose from 'mongoose'
+import { initializeClient } from '@/lib/meilisearch/client'
+import { initializeProductsIndex, indexProduct, removeProductFromIndex } from '@/lib/meilisearch/indexing'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 
@@ -176,6 +178,15 @@ export async function PUT(
       }, { status: 404 })
     }
 
+    // Best-effort: re-index in Meilisearch
+    try {
+      await initializeClient()
+      await initializeProductsIndex()
+      await indexProduct(updatedProduct as any)
+    } catch (e) {
+      console.warn('Meilisearch indexing (update) failed or is unavailable:', e instanceof Error ? e.message : e)
+    }
+
     return NextResponse.json<ApiResponse>({
       success: true,
       message: 'Product updated successfully',
@@ -245,6 +256,14 @@ export async function DELETE(
         success: false,
         error: 'Product not found'
       }, { status: 404 })
+    }
+
+    // Best-effort: remove from Meilisearch
+    try {
+      await initializeClient()
+      await removeProductFromIndex(String(id))
+    } catch (e) {
+      console.warn('Meilisearch remove (delete) failed or is unavailable:', e instanceof Error ? e.message : e)
     }
 
     return NextResponse.json<ApiResponse>({
