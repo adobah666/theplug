@@ -85,8 +85,8 @@ const Header: React.FC = () => {
             <span className="text-xl font-bold text-gray-900">ThePlug</span>
           </Link>
 
-          {/* Search bar - Desktop */}
-          <div className="hidden flex-1 max-w-lg mx-8 md:block">
+          {/* Search bar - Desktop (lg and up) */}
+          <div className="hidden flex-1 max-w-lg mx-8 lg:block">
             <SearchBar />
           </div>
 
@@ -94,7 +94,7 @@ const Header: React.FC = () => {
           <div className="flex items-center space-x-4">
             {/* Account */}
             {user ? (
-              <div className="hidden md:flex items-center space-x-3">
+              <div className="hidden lg:flex items-center space-x-3">
                 <Link href="/account" className="flex items-center space-x-1 text-gray-700 hover:text-gray-900">
                   <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center">
                     <span className="text-xs text-blue-600 font-medium">
@@ -111,7 +111,7 @@ const Header: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <Link href="/login" className="hidden md:flex items-center space-x-1 text-gray-700 hover:text-gray-900">
+              <Link href="/login" className="hidden lg:flex items-center space-x-1 text-gray-700 hover:text-gray-900">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
@@ -119,16 +119,16 @@ const Header: React.FC = () => {
               </Link>
             )}
 
-            {/* Wishlist */}
-            <Link href="/account/wishlist" className="hidden md:flex items-center space-x-1 text-gray-700 hover:text-gray-900">
+            {/* Wishlist (lg and up) */}
+            <Link href="/account/wishlist" className="hidden lg:flex items-center space-x-1 text-gray-700 hover:text-gray-900">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
               <span className="text-sm">Wishlist</span>
             </Link>
 
-            {/* Orders with badge */}
-            <Link href="/account/orders" className="hidden md:flex items-center space-x-2 text-gray-700 hover:text-gray-900 relative">
+            {/* Orders with badge (lg and up) */}
+            <Link href="/account/orders" className="hidden lg:flex items-center space-x-2 text-gray-700 hover:text-gray-900 relative">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
               </svg>
@@ -140,24 +140,24 @@ const Header: React.FC = () => {
               )}
             </Link>
 
-            {/* Cart (icon only on mobile) */}
-            <div className="md:hidden w-12 flex flex-col items-center justify-center">
+            {/* Cart (icon only on mobile / medium) */}
+            <div className="lg:hidden w-12 flex flex-col items-center justify-center">
               <CartIcon 
                 itemCount={state.itemCount}
                 onClick={() => setIsCartOpen(true)}
               />
             </div>
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
               <CartIcon 
                 itemCount={state.itemCount}
                 onClick={() => setIsCartOpen(true)}
               />
             </div>
 
-            {/* Orders icon (mobile) */}
+            {/* Orders icon (mobile / medium) */}
             <Link
               href="/account/orders"
-              className="relative md:hidden w-12 px-0 py-1 text-gray-700 hover:text-gray-900 flex flex-col items-center justify-center"
+              className="relative lg:hidden w-12 px-0 py-1 text-gray-700 hover:text-gray-900 flex flex-col items-center justify-center"
               aria-label="Orders"
             >
               {/* Package icon */}
@@ -172,8 +172,8 @@ const Header: React.FC = () => {
               )}
             </Link>
 
-            {/* Mobile menu button (icon only) */}
-            <div className="md:hidden w-12 flex flex-col items-center justify-center">
+            {/* Mobile menu button (icon only) shown on mobile/medium */}
+            <div className="lg:hidden w-12 flex flex-col items-center justify-center">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="p-2 text-gray-700 hover:text-gray-900"
@@ -187,8 +187,8 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile search */}
-        <div className="mt-4 md:hidden">
+        {/* Mobile/medium search */}
+        <div className="mt-4 lg:hidden">
           <SearchBar />
         </div>
       </div>
@@ -197,8 +197,8 @@ const Header: React.FC = () => {
       <nav className="border-t border-gray-200 bg-white">
         <div className="mx-auto max-w-7xl px-4">
           <div className="flex items-center justify-between py-3">
-            {/* Categories - Desktop */}
-            <div className="hidden md:flex items-center space-x-8">
+            {/* Categories - Desktop (lg and up) */}
+            <div className="hidden lg:flex items-center space-x-8">
               {categories.slice(0, 6).map((category) => (
                 <Link
                   key={category.slug}
@@ -215,8 +215,8 @@ const Header: React.FC = () => {
               )}
             </div>
 
-            {/* Brands - Desktop */}
-            <div className="hidden md:flex items-center space-x-6">
+            {/* Brands - Desktop (lg and up) */}
+            <div className="hidden lg:flex items-center space-x-6">
               {brands.slice(0, 3).map((brand) => (
                 <Link
                   key={brand.slug || brand.name}
@@ -229,9 +229,9 @@ const Header: React.FC = () => {
               <Link href="/brands" className="text-sm font-medium text-gray-700 hover:text-blue-600">All Brands</Link>
             </div>
 
-            {/* Auth buttons - Desktop */}
+            {/* Auth buttons - Desktop (lg and up) */}
             {!user && (
-              <div className="hidden md:flex items-center space-x-4">
+              <div className="hidden lg:flex items-center space-x-4">
                 <Button variant="ghost" size="sm">
                   <Link href="/login">Sign In</Link>
                 </Button>
