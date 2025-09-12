@@ -328,26 +328,25 @@ export default function ProductCreateForm() {
             <p className="text-sm text-gray-600 mt-1">Uploading...</p>
           )}
           {images.length > 0 && (
-            <div className="mt-3 space-y-2">
-              <p className="text-sm text-gray-700">Uploaded Images:</p>
-              <ul className="space-y-2">
+            <div className="mt-3">
+              <p className="text-sm text-gray-700 mb-2">Uploaded Images:</p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                 {images.map((url, idx) => (
-                  <li key={idx} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <img src={url} alt="uploaded" className="w-12 h-12 object-cover rounded" />
-                      <span className="text-sm text-gray-700 break-all">{url}</span>
-                    </div>
+                  <div key={idx} className="relative group">
+                    <img src={url} alt={`uploaded ${idx + 1}`} className="w-full h-20 object-cover rounded border" />
                     <button
                       type="button"
-                      className="text-sm text-red-600 hover:underline"
+                      aria-label="Remove image"
+                      title="Remove"
+                      className="absolute top-1 right-1 bg-white/90 hover:bg-white text-red-600 rounded-full px-2 py-0.5 text-xs shadow hidden group-hover:block"
                       onClick={() => setImages(imgs => imgs.filter((_, i) => i !== idx))}
                     >
                       Remove
                     </button>
-                  </li>
+                  </div>
                 ))}
-              </ul>
-              {images.length > 0 && (
+              </div>
+              <div className="mt-2">
                 <button
                   type="button"
                   className="text-sm text-gray-600 hover:underline"
@@ -355,7 +354,7 @@ export default function ProductCreateForm() {
                 >
                   Clear all
                 </button>
-              )}
+              </div>
             </div>
           )}
         </div>

@@ -36,6 +36,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
   // Debounce suggestions fetch
   useEffect(() => {
@@ -82,7 +83,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   const handleSearch = (searchQuery: string = query) => {
     if (!searchQuery.trim()) return
 
+    // Close and clear suggestions deterministically
     setShowSuggestionsList(false)
+    setSelectedIndex(-1)
+    setSuggestions([])
+    setIsFocused(false)
     
     if (onSearch) {
       onSearch(searchQuery)
@@ -166,8 +171,25 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     inputRef.current?.focus()
   }
 
+  // Close on outside click/tap
+  useEffect(() => {
+    const onPointerDown = (ev: MouseEvent | TouchEvent) => {
+      const target = ev.target as Node | null
+      if (!wrapperRef.current) return
+      if (target && wrapperRef.current.contains(target)) return
+      setShowSuggestionsList(false)
+      setSelectedIndex(-1)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('touchstart', onPointerDown, { passive: true })
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('touchstart', onPointerDown)
+    }
+  }, [])
+
   return (
-    <div className={`relative ${className}`}>
+    <div ref={wrapperRef} className={`relative ${className}`}>
       <div className="relative">
         <Input
           ref={inputRef}
