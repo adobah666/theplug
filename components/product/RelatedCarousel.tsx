@@ -46,17 +46,22 @@ export function RelatedCarousel({
         setError(null)
         const params = new URLSearchParams()
         params.set('category', category)
-        params.set('limit', String(limit))
-        params.set('exclude', productId)
+        params.set('limit', String(limit * 2))
+        params.set('sort', 'popularity')
         const res = await fetch(`/api/products/search?${params.toString()}`, { cache: 'no-store' })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(data?.error || 'Failed to fetch related items')
         const list: Item[] = Array.isArray(data?.products)
           ? data.products
-          : Array.isArray(data?.data)
-            ? data.data
-            : []
-        if (!ignore) setItems(list)
+          : Array.isArray(data?.data?.data)
+            ? data.data.data
+            : Array.isArray(data?.data)
+              ? data.data
+              : []
+        const filtered = list
+          .filter((p: any) => p && (p._id || p.id) && String(p._id || p.id) !== String(productId))
+          .filter((p: any) => (typeof p.inventory === 'number' ? p.inventory : 0) > 0)
+        if (!ignore) setItems(filtered.slice(0, limit))
       } catch (e) {
         if (!ignore) setError(e instanceof Error ? e.message : 'Failed to load related items')
       } finally {

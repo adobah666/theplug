@@ -1,43 +1,63 @@
-import React from 'react'
+"use client"
+
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear()
 
+  // Load categories dynamically for the Shop section
+  const [topCategories, setTopCategories] = useState<Array<{ name: string; slug: string }>>([])
+  useEffect(() => {
+    let ignore = false
+    const load = async () => {
+      try {
+        const res = await fetch('/api/categories', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) return
+        // Expected API shapes:
+        // { data: { categories: [{ name, slug }] } } OR { categories: [...] }
+        const list: Array<{ name: string; slug?: string }> = (json?.data?.categories
+          || json?.categories
+          || []) as any[]
+        // Normalize and sort by name
+        const norm = list
+          .map((c) => ({ name: c.name, slug: (c as any).slug || String(c.name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') }))
+          .filter((c) => c.name && c.slug)
+          .sort((a, b) => a.name.localeCompare(b.name))
+        if (!ignore) setTopCategories(norm.slice(0, 3))
+      } catch {}
+    }
+    load()
+    return () => { ignore = true }
+  }, [])
+
+  const shopLinks = [
+    // Top 3 categories (dynamic)
+    ...topCategories.map((c) => ({ name: c.name, href: `/categories/${c.slug}` })),
+    // Keep New Arrivals (static)
+    { name: 'New Arrivals', href: '/new-arrivals' },
+  ]
+
   const footerSections = [
     {
       title: 'Shop',
-      links: [
-        { name: 'Clothing', href: '/category/clothing' },
-        { name: 'Shoes', href: '/category/shoes' },
-        { name: 'Accessories', href: '/category/accessories' },
-        { name: 'New Arrivals', href: '/new-arrivals' },
-        { name: 'Sale', href: '/sale' },
-      ],
+      links: shopLinks,
     },
     {
       title: 'Customer Service',
       links: [
         { name: 'Contact Us', href: '/contact' },
         { name: 'Help Center', href: '/help' },
-        { name: 'Track Your Order', href: '/track-order' },
+        { name: 'Track Your Order', href: '/account/orders' },
         { name: 'Returns & Exchanges', href: '/returns' },
         { name: 'Size Guide', href: '/size-guide' },
       ],
     },
     {
-      title: 'Company',
-      links: [
-        { name: 'About Us', href: '/about' },
-        { name: 'Careers', href: '/careers' },
-        { name: 'Press', href: '/press' },
-        { name: 'Sustainability', href: '/sustainability' },
-        { name: 'Affiliate Program', href: '/affiliate' },
-      ],
-    },
-    {
       title: 'Legal',
       links: [
+        { name: 'About Us', href: '/about' },
         { name: 'Privacy Policy', href: '/privacy' },
         { name: 'Terms of Service', href: '/terms' },
         { name: 'Cookie Policy', href: '/cookies' },

@@ -119,7 +119,9 @@ export function YouMayAlsoLike({ productId, category, brand, limit = 16, classNa
           } catch {}
         }
 
-        if (!ignore) setItems(result.slice(0, limit))
+        // Filter out out-of-stock items
+        const inStock = result.filter((p: any) => (typeof p.inventory === 'number' ? p.inventory : 0) > 0)
+        if (!ignore) setItems(inStock.slice(0, limit))
       } catch (e) {
         if (!ignore) setError(e instanceof Error ? e.message : 'Failed to load suggestions')
       } finally {
