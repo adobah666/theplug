@@ -199,7 +199,7 @@ const Header: React.FC = () => {
           <div className="flex items-center justify-between py-3">
             {/* Categories - Desktop */}
             <div className="hidden md:flex items-center space-x-8">
-              {categories.map((category) => (
+              {categories.slice(0, 6).map((category) => (
                 <Link
                   key={category.slug}
                   href={`/categories/${category.slug}`}
@@ -208,6 +208,11 @@ const Header: React.FC = () => {
                   {category.name}
                 </Link>
               ))}
+              {categories.length > 6 && (
+                <Link href="/categories" className="text-sm font-medium text-gray-700 hover:text-blue-600">
+                  All Categories
+                </Link>
+              )}
             </div>
 
             {/* Brands - Desktop */}
