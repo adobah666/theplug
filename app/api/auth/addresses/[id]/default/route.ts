@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import User from '@/lib/db/models/User';
+import User, { IAddress } from '@/lib/db/models/User';
 
 export async function PUT(
   request: NextRequest,
@@ -18,16 +18,19 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const addressExists = user.addresses?.some(addr => addr.id === id);
+    const addressExists = user.addresses?.some((addr: IAddress) => addr.id === id);
     if (!addressExists) {
       return NextResponse.json({ error: 'Address not found' }, { status: 404 });
     }
 
     // Set all addresses to non-default, then set the specified one as default
-    user.addresses = user.addresses!.map((addr: any) => ({
-      ...addr,
-      isDefault: addr.id === id,
-    }));
+    if (user.addresses && user.addresses.length > 0) {
+      user.addresses.forEach((addr: IAddress) => {
+        // Mongoose subdocs can be mutated directly
+        // eslint-disable-next-line no-param-reassign
+        (addr as IAddress).isDefault = addr.id === id;
+      });
+    }
 
     await user.save();
 

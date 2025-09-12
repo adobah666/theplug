@@ -23,8 +23,11 @@ export async function GET(_req: NextRequest) {
     // Fallback to session
     if (!authedUserId) {
       const session = await getServerSession(authOptions as any)
-      const sUser = (session?.user ?? null) as any
-      const sid = sUser?.id || sUser?._id || null
+      let sid: string | null = null
+      if (session && typeof session === 'object' && 'user' in session && (session as any).user) {
+        const sUser = (session as any).user as any
+        sid = sUser?.id || sUser?._id || null
+      }
       if (sid) authedUserId = String(sid)
     }
 

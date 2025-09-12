@@ -9,7 +9,7 @@ export const GET = withAuth(async (request: NextRequest, { user, userId }) => {
     const userProfile = {
       id: user._id,
       email: user.email,
-      name: user.name,
+      name: `${user.firstName} ${user.lastName}`.trim(),
       phone: user.phone,
       emailVerified: user.emailVerified,
       addresses: user.addresses,
@@ -60,7 +60,17 @@ export const PUT = withAuth(async (request: NextRequest, { user, userId }) => {
     }
 
     // Update user fields
-    if (name) user.name = name.trim()
+    if (name) {
+      const full = name.trim()
+      const firstSpace = full.indexOf(' ')
+      if (firstSpace === -1) {
+        user.firstName = full
+        user.lastName = user.lastName || ''
+      } else {
+        user.firstName = full.slice(0, firstSpace)
+        user.lastName = full.slice(firstSpace + 1).trim()
+      }
+    }
     if (phone) user.phone = phone.trim()
 
     await user.save()
@@ -69,7 +79,7 @@ export const PUT = withAuth(async (request: NextRequest, { user, userId }) => {
     const userProfile = {
       id: user._id,
       email: user.email,
-      name: user.name,
+      name: `${user.firstName} ${user.lastName}`.trim(),
       phone: user.phone,
       emailVerified: user.emailVerified,
       addresses: user.addresses,

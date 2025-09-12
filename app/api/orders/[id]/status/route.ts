@@ -25,8 +25,10 @@ export async function PUT(
 
     const { id } = await params
 
-    const body = await request.json()
-    const { status, cancelReason } = body
+    type UpdateStatusBody = { status: OrderStatus | string; cancelReason?: string }
+    const body: UpdateStatusBody = await request.json()
+    const rawStatus = body.status
+    const cancelReason = body.cancelReason
 
     // Validate order ID format
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -37,12 +39,13 @@ export async function PUT(
     }
 
     // Validate status
-    if (!status || !Object.values(OrderStatus).includes(status)) {
+    if (!rawStatus || !Object.values(OrderStatus).includes(rawStatus as OrderStatus)) {
       return NextResponse.json(
         { error: 'Valid order status is required' },
         { status: 400 }
       )
     }
+    const status = rawStatus as OrderStatus
 
     // Get the current order to check ownership and current status
     const currentOrder = await getOrderById(id, authResult.userId!)
@@ -101,29 +104,30 @@ export async function PUT(
       
       const user = await User.findById(authResult.userId);
       if (user) {
-        const statusMessages = {
+        const statusMessages: Record<OrderStatus, string> = {
           [OrderStatus.PENDING]: 'Your order has been received and is being processed.',
           [OrderStatus.CONFIRMED]: 'Your order has been confirmed and is being prepared for shipment.',
           [OrderStatus.PROCESSING]: 'Your order is currently being processed.',
           [OrderStatus.SHIPPED]: 'Your order has been shipped and is on its way to you!',
           [OrderStatus.DELIVERED]: 'Your order has been delivered successfully.',
-          [OrderStatus.CANCELLED]: `Your order has been cancelled. ${cancelReason ? `Reason: ${cancelReason}` : ''}`
+          [OrderStatus.CANCELLED]: `Your order has been cancelled. ${cancelReason ? `Reason: ${cancelReason}` : ''}`,
+          [OrderStatus.RETURNED]: 'Your order has been marked as returned.'
         };
 
         await emailNotificationService.queueOrderStatusUpdate(user.email, {
           customerName: `${user.firstName} ${user.lastName}`,
           orderNumber: updatedOrder.orderNumber,
           status: status,
-          statusMessage: statusMessages[status as OrderStatus] || 'Your order status has been updated.',
+          statusMessage: statusMessages[status] || 'Your order status has been updated.',
           trackingUrl: updatedOrder.trackingNumber ? 
-            `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/orders/${updatedOrder._id}` : 
+            `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/orders/${String(updatedOrder._id)}` : 
             undefined
         });
 
         // Schedule review request if order is delivered
         if (status === OrderStatus.DELIVERED) {
           const { emailJobService } = await import('@/lib/email/jobs');
-          await emailJobService.scheduleReviewRequestForOrder(updatedOrder._id.toString(), 72); // 3 days delay
+          await emailJobService.scheduleReviewRequestForOrder(String(updatedOrder._id), 72); // 3 days delay
         }
       }
     } catch (emailError) {
@@ -134,7 +138,7 @@ export async function PUT(
     return NextResponse.json({
       message: 'Order status updated successfully',
       order: {
-        id: updatedOrder._id,
+        id: String(updatedOrder._id),
         orderNumber: updatedOrder.orderNumber,
         status: updatedOrder.status,
         cancelReason: updatedOrder.cancelReason,

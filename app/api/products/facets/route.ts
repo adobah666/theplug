@@ -18,8 +18,11 @@ export async function GET(request: NextRequest) {
       if (mongoose.Types.ObjectId.isValid(categoryParam)) {
         categoryId = new mongoose.Types.ObjectId(categoryParam)
       } else {
-        const cat = await Category.findOne({ slug: categoryParam.toLowerCase() }).lean()
-        if (cat) categoryId = cat._id as unknown as mongoose.Types.ObjectId
+        const cat = await Category
+          .findOne({ slug: categoryParam.toLowerCase() })
+          .select('_id')
+          .lean<{ _id: mongoose.Types.ObjectId }>()
+        if (cat?._id) categoryId = cat._id
       }
       if (categoryId) match.category = categoryId
     }
@@ -37,7 +40,7 @@ export async function GET(request: NextRequest) {
     // Aggregate brands
     const brandsAgg = await Product.aggregate([
       { $match: match },
-      { $match: { brand: { $exists: true, $ne: null, $ne: '' } } },
+      { $match: { brand: { $exists: true, $nin: [null, ''] } } },
       { $group: { _id: '$brand', count: { $sum: 1 } } },
       { $project: { _id: 0, name: '$_id', count: 1 } },
       { $sort: { name: 1 } }
@@ -47,7 +50,7 @@ export async function GET(request: NextRequest) {
     const sizesAgg = await Product.aggregate([
       { $match: match },
       { $unwind: '$variants' },
-      { $match: { 'variants.size': { $exists: true, $ne: null, $ne: '' } } },
+      { $match: { 'variants.size': { $exists: true, $nin: [null, ''] } } },
       { $group: { _id: { $toLower: '$variants.size' }, count: { $sum: 1 } } },
       { $project: { _id: 0, value: '$_id', count: 1 } },
       { $sort: { value: 1 } }
@@ -57,7 +60,7 @@ export async function GET(request: NextRequest) {
     const colorsAgg = await Product.aggregate([
       { $match: match },
       { $unwind: '$variants' },
-      { $match: { 'variants.color': { $exists: true, $ne: null, $ne: '' } } },
+      { $match: { 'variants.color': { $exists: true, $nin: [null, ''] } } },
       { $group: { _id: { $toLower: '$variants.color' }, count: { $sum: 1 } } },
       { $project: { _id: 0, value: '$_id', count: 1 } },
       { $sort: { value: 1 } }

@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
     await connectDB()
 
     // Verify authentication
-    const authResult = await verifyToken(request)
-    if (!authResult.success) {
+    const authResult = await authenticateToken(request)
+    if (!authResult.success || !authResult.userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }

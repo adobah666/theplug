@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
-import { connectDB } from '@/lib/db/connection'
-import { User } from '@/lib/db/models/User'
+import connectDB from '@/lib/db/connection'
+import User from '@/lib/db/models/User'
 
-// Configure web-push with VAPID keys
-webpush.setVapidDetails(
-  'mailto:notifications@theplug.com',
-  process.env.VAPID_PUBLIC_KEY || '',
-  process.env.VAPID_PRIVATE_KEY || ''
-)
+// Lazily configure web-push to avoid build-time failures when envs are missing
+let vapidConfigured = false
+function configureWebPush() {
+  if (vapidConfigured) return
+  const pub = process.env.VAPID_PUBLIC_KEY
+  const priv = process.env.VAPID_PRIVATE_KEY
+  if (!pub || !priv) {
+    console.warn('[notifications/send] VAPID keys not set; push notifications disabled')
+    return
+  }
+  try {
+    webpush.setVapidDetails('mailto:notifications@theplug.com', pub, priv)
+    vapidConfigured = true
+  } catch (e) {
+    console.error('[notifications/send] Failed to configure web-push VAPID keys:', e)
+  }
+}
 
 interface NotificationPayload {
   title: string
@@ -28,6 +39,7 @@ interface NotificationPayload {
 
 export async function POST(request: NextRequest) {
   try {
+    configureWebPush()
     // This endpoint should be protected and only accessible by admin/system
     const authHeader = request.headers.get('authorization')
     const apiKey = process.env.NOTIFICATIONS_API_KEY

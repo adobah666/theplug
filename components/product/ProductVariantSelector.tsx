@@ -23,9 +23,21 @@ const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
   onVariantChange,
   className
 }) => {
-  // Group variants by size and color
-  const sizes = [...new Set(variants.filter(v => v.size).map(v => v.size))]
-  const colors = [...new Set(variants.filter(v => v.color).map(v => v.color))]
+  // Group variants by size and color (ensure arrays are string[])
+  const sizes = [
+    ...new Set(
+      variants
+        .map(v => v.size)
+        .filter((s): s is string => typeof s === 'string' && s.length > 0)
+    )
+  ]
+  const colors = [
+    ...new Set(
+      variants
+        .map(v => v.color)
+        .filter((c): c is string => typeof c === 'string' && c.length > 0)
+    )
+  ]
 
   // Get available variants based on current selection
   const getAvailableVariants = (filterBy: 'size' | 'color', value: string) => {

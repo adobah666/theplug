@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     // For guest users, use session ID from cookies
     if (!userId) {
-      sessionId = request.cookies.get('sessionId')?.value
+      sessionId = request.cookies.get('sessionId')?.value ?? null
       if (!sessionId) {
         return NextResponse.json<ApiResponse>({
           success: false,

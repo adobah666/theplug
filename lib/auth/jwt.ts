@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken'
+import { sign, verify, decode, type SignOptions, type JwtPayload } from 'jsonwebtoken'
 
 function getJWTSecret(): string {
   const secret = process.env.JWT_SECRET
@@ -20,14 +20,22 @@ export interface JWTPayload {
 }
 
 export function signToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, getJWTSecret(), {
-    expiresIn: getJWTExpiresIn(),
-  })
+  // Cast payload to a plain object to satisfy jsonwebtoken typings
+  const data: Record<string, unknown> = {
+    userId: payload.userId,
+    email: payload.email,
+  }
+  const options: SignOptions = { expiresIn: getJWTExpiresIn() as unknown as any }
+  return sign(data, getJWTSecret(), options) as string
 }
 
 export function verifyToken(token: string): JWTPayload {
   try {
-    return jwt.verify(token, getJWTSecret()) as JWTPayload
+    const decoded = verify(token, getJWTSecret()) as JwtPayload | string
+    if (typeof decoded === 'string') {
+      throw new Error('Invalid token payload')
+    }
+    return decoded as unknown as JWTPayload
   } catch (error) {
     throw new Error('Invalid or expired token')
   }
@@ -35,7 +43,9 @@ export function verifyToken(token: string): JWTPayload {
 
 export function decodeToken(token: string): JWTPayload | null {
   try {
-    return jwt.decode(token) as JWTPayload
+    const d = decode(token) as JwtPayload | null
+    if (!d || typeof d === 'string') return null
+    return d as unknown as JWTPayload
   } catch (error) {
     return null
   }

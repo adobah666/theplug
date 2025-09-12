@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import ReviewList from './ReviewList'
-import ReviewForm from './ReviewForm'
+import { ReviewForm } from './ReviewForm'
 import { useAuth } from '@/lib/auth/context'
 
 interface ReviewSectionProps {
@@ -16,12 +16,12 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   productId,
   className = ''
 }) => {
-  const { user, isAuthenticated } = useAuth()
+  const { session, status } = useAuth()
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
   const handleWriteReview = () => {
-    if (!isAuthenticated) {
+    if (status !== 'authenticated') {
       // Redirect to login or show login modal
       window.location.href = '/auth/login?redirect=' + encodeURIComponent(window.location.pathname)
       return
@@ -69,8 +69,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
       >
         <ReviewForm
           productId={productId}
-          onSubmitSuccess={handleReviewSubmitted}
-          onCancel={() => setShowReviewForm(false)}
+          onSubmitted={handleReviewSubmitted}
         />
       </Modal>
     </div>

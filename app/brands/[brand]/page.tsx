@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { ProductGrid } from '@/components/product/ProductGrid';
 import { FilterSidebar } from '@/components/product/FilterSidebar';
@@ -96,6 +96,11 @@ export default function BrandPage({}: BrandPageProps) {
   }
 
   return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    }>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
       <Breadcrumb
@@ -268,5 +273,6 @@ export default function BrandPage({}: BrandPageProps) {
         onClose={() => setMobileFiltersOpen(false)}
       />
     </div>
+    </Suspense>
   );
 }

@@ -75,9 +75,10 @@ export function verifyWebhookSignature(
     }
 
     // Create hash using the webhook secret
+    const data = typeof payload === 'string' ? Buffer.from(payload, 'utf8') : payload;
     const hash = crypto
       .createHmac('sha512', webhookSecret)
-      .update(payload, 'utf8')
+      .update(data)
       .digest('hex');
 
     // Compare signatures

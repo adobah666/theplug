@@ -147,7 +147,7 @@ export class EmailQueue {
   }
 
   private generateId(): string {
-    return `email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `email_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   private sleep(ms: number): Promise<void> {

@@ -49,7 +49,7 @@ async function findMeilisearchKey() {
       return key
       
     } catch (error) {
-      console.log(`❌ Key "${key}" failed:`, error.message)
+      console.log(`❌ Key "${key}" failed:`, error instanceof Error ? error.message : String(error))
     }
   }
   

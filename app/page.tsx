@@ -1,4 +1,8 @@
 import { Suspense } from 'react'
+
+// Force dynamic rendering to avoid build-time prerender fetch errors
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import { Hero } from '@/components/layout/Hero'
 import { FeaturedProducts } from '@/components/product/FeaturedProducts'
 import { TrendingSection } from '@/components/product/TrendingSection'

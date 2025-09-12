@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const brandAggregation = await Product.aggregate([
       {
         $match: {
-          brand: { $exists: true, $ne: null, $ne: '' }
+          brand: { $exists: true, $nin: [null, ''] }
         }
       },
       {

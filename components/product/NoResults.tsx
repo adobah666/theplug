@@ -65,7 +65,7 @@ export const NoResults: React.FC<NoResultsProps> = ({
         
         <Button 
           onClick={() => window.location.href = '/'}
-          variant="default"
+          variant="primary"
         >
           Browse All Products
         </Button>

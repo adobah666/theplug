@@ -1,5 +1,5 @@
 import Cart, { ICart, ICartItem } from '@/lib/db/models/Cart'
-import Product from '@/lib/db/models/Product'
+import Product, { type IProductVariant } from '@/lib/db/models/Product'
 import mongoose from 'mongoose'
 
 export interface CartValidationResult {
@@ -34,7 +34,7 @@ export async function validateCartItems(cart: ICart): Promise<CartValidationResu
   })
 
   // Create a map for quick product lookup
-  const productMap = new Map(products.map(p => [p._id.toString(), p]))
+  const productMap = new Map<string, any>(products.map((p: any) => [p._id.toString(), p]))
 
   const validItems: ICartItem[] = []
 
@@ -55,7 +55,8 @@ export async function validateCartItems(cart: ICart): Promise<CartValidationResu
     let isVariantValid = true
 
     if (item.variantId) {
-      const variant = product.variants.find(v => v._id?.toString() === item.variantId)
+      const variant = (product.variants as any[]).find((v: any) => v._id?.toString() === item.variantId)
+      
       if (!variant) {
         result.removedItems.push(item)
         result.errors.push(`Variant for "${item.name}" is no longer available`)
@@ -171,7 +172,7 @@ export async function checkInventoryAvailability(
   let availableInventory = product.inventory
 
   if (variantId) {
-    const variant = product.variants.find(v => v._id?.toString() === variantId)
+    const variant = (product.variants as IProductVariant[]).find((v: IProductVariant) => v._id?.toString() === variantId)
     if (!variant) {
       return {
         available: false,

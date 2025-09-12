@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/Button';
 import { ProfileForm } from '@/components/auth/ProfileForm';
 import { AddressManager } from '@/components/auth/AddressManager';
 import { PasswordChangeForm } from '@/components/auth/PasswordChangeForm';
-import { useAuth } from '@/lib/auth/hooks';
+import { useAuthUser } from '@/lib/auth/hooks';
 
 type TabType = 'profile' | 'addresses' | 'password' | 'preferences';
 
 export default function AccountPage() {
-  const { user } = useAuth();
+  const { user } = useAuthUser();
   const [activeTab, setActiveTab] = useState<TabType>('profile');
 
   const tabs = [
@@ -34,7 +34,7 @@ export default function AccountPage() {
                 {tabs.map((tab) => (
                   <Button
                     key={tab.id}
-                    variant={activeTab === tab.id ? 'default' : 'ghost'}
+                    variant={activeTab === tab.id ? 'primary' : 'ghost'}
                     className="w-full justify-start"
                     onClick={() => setActiveTab(tab.id)}
                   >

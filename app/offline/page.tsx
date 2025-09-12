@@ -36,20 +36,12 @@ export default function OfflinePage() {
 
         {/* Actions */}
         <div className="space-y-4">
-          <Button 
-            className="w-full"
-            onClick={() => window.location.reload()}
-          >
-            Try Again
+          <Button className="w-full">
+            <Link href=".">Try Again</Link>
           </Button>
           
-          <Button 
-            variant="outline" 
-            className="w-full"
-          >
-            <Link href="/">
-              Go to Homepage
-            </Link>
+          <Button variant="outline" className="w-full">
+            <Link href="/">Go to Homepage</Link>
           </Button>
         </div>
 

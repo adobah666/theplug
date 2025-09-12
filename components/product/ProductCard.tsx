@@ -34,6 +34,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onAddToCart,
   onAddToWishlist
 }) => {
+  // Hooks must be called unconditionally at the top level
+  const { state } = useCart()
+
   const formatPrice = (price: number) => formatCurrency(price)
 
   const renderStars = (rating: number) => {
@@ -80,7 +83,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
   }
 
   // Client-side availability (subtract items already in cart for this product)
-  const { state } = useCart()
   const reservedQty = state.items
     .filter((it) => it.productId === product._id)
     .reduce((sum, it) => sum + (it.quantity || 0), 0)

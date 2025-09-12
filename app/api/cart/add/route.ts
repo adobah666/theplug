@@ -6,6 +6,8 @@ import { verifyToken } from '@/lib/auth/jwt'
 import { ApiResponse } from '@/types'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
+import type { IProductVariant } from '@/lib/db/models/Product'
+import type { ICartItem } from '@/lib/db/models/Cart'
 
 interface AddToCartRequest {
   productId: string
@@ -58,9 +60,10 @@ export async function POST(request: NextRequest) {
 
     // For guest users, use session ID from cookies or generate one
     if (!userId) {
-      sessionId = request.cookies.get('sessionId')?.value
+      // Ensure the type matches string | null
+      sessionId = request.cookies.get('sessionId')?.value ?? null
       if (!sessionId) {
-        sessionId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        sessionId = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
       }
     }
 
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
     let availableInventory = product.inventory
 
     if (variantId && product.variants.length > 0) {
-      selectedVariant = product.variants.find(v => v._id?.toString() === variantId)
+      selectedVariant = product.variants.find((v: IProductVariant) => v._id?.toString() === variantId)
       if (!selectedVariant) {
         return NextResponse.json<ApiResponse>({
           success: false,
@@ -124,7 +127,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if item already exists in cart
-    const existingItemIndex = cart.items.findIndex(item => 
+    const existingItemIndex = cart.items.findIndex((item: ICartItem) => 
       item.productId.toString() === productId && 
       item.variantId === variantId
     )

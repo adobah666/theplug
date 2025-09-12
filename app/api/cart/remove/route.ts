@@ -5,6 +5,7 @@ import { verifyToken } from '@/lib/auth/jwt'
 import { ApiResponse } from '@/types'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
+import type { ICartItem } from '@/lib/db/models/Cart'
 
 interface RemoveFromCartRequest {
   itemId: string
@@ -68,7 +69,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Find and remove the item from cart
-    const itemIndex = cart.items.findIndex(item => item._id?.toString() === itemId)
+    const itemIndex = cart.items.findIndex((item: ICartItem) => item._id?.toString() === itemId)
     
     if (itemIndex === -1) {
       return NextResponse.json<ApiResponse>({

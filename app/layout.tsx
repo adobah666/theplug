@@ -102,7 +102,15 @@ export default function RootLayout({
               <CartProvider>
                 <OfflineIndicator />
                 <div className="flex flex-col min-h-screen">
-                  <Header />
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center py-4">
+                        <LoadingSpinner size="md" />
+                      </div>
+                    }
+                  >
+                    <Header />
+                  </Suspense>
                   <main className="flex-1">
                     <Suspense 
                       fallback={

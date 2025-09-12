@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ProductGrid } from '@/components/product/ProductGrid';
 import { FilterSidebar } from '@/components/product/FilterSidebar';
 import { MobileFilterDrawer } from '@/components/product/MobileFilterDrawer';
@@ -23,7 +24,6 @@ type UIProduct = {
   inventory: number
 }
 
-interface CategoryPageProps {}
 
 interface CategoryInfo {
   name: string;
@@ -59,7 +59,7 @@ const CATEGORY_INFO: Record<string, CategoryInfo> = {
   }
 };
 
-export default function CategoryPage({}: CategoryPageProps) {
+export default function CategoryPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -210,10 +210,15 @@ export default function CategoryPage({}: CategoryPageProps) {
   }
 
   return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    }>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-xs sm:text-sm text-gray-600 mb-6">
-        <a href="/" className="inline-flex items-center leading-none hover:text-gray-900">Home</a>
+        <Link href="/" className="inline-flex items-center leading-none hover:text-gray-900">Home</Link>
         <span className="px-1 text-gray-400 leading-none">/</span>
         <span className="inline-flex items-center leading-none text-gray-900">{categoryInfo.name}</span>
         {subcategory && (
@@ -264,7 +269,7 @@ export default function CategoryPage({}: CategoryPageProps) {
         {/* Subcategories */}
         {categoryInfo.subcategories.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
-            <a
+            <Link
               href={`/categories/${category}`}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 !subcategory
@@ -273,9 +278,9 @@ export default function CategoryPage({}: CategoryPageProps) {
               }`}
             >
               All
-            </a>
+            </Link>
             {categoryInfo.subcategories.map((sub) => (
-              <a
+              <Link
                 key={sub}
                 href={`/categories/${category}?subcategory=${sub}`}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors capitalize ${
@@ -285,7 +290,7 @@ export default function CategoryPage({}: CategoryPageProps) {
                 }`}
               >
                 {sub}
-              </a>
+              </Link>
             ))}
           </div>
         )}
@@ -433,11 +438,7 @@ export default function CategoryPage({}: CategoryPageProps) {
         </div>
       </div>
 
-      {/* Mobile Filter Drawer */}
-      <MobileFilterDrawer
-        isOpen={mobileFiltersOpen}
-        onClose={() => setMobileFiltersOpen(false)}
-      />
     </div>
-  );
+  </Suspense>
+);
 }

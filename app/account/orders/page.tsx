@@ -1,14 +1,18 @@
 'use client';
 
+import { Suspense } from 'react';
+
 import { OrderHistory } from '@/components/auth/OrderHistory';
 
 export default function OrdersPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold mb-8">Order History</h1>
-        <OrderHistory />
+    <Suspense fallback={<div className="min-h-[200px] flex items-center justify-center">Loading…</div>}>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-2xl font-bold mb-8">Order History</h1>
+          <OrderHistory />
+        </div>
       </div>
-    </div>
+    </Suspense>
   );
 }

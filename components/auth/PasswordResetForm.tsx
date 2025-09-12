@@ -127,11 +127,11 @@ export function PasswordResetForm({ onSubmit, onBackToLogin, className }: Passwo
           autoComplete="email"
           placeholder="Enter your email"
           {...register('email')}
-          error={!!errors.email}
+          error={errors.email?.message ?? ''}
           disabled={isSubmitting}
         />
         {errors.email && (
-          <ErrorMessage message={errors.email.message} className="mt-1" />
+          <ErrorMessage message={errors.email?.message ?? 'Invalid email'} className="mt-1" />
         )}
       </div>
 

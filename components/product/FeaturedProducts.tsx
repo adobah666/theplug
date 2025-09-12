@@ -38,7 +38,7 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const intervalRef = useRef<NodeJS.Timeout>()
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const itemsPerView = {
     mobile: 1,
@@ -157,16 +157,17 @@ const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                       className="w-full sm:w-1/2 lg:w-1/4 flex-shrink-0 px-3"
                     >
                       <ProductCard
-                        id={product.id}
-                        name={product.name}
-                        price={product.price}
-                        originalPrice={product.originalPrice}
-                        image={product.image}
-                        category={product.category}
-                        rating={product.rating}
-                        reviewCount={product.reviewCount}
-                        isNew={product.isNew}
-                        isOnSale={product.isOnSale}
+                        product={{
+                          _id: product.id,
+                          name: product.name,
+                          description: undefined,
+                          price: product.price,
+                          images: [product.image],
+                          brand: '',
+                          rating: product.rating ?? 0,
+                          reviewCount: product.reviewCount ?? 0,
+                          inventory: 0,
+                        }}
                       />
                     </div>
                   ))}

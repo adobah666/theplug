@@ -12,8 +12,12 @@ export async function testDatabaseConnection(): Promise<boolean> {
     await connectDB()
     
     // Test if we can perform a simple operation
-    const collections = await mongoose.connection.db.listCollections().toArray()
-    console.log('Available collections:', collections.map(c => c.name))
+    const db = mongoose.connection.db
+    if (!db) {
+      throw new Error('MongoDB connection is not established')
+    }
+    const collections = await db.listCollections().toArray()
+    console.log('Available collections:', collections.map((c: any) => c.name))
     
     console.log('✅ Database connection test passed')
     return true
@@ -24,7 +28,7 @@ export async function testDatabaseConnection(): Promise<boolean> {
     console.error('1. Download MongoDB Community Server from https://www.mongodb.com/try/download/community')
     console.error('2. Install and start the MongoDB service')
     console.error('3. Or use MongoDB Atlas cloud service and update MONGODB_URI in .env.local')
-    console.error('Error details:', error instanceof Error ? error.message : error)
+    console.error('Error details:', error instanceof Error ? error.message : String(error))
     return false
   }
 }

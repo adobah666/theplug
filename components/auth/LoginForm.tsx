@@ -61,11 +61,12 @@ export function LoginForm({ onSubmit, onForgotPassword, className }: LoginFormPr
             autoComplete="email"
             placeholder="Enter your email"
             {...register('email')}
-            error={!!errors.email}
+            error={errors.email?.message ?? ''}
             disabled={isSubmitting}
           />
+
           {errors.email && (
-            <ErrorMessage message={errors.email.message} className="mt-1" />
+            <ErrorMessage message={errors.email?.message ?? 'Invalid email'} className="mt-1" />
           )}
         </div>
 
@@ -79,11 +80,12 @@ export function LoginForm({ onSubmit, onForgotPassword, className }: LoginFormPr
             autoComplete="current-password"
             placeholder="Enter your password"
             {...register('password')}
-            error={!!errors.password}
+            error={errors.password?.message ?? ''}
             disabled={isSubmitting}
           />
+
           {errors.password && (
-            <ErrorMessage message={errors.password.message} className="mt-1" />
+            <ErrorMessage message={errors.password?.message ?? 'Invalid password'} className="mt-1" />
           )}
         </div>
       </div>

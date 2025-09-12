@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { LoginForm } from '@/components/auth/LoginForm'
 import type { LoginFormData } from '@/lib/auth/validation'
@@ -36,20 +37,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-16 bg-gray-50">
-      <div className="w-full max-w-md bg-white rounded-lg shadow p-6">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Sign in to your account</h1>
-        <p className="text-sm text-gray-600 mb-6">
-          Or{' '}
-          <Link href="/register" className="text-blue-600 hover:text-blue-500">
-            create a new account
-          </Link>
-        </p>
+    <Suspense fallback={<div className="min-h-[200px] flex items-center justify-center">Loading…</div>}>
+      <div className="min-h-screen flex items-center justify-center px-4 py-16 bg-gray-50">
+        <div className="w-full max-w-md bg-white rounded-lg shadow p-6">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Sign in to your account</h1>
+          <p className="text-sm text-gray-600 mb-6">
+            Or{' '}
+            <Link href="/register" className="text-blue-600 hover:text-blue-500">
+              create a new account
+            </Link>
+          </p>
 
-        {error && <ErrorMessage message={error} className="mb-4" />}
+          {error && <ErrorMessage message={error} className="mb-4" />}
 
-        <LoginForm onSubmit={onSubmit} className="mt-4" />
+          <LoginForm onSubmit={onSubmit} className="mt-4" />
+        </div>
       </div>
-    </div>
+    </Suspense>
   )
 }

@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       const lastName = nameParts.slice(1).join(' ') || ''
 
       const newAddress = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        id: Date.now().toString() + Math.random().toString(36).slice(2, 11),
         firstName,
         lastName,
         street: shipping.street,

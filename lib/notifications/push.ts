@@ -82,7 +82,7 @@ export class PushNotificationService {
       
       const subscription = await this.registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(vapidPublicKey)
+        applicationServerKey: this.urlBase64ToUint8Array(vapidPublicKey).buffer as ArrayBuffer
       })
 
       // Send subscription to server
@@ -149,12 +149,9 @@ export class PushNotificationService {
       body: payload.body,
       icon: payload.icon || '/icons/icon-192x192.png',
       badge: payload.badge || '/icons/badge-72x72.png',
-      image: payload.image,
       data: payload.data,
-      actions: payload.actions,
       tag: payload.tag,
-      requireInteraction: payload.requireInteraction || false,
-      vibrate: [200, 100, 200]
+      requireInteraction: payload.requireInteraction || false
     }
 
     await this.registration.showNotification(payload.title, options)

@@ -7,8 +7,6 @@ export { validateEmailConfig, emailConfig } from './config';
 
 export type {
   SendEmailOptions,
-  EmailJob,
-  EmailQueueOptions,
 } from './service';
 
 export type {
@@ -19,3 +17,8 @@ export type {
   OrderStatusData,
   ReviewRequestData,
 } from './templates';
+
+export type {
+  EmailJob,
+  EmailQueueOptions,
+} from './queue';

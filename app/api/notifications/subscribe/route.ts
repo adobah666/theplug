@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
-import { connectDB } from '@/lib/db/connection'
-import { User } from '@/lib/db/models/User'
+import connectDB from '@/lib/db/connection'
+import User from '@/lib/db/models/User'
 
 export async function POST(request: NextRequest) {
   try {

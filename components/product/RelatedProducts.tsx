@@ -3,7 +3,18 @@
 import { useState, useEffect } from 'react';
 import { ProductCard } from './ProductCard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Product } from '@/types';
+
+type CardProduct = {
+  _id: string;
+  name: string;
+  description?: string;
+  price: number;
+  images: string[];
+  brand: string;
+  rating: number;
+  reviewCount: number;
+  inventory: number;
+};
 
 interface RelatedProductsProps {
   productId: string;
@@ -12,7 +23,7 @@ interface RelatedProductsProps {
 }
 
 export function RelatedProducts({ productId, category, className = '' }: RelatedProductsProps) {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<CardProduct[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
