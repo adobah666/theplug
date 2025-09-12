@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth/jwt';
-import { User } from '@/lib/db/models/User';
-import { hashPassword, verifyPassword } from '@/lib/auth/password';
+import connectDB from '@/lib/db/connection';
+import User from '@/lib/db/models/User';
+import { hashPassword, comparePassword } from '@/lib/auth/password';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,13 +32,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await User.findById(payload.userId);
+    await connectDB();
+
+    const user = await User.findById(payload.userId).select('+password');
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await verifyPassword(currentPassword, user.password);
+    const isCurrentPasswordValid = await comparePassword(currentPassword, user.password);
     if (!isCurrentPasswordValid) {
       return NextResponse.json(
         { error: 'Current password is incorrect' },
