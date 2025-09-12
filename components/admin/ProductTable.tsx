@@ -434,52 +434,84 @@ export default function ProductTable() {
       ) : error ? (
         <ErrorMessage message={error} />
       ) : (
-        <div className="overflow-x-auto border rounded-md">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left">Product</th>
-                <th className="px-3 py-2 text-left">Brand</th>
-                <th className="px-3 py-2 text-left">Price</th>
-                <th className="px-3 py-2 text-left">Inventory</th>
-                <th className="px-3 py-2 text-left">Views</th>
-                <th className="px-3 py-2 text-left">Adds</th>
-                <th className="px-3 py-2 text-left">Purchases</th>
-                <th className="px-3 py-2 text-left">Popularity</th>
-                <th className="px-3 py-2 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map(p => (
-                <tr key={p._id} className="border-t">
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      {p.images?.[0] && <img src={p.images[0]} alt="" className="w-10 h-10 object-cover rounded" />}
-                      <div>
-                        <button className="font-medium text-blue-600 hover:underline" onClick={async () => { await openAnalytics(p._id) }}>{p.name}</button>
-                        <div className="text-gray-500 text-xs">{p.category?.name || '—'}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2">{p.brand}</td>
-                  <td className="px-3 py-2">{formatCurrency(p.price)}</td>
-                  <td className="px-3 py-2">{p.inventory}</td>
-                  <td className="px-3 py-2">{p.views ?? 0}</td>
-                  <td className="px-3 py-2">{p.addToCartCount ?? 0}</td>
-                  <td className="px-3 py-2">{p.purchaseCount ?? 0}</td>
-                  <td className="px-3 py-2">{Math.round((p.popularityScore ?? 0) * 10) / 10}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="secondary" onClick={async () => { await openAnalytics(p._id) }}>Analytics</Button>
-                      <Button size="sm" onClick={async () => { await openModal(p._id) }}>Edit</Button>
-                      <Button size="sm" variant="destructive" onClick={() => onDelete(p._id)}>Delete</Button>
-                    </div>
-                  </td>
+        <>
+          {/* Desktop/tablet table (md and up) */}
+          <div className="hidden md:block overflow-hidden border rounded-md shadow-sm">
+            <table className="min-w-full text-sm table-auto">
+              <thead className="bg-gray-50">
+                <tr className="text-gray-700">
+                  <th className="px-3 py-2 text-left">Product</th>
+                  <th className="px-3 py-2 text-left">Brand</th>
+                  <th className="px-3 py-2 text-left">Price</th>
+                  <th className="px-3 py-2 text-left">Inventory</th>
+                  <th className="px-3 py-2 text-left">Views</th>
+                  <th className="px-3 py-2 text-left">Adds</th>
+                  <th className="px-3 py-2 text-left">Purchases</th>
+                  <th className="px-3 py-2 text-left">Popularity</th>
+                  <th className="px-3 py-2 text-left">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {items.map(p => (
+                  <tr key={p._id} className="border-t align-middle">
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        {p.images?.[0] && <img src={p.images[0]} alt="" className="w-10 h-10 object-cover rounded" />}
+                        <div className="min-w-0">
+                          <div className="font-medium text-blue-600 hover:underline max-w-[220px] truncate">
+                            <button onClick={async () => { await openAnalytics(p._id) }}>{p.name}</button>
+                          </div>
+                          <div className="text-gray-500 text-xs truncate max-w-[220px]">{p.category?.name || '—'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 max-w-[160px] truncate">{p.brand}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{formatCurrency(p.price)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{p.inventory}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{p.views ?? 0}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{p.addToCartCount ?? 0}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{p.purchaseCount ?? 0}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{Math.round((p.popularityScore ?? 0) * 10) / 10}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="secondary" onClick={async () => { await openAnalytics(p._id) }}>Analytics</Button>
+                        <Button size="sm" onClick={async () => { await openModal(p._id) }}>Edit</Button>
+                        <Button size="sm" variant="destructive" onClick={() => onDelete(p._id)}>Delete</Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile stacked list (no horizontal scroll) */}
+          <div className="md:hidden space-y-3">
+            {items.map((p) => (
+              <div key={p._id} className="border rounded-md p-3 bg-white shadow-sm">
+                <div className="flex items-center gap-3">
+                  {p.images?.[0] && <img src={p.images[0]} alt="" className="w-12 h-12 object-cover rounded" />}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-gray-900 truncate">{p.name}</div>
+                    <div className="text-xs text-gray-500 truncate">{p.brand} • {p.category?.name || '—'}</div>
+                  </div>
+                  <div className="text-right whitespace-nowrap font-semibold">{formatCurrency(p.price)}</div>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <div className="text-gray-600">
+                    <div>Inventory: <span className="font-medium">{p.inventory}</span></div>
+                    <div className="mt-0.5">Purchases: <span className="font-medium">{p.purchaseCount ?? 0}</span></div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="secondary" onClick={async () => { await openAnalytics(p._id) }}>Analytics</Button>
+                    <Button size="sm" onClick={async () => { await openModal(p._id) }}>Edit</Button>
+                    <Button size="sm" variant="destructive" onClick={() => onDelete(p._id)}>Delete</Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       <div className="flex items-center justify-between">
