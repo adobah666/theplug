@@ -115,10 +115,10 @@ CartSchema.pre('save', function(next) {
   next()
 })
 
-// Index for better query performance
-CartSchema.index({ userId: 1 })
-CartSchema.index({ sessionId: 1 })
-CartSchema.index({ updatedAt: -1 })
+// Indexes for better query performance
+// Use compound indexes to avoid duplicate single-field index defs and support sorting by recency
+CartSchema.index({ userId: 1, updatedAt: -1 }, { sparse: true })
+CartSchema.index({ sessionId: 1, updatedAt: -1 }, { sparse: true })
 
 // Create and export the model
 const Cart = mongoose.models.Cart || mongoose.model<ICart>('Cart', CartSchema)

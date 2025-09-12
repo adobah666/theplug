@@ -15,8 +15,12 @@ async function connectDB(): Promise<void> {
 
   try {
     // Attempt to connect to the database
+    // Favor fewer warnings in prod by disabling autoIndex (indexes should be created via migrations)
+    const isProd = process.env.NODE_ENV === 'production'
+    mongoose.set('strictQuery', true)
     const db = await mongoose.connect(process.env.MONGODB_URI || '', {
       dbName: process.env.MONGODB_DB_NAME || 'fashion-ecommerce',
+      autoIndex: !isProd,
     })
 
     connection.isConnected = db.connections[0].readyState
