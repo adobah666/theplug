@@ -1,13 +1,12 @@
 import { Suspense } from 'react'
 
-// Force dynamic rendering to avoid build-time prerender fetch errors
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+// Enable caching with 15-minute revalidation for optimal performance
+export const revalidate = 900 // 15 minutes
 import { Hero } from '@/components/layout/Hero'
 import { FeaturedProducts } from '@/components/product/FeaturedProducts'
-import { TrendingSection } from '@/components/product/TrendingSection'
+import { TrendingSectionServer } from '@/components/product/TrendingSectionServer'
 import { CategoryShowcase } from '@/components/layout/CategoryShowcase'
-import { CategoryProductsRow } from '@/components/product/CategoryProductsRow'
+import { CategoryProductsRowServer } from '@/components/product/CategoryProductsRowServer'
 import { PromotionalBanner } from '@/components/layout/PromotionalBanner'
 import { Newsletter } from '@/components/layout/Newsletter'
 import { Testimonials } from '@/components/layout/Testimonials'
@@ -22,7 +21,7 @@ async function getFeaturedProducts() {
     const base = (process.env.NEXT_PUBLIC_SITE_URL && process.env.NEXT_PUBLIC_SITE_URL.trim().length > 0)
       ? process.env.NEXT_PUBLIC_SITE_URL
       : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-    const catRes = await fetch(`${base}/api/categories`, { cache: 'no-store', next: { revalidate: 0 } })
+    const catRes = await fetch(`${base}/api/categories`, { next: { revalidate: 900 } })
     if (!catRes.ok) {
       console.error('[home:getFeatured] /api/categories HTTP', catRes.status, catRes.statusText)
     }
@@ -37,7 +36,7 @@ async function getFeaturedProducts() {
       if (current.length >= 5) return current
       const needed = 5 - current.length
       const p = new URLSearchParams({ sort: 'popularity', order: 'desc', page: '1', limit: '50' })
-      const r = await fetch(`${base}/api/products/search?${p.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+      const r = await fetch(`${base}/api/products/search?${p.toString()}`, { next: { revalidate: 900 } })
       const j = await r.json().catch(() => ({} as any))
       const list: any[] = Array.isArray(j?.data?.data) ? j.data.data : []
       const existingIds = new Set(current.map(i => i.id))
@@ -66,7 +65,7 @@ async function getFeaturedProducts() {
     // If we don't have any categories (e.g., categories not populated), fallback to overall popularity unique-by-category
     if (!catList || catList.length === 0) {
       const p = new URLSearchParams({ sort: 'popularity', order: 'desc', page: '1', limit: '50' })
-      const r = await fetch(`${base}/api/products/search?${p.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+      const r = await fetch(`${base}/api/products/search?${p.toString()}`, { next: { revalidate: 900 } })
       const j = await r.json().catch(() => ({} as any))
       const list: any[] = Array.isArray(j?.data?.data) ? j.data.data : []
       const seen = new Set<string>()
@@ -98,7 +97,7 @@ async function getFeaturedProducts() {
     // 2) For each category, fetch top 1 by popularity
     const perCategoryPromises = catList.map(async (cat) => {
       const p = new URLSearchParams({ category: cat.slug, sort: 'popularity', order: 'desc', page: '1', limit: '1' })
-      const r = await fetch(`${base}/api/products/search?${p.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+      const r = await fetch(`${base}/api/products/search?${p.toString()}`, { next: { revalidate: 900 } })
       if (!r.ok) {
         console.warn('[home:getFeatured] per-cat search failed', cat.slug, r.status, r.statusText)
       }
@@ -121,7 +120,7 @@ async function getFeaturedProducts() {
     if (perCategory.length === 0) {
       // Fallback to overall popularity unique-by-category if per-category queries returned nothing
       const p = new URLSearchParams({ sort: 'popularity', order: 'desc', page: '1', limit: '50' })
-      const r = await fetch(`${base}/api/products/search?${p.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+      const r = await fetch(`${base}/api/products/search?${p.toString()}`, { next: { revalidate: 900 } })
       if (!r.ok) console.warn('[home:getFeatured] fallback overall search HTTP', r.status, r.statusText)
       const j = await r.json().catch((e) => { console.warn('[home:getFeatured] fallback overall json error', e); return {} as any })
       const list: any[] = Array.isArray(j?.data?.data) ? j.data.data : []
@@ -199,7 +198,7 @@ async function getCategories() {
       : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
     // 1) Get all categories
-    const catRes = await fetch(`${base}/api/categories`, { cache: 'no-store', next: { revalidate: 0 } })
+    const catRes = await fetch(`${base}/api/categories`, { next: { revalidate: 900 } })
     if (!catRes.ok) {
       console.error('[home:getCategories] /api/categories HTTP', catRes.status, catRes.statusText)
       return []
@@ -230,8 +229,7 @@ async function getCategories() {
         })
         
         const prodRes = await fetch(`${base}/api/products/search?${params.toString()}`, { 
-          cache: 'no-store', 
-          next: { revalidate: 0 } 
+          next: { revalidate: 900 } 
         })
         
         if (!prodRes.ok) {
@@ -305,7 +303,7 @@ async function getCategorySlides() {
       ? process.env.NEXT_PUBLIC_SITE_URL
       : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
-    const catRes = await fetch(`${base}/api/categories`, { cache: 'no-store', next: { revalidate: 0 } })
+    const catRes = await fetch(`${base}/api/categories`, { next: { revalidate: 900 } })
     const catJson = await catRes.json().catch(() => ({} as any))
     const cats: Array<{ slug: string; name: string }> = (catJson?.data?.categories || []).map((c: any) => ({ slug: c.slug, name: c.name }))
 
@@ -315,12 +313,12 @@ async function getCategorySlides() {
     const slidePromises = topCats.map(async (cat) => {
       // Try newest first (API accepts 'newest'), then fall back to popularity
       const newestParams = new URLSearchParams({ category: cat.slug, sort: 'newest', order: 'desc', page: '1', limit: '24' })
-      const newestRes = await fetch(`${base}/api/products/search?${newestParams.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+      const newestRes = await fetch(`${base}/api/products/search?${newestParams.toString()}`, { next: { revalidate: 900 } })
       const newestJson = await newestRes.json().catch(() => ({} as any))
       let items: any[] = Array.isArray(newestJson?.data?.data) ? newestJson.data.data : []
       if (items.length === 0) {
         const popParams = new URLSearchParams({ category: cat.slug, sort: 'popularity', order: 'desc', page: '1', limit: '24' })
-        const popRes = await fetch(`${base}/api/products/search?${popParams.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+        const popRes = await fetch(`${base}/api/products/search?${popParams.toString()}`, { next: { revalidate: 900 } })
         const popJson = await popRes.json().catch(() => ({} as any))
         items = Array.isArray(popJson?.data?.data) ? popJson.data.data : []
       }
@@ -378,7 +376,7 @@ function HomePageContent({ featuredProducts, categories, categorySlides }: HomeP
       />*/}
 
       {/* Trending Section - Horizontal Scrolling */}
-      <TrendingSection 
+      <TrendingSectionServer 
         excludeIds={featuredProducts.map(p => p.id)}
         title="Trending Now"
         subtitle="Discover what's popular with our customers this week"
@@ -393,7 +391,7 @@ function HomePageContent({ featuredProducts, categories, categorySlides }: HomeP
 
       {/* Per-Category Latest Rows */}
       {categories.length > 0 && categories.map((cat) => (
-        <CategoryProductsRow
+        <CategoryProductsRowServer
           key={cat.id}
           categorySlug={cat.id}
           categoryName={cat.name}
