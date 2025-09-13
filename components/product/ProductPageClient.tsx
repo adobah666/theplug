@@ -85,7 +85,7 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
     let ignore = false;
     (async () => {
       try {
-        const res = await fetch('/api/wishlist', { cache: 'no-store' });
+        const res = await fetch('/api/wishlist', { cache: 'no-store', credentials: 'include' });
         if (!res.ok) return;
         const data = await res.json();
         const items = Array.isArray(data)
@@ -219,18 +219,48 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
         const res = await fetch('/api/wishlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId: product._id })
+          body: JSON.stringify({ productId: product._id }),
+          credentials: 'include'
         });
-        if (!res.ok) throw new Error('Failed to add to wishlist');
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({} as any));
+          throw new Error(j?.error || 'Failed to add to wishlist');
+        }
       } else {
         if (wishlistItemId) {
-          const res = await fetch(`/api/wishlist/${wishlistItemId}`, { method: 'DELETE' });
-          if (!res.ok) throw new Error('Failed to remove from wishlist');
+          const res = await fetch(`/api/wishlist/${wishlistItemId}`, { method: 'DELETE', credentials: 'include' });
+          if (!res.ok) {
+            const j = await res.json().catch(() => ({} as any));
+            throw new Error(j?.error || 'Failed to remove from wishlist');
+          }
           setWishlistItemId(null);
         }
       }
     } catch {
       setIsWishlisted((v) => !v);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const shareData = {
+        title: product?.name || 'Product',
+        text: product?.name || 'Check this out',
+        url: typeof window !== 'undefined' ? window.location.href : ''
+      } as any;
+      if (typeof navigator !== 'undefined' && (navigator as any).share) {
+        await (navigator as any).share(shareData);
+        return;
+      }
+      if (typeof navigator !== 'undefined' && navigator.clipboard && shareData.url) {
+        await navigator.clipboard.writeText(shareData.url);
+        alert('Link copied to clipboard');
+        return;
+      }
+      // Fallback
+      alert('Sharing not supported on this device.');
+    } catch {
+      // ignore
     }
   };
 
@@ -259,7 +289,7 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
       {/* Breadcrumb */}
       <Breadcrumb
         items={[
@@ -273,13 +303,13 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
           })(),
           { label: product.name }
         ]}
-        className="mb-8"
+        className="mb-4 sm:mb-8"
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
         {/* Product Images */}
-        <div className="space-y-4">
-          <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden shadow-sm">
             <Image
               src={(product.images && product.images[selectedImageIndex]) || '/placeholder-product.jpg'}
               alt={product.name}
@@ -291,16 +321,16 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
 
           {/* Image Thumbnails */}
           {product.images && product.images.length > 1 && (
-            <div className="flex space-x-2 overflow-x-auto">
+            <div className="flex space-x-2 overflow-x-auto pb-2">
               {product.images.map((image: string, index: number) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImageIndex(index)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 ${
+                  className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 ${
                     selectedImageIndex === index ? 'border-blue-500' : 'border-gray-200'
                   }`}
                 >
-                  <Image src={image} alt={`${product.name} ${index + 1}`} width={80} height={80} className="object-cover w-full h-full" />
+                  <Image src={image} alt={`${product.name} ${index + 1}`} width={64} height={64} className="object-cover w-full h-full sm:w-20 sm:h-20" />
                 </button>
               ))}
             </div>
@@ -308,22 +338,22 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
         </div>
 
         {/* Product Info */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-            <div className="flex items-center space-x-4 mb-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 leading-tight">{product.name}</h1>
+            <div className="flex items-center space-x-4 mb-4 sm:mb-6">
               <div className="flex items-center">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={`w-5 h-5 ${i < Math.floor(product.rating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                  <Star key={i} className={`w-4 h-4 sm:w-5 sm:h-5 ${i < Math.floor(product.rating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
                 ))}
                 <span className="ml-2 text-sm text-gray-600">({product.reviewCount || 0} reviews)</span>
               </div>
             </div>
 
-            <div className="flex items-center space-x-3 mb-6">
-              <span className="text-3xl font-bold text-gray-900">{formatCurrency(currentPrice)}</span>
+            <div className="flex items-center space-x-3 mb-4 sm:mb-6">
+              <span className="text-2xl sm:text-3xl font-bold text-gray-900">{formatCurrency(currentPrice)}</span>
               {isOnSale && (
-                <span className="text-xl text-gray-500 line-through">{formatCurrency(originalPrice as number)}</span>
+                <span className="text-lg sm:text-xl text-gray-500 line-through">{formatCurrency(originalPrice as number)}</span>
               )}
             </div>
           </div>
@@ -338,57 +368,66 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
           )}
 
           {/* Delivery Notice */}
-          <div className="rounded-md bg-blue-50 border border-blue-100 text-blue-800 p-3 flex items-center gap-2">
-            <Truck className="w-4 h-4" />
+          <div className="rounded-lg bg-blue-50 border border-blue-100 text-blue-800 p-4 flex items-center gap-3">
+            <Truck className="w-5 h-5 flex-shrink-0" />
             <span className="text-sm">
               Delivery typically arrives between 1–5 days based on your location.
             </span>
           </div>
 
           {/* Quantity and Add to Cart */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-4">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
               <label className="text-sm font-medium text-gray-700">Quantity:</label>
-              <div className="flex items-center border border-gray-300 rounded-md">
-                <button onClick={() => handleQuantityChange(quantity - 1)} disabled={quantity <= 1} className="px-3 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50">-</button>
-                <span className="px-4 py-2 border-x border-gray-300">{quantity}</span>
-                <button onClick={() => handleQuantityChange(quantity + 1)} disabled={quantity >= availableQty} className="px-3 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50">+</button>
+              <div className="flex items-center justify-between sm:justify-start">
+                <div className="flex items-center border border-gray-300 rounded-lg">
+                  <button onClick={() => handleQuantityChange(quantity - 1)} disabled={quantity <= 1} className="px-4 py-3 text-gray-600 hover:text-gray-800 disabled:opacity-50 text-lg">-</button>
+                  <span className="px-6 py-3 border-x border-gray-300 font-medium min-w-[60px] text-center">{quantity}</span>
+                  <button onClick={() => handleQuantityChange(quantity + 1)} disabled={quantity >= availableQty} className="px-4 py-3 text-gray-600 hover:text-gray-800 disabled:opacity-50 text-lg">+</button>
+                </div>
+                <span className="text-sm text-gray-600 ml-4">{availableQty} in stock</span>
               </div>
-              <span className="text-sm text-gray-600">{availableQty} in stock</span>
             </div>
 
-            <div className="flex space-x-4">
-              <Button onClick={handleAddToCart} disabled={availableQty === 0 || cartLoading} className="flex-1 flex items-center justify-center space-x-2">
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+              <Button onClick={handleAddToCart} disabled={availableQty === 0 || cartLoading} className="flex-1 flex items-center justify-center space-x-2 h-12 text-base font-medium">
                 <ShoppingCart className="w-5 h-5" />
                 <span>{cartLoading ? 'Adding...' : 'Add to Cart'}</span>
               </Button>
-              <Button onClick={handleBuyNow} disabled={availableQty === 0 || buyNowLoading} className="flex-1 flex items-center justify-center">
+              <Button onClick={handleBuyNow} disabled={availableQty === 0 || buyNowLoading} className="flex-1 flex items-center justify-center h-12 text-base font-medium">
                 {buyNowLoading ? 'Processing...' : 'Buy Now'}
               </Button>
-              <Button variant="outline" onClick={toggleWishlist} className="px-4">
+            </div>
+            
+            <div className="flex space-x-3">
+              <Button variant="outline" onClick={toggleWishlist} className="flex-1 sm:flex-none px-6 h-12 flex items-center justify-center">
                 <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-current text-red-500' : ''}`} />
+                <span className="ml-2 sm:hidden">Wishlist</span>
               </Button>
-              <Button variant="outline" className="px-4"><Share2 className="w-5 h-5" /></Button>
+              <Button variant="outline" onClick={handleShare} className="flex-1 sm:flex-none px-6 h-12 flex items-center justify-center">
+                <Share2 className="w-5 h-5" />
+                <span className="ml-2 sm:hidden">Share</span>
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Product Description and Reviews */}
-      <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="mt-8 sm:mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2">
           {typeof product.description === 'string' && product.description.trim().length > 0 && (
-            <Card className="p-6">
-              <h2 className="text-2xl font-bold mb-4">Product Description</h2>
+            <Card className="p-4 sm:p-6">
+              <h2 className="text-xl sm:text-2xl font-bold mb-4">Product Description</h2>
               <div className="prose max-w-none">
                 <p className="text-gray-700 leading-relaxed">{product.description}</p>
               </div>
             </Card>
           )}
 
-          <Card className="p-6 mt-6">
+          <Card className="p-4 sm:p-6 mt-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold">Customer Reviews</h2>
+              <h2 className="text-xl sm:text-2xl font-bold">Customer Reviews</h2>
               <div className="text-sm text-gray-600">
                 Average: {(typeof product.rating === 'number' ? product.rating.toFixed(1) : (product.rating || 0))} · {product.reviewCount ?? 0} reviews
               </div>
@@ -428,8 +467,8 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
         </div>
 
         <div className="space-y-6">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Product Details</h3>
+          <Card className="p-4 sm:p-6">
+            <h3 className="text-lg sm:text-xl font-semibold mb-4">Product Details</h3>
             <dl className="space-y-2">
               <div className="flex justify-between">
                 <dt className="text-gray-600">Brand:</dt>
