@@ -176,6 +176,30 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 
   const totalPages = Math.ceil(total / 20);
 
+  // Build safe string hrefs (avoid passing non-plain objects to Client Components)
+  const toURLSearchParams = (sp: Record<string, string | string[] | undefined>) => {
+    const usp = new URLSearchParams();
+    for (const [key, val] of Object.entries(sp)) {
+      if (typeof val === 'string') {
+        if (val !== undefined && val !== null && val !== '') usp.set(key, val);
+      } else if (Array.isArray(val)) {
+        for (const v of val) {
+          if (v !== undefined && v !== null && v !== '') usp.append(key, String(v));
+        }
+      }
+    }
+    return usp;
+  };
+  const buildHref = (base: string, overrides: Record<string, string | undefined> = {}) => {
+    const usp = toURLSearchParams(searchParams);
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v === undefined || v === null || v === '') usp.delete(k);
+      else usp.set(k, v);
+    }
+    const qs = usp.toString();
+    return qs ? `${base}?${qs}` : base;
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
@@ -270,7 +294,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
             <div className="flex items-center space-x-4">
               <Link
-                href={{ pathname: `/categories/${category}`, query: { ...searchParams, filters: 'open' } }}
+                href={buildHref(`/categories/${category}`, { filters: 'open' })}
                 className="lg:hidden inline-flex items-center space-x-2 border border-gray-300 rounded-md px-3 py-2 text-sm hover:bg-gray-50"
               >
                 <Filter className="w-4 h-4" />
@@ -308,7 +332,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                 <div className="flex justify-center mt-12">
                   <div className="flex items-center space-x-2">
                     <Link
-                      href={{ pathname: `/categories/${category}`, query: { ...searchParams, page: String(Math.max(1, page - 1)) } }}
+                      href={buildHref(`/categories/${category}`, { page: String(Math.max(1, page - 1)) })}
                       className={`px-3 py-1.5 text-sm border rounded ${page <= 1 ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Previous
@@ -329,7 +353,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                         pages.push(
                           <Link
                             key={p}
-                            href={{ pathname: `/categories/${category}`, query: { ...searchParams, page: String(p) } }}
+                            href={buildHref(`/categories/${category}`, { page: String(p) })}
                             className={`px-3 py-1.5 text-sm border rounded ${active ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}
                           >
                             {p}
@@ -339,7 +363,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                       return pages;
                     })()}
                     <Link
-                      href={{ pathname: `/categories/${category}`, query: { ...searchParams, page: String(Math.min(totalPages, page + 1)) } }}
+                      href={buildHref(`/categories/${category}`, { page: String(Math.min(totalPages, page + 1)) })}
                       className={`px-3 py-1.5 text-sm border rounded ${page >= totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Next
