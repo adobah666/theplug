@@ -1,8 +1,8 @@
 import React from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency } from '@/lib/utils/currency'
+import { HeroImage } from '@/components/ui/OptimizedImage'
 
 interface HeroProps {
   featuredProducts?: Array<{
@@ -75,12 +75,16 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
                     index === 0 ? 'col-span-2' : ''
                   }`}
                 >
-                  <div className={`aspect-square ${index === 0 ? 'aspect-[2/1]' : ''}`}>
-                    <Image
+                  <div className={`relative aspect-square ${index === 0 ? 'aspect-[2/1]' : ''}`}>
+                    <HeroImage
                       src={product.image}
                       alt={product.name}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      width={index === 0 ? 800 : 400}
+                      height={index === 0 ? 400 : 400}
+                      priority={index < 2}
+                      sizes={index === 0 ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 50vw, 25vw'}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                     <div className="absolute bottom-4 left-4 right-4">

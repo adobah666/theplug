@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
-import { optimizeImageUrl, isCloudinaryUrl } from "@/lib/utils/images";
+import { ProductImage, ThumbnailImage } from "@/components/ui/OptimizedImage";
 import { Star, Heart, Share2, ShoppingCart, Truck, Grid, List } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -391,17 +390,16 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
         {/* Product Images */}
         <div className="space-y-3 sm:space-y-4">
           <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden shadow-sm">
-            <Image
-              src={(() => {
-                const raw = (product.images && product.images[selectedImageIndex]) || '/placeholder-product.jpg'
-                return isCloudinaryUrl(raw)
-                  ? optimizeImageUrl(raw, { width: 1200, height: 1200, format: 'auto', quality: 'auto', crop: 'fill', gravity: 'auto', dpr: 'auto' })
-                  : raw
-              })()}
+            <ProductImage
+              src={(product.images && product.images[selectedImageIndex]) || '/placeholder-product.jpg'}
               alt={product.name}
               fill
               className="object-cover"
               priority
+              width={1200}
+              height={1200}
+              quality="auto"
+              sizes="(max-width: 768px) 100vw, 50vw"
             />
           </div>
 
@@ -416,17 +414,13 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
                     selectedImageIndex === index ? 'border-blue-500' : 'border-gray-200'
                   }`}
                 >
-                  <Image
-                    src={(() => {
-                      const raw = image
-                      return isCloudinaryUrl(raw)
-                        ? optimizeImageUrl(raw, { width: 80, height: 80, format: 'auto', quality: 'auto', crop: 'fill', gravity: 'auto', dpr: 'auto' })
-                        : raw
-                    })()}
+                  <ThumbnailImage
+                    src={image}
                     alt={`${product.name} ${index + 1}`}
-                    width={64}
-                    height={64}
+                    width={80}
+                    height={80}
                     className="object-cover w-full h-full sm:w-20 sm:h-20"
+                    quality="eco"
                   />
                 </button>
               ))}

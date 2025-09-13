@@ -13,6 +13,7 @@ import { headers } from 'next/headers'
 import { Testimonials } from '@/components/layout/Testimonials'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
+import { ImagePreloader } from '@/components/ui/ImagePreloader'
 
 
 // Build dynamic trending list: pick the top product per category (by popularity), then
@@ -353,7 +354,7 @@ interface HomePageContentProps {
 }
 
 function HomePageContent({ featuredProducts, categories, categorySlides }: HomePageContentProps) {
-  // Prepare hero featured products (first 4 products)
+  // Prepare hero featured products (first 5 products)
   const heroProducts = featuredProducts.slice(0, 5).map(product => ({
     id: product.id,
     name: product.name,
@@ -362,8 +363,17 @@ function HomePageContent({ featuredProducts, categories, categorySlides }: HomeP
     href: `/products/${product.id}`
   }))
 
+  // Preload critical images for faster loading
+  const criticalImages = [
+    ...heroProducts.map(p => p.image),
+    ...categories.slice(0, 6).map(c => c.image)
+  ].filter(Boolean)
+
   return (
     <>
+      {/* Preload critical images for instant loading */}
+      <ImagePreloader images={criticalImages} priority maxConcurrent={5} />
+      
       {/* Hero Section */}
       <Hero featuredProducts={heroProducts} />
 

@@ -2,13 +2,12 @@
 
 import React from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils/currency'
 import { useCart } from '@/lib/cart/hooks'
-import { optimizeImageUrl, isCloudinaryUrl } from '@/lib/utils/images'
+import { ProductImage } from '@/components/ui/OptimizedImage'
 
 interface ProductCardProps {
   product: {
@@ -97,17 +96,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {/* Image */}
           <div className="relative w-48 h-48 flex-shrink-0 overflow-hidden">
             <Link href={`/products/${product._id}`}>
-              <Image
-                src={(() => {
-                  const raw = product.images[0] || '/placeholder-product.jpg'
-                  return isCloudinaryUrl(raw)
-                    ? optimizeImageUrl(raw, { width: 384, height: 384, format: 'auto', quality: 'auto', crop: 'fill', gravity: 'auto', dpr: 'auto' })
-                    : raw
-                })()}
+              <ProductImage
+                src={product.images[0] || '/placeholder-product.jpg'}
                 alt={product.name}
                 fill
                 className="object-cover transition-transform group-hover:scale-105"
                 sizes="192px"
+                width={384}
+                height={384}
+                quality="auto"
               />
             </Link>
             
@@ -195,17 +192,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
     <Card className={cn('group relative overflow-hidden transition-shadow hover:shadow-lg', className)}>
       <div className="relative aspect-square overflow-hidden">
         <Link href={`/products/${product._id}`}>
-          <Image
-            src={(() => {
-              const raw = product.images[0] || '/placeholder-product.jpg'
-              return isCloudinaryUrl(raw)
-                ? optimizeImageUrl(raw, { width: 800, height: 800, format: 'auto', quality: 'auto', crop: 'fill', gravity: 'auto', dpr: 'auto' })
-                : raw
-            })()}
+          <ProductImage
+            src={product.images[0] || '/placeholder-product.jpg'}
             alt={product.name}
             fill
             className="object-cover transition-transform group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            width={800}
+            height={800}
+            quality="auto"
           />
         </Link>
         

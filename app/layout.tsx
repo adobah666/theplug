@@ -10,6 +10,7 @@ import { PWAInstallPrompt } from "@/components/layout/PWAInstallPrompt";
 import { OfflineIndicator } from "@/components/layout/OfflineIndicator";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { ImagePerformanceProvider } from "@/components/layout/ImagePerformanceProvider";
 import { Suspense } from "react";
 
 const geistSans = Geist({
@@ -97,9 +98,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-full flex flex-col`}
       >
         <ErrorBoundary>
-          <PWAProvider>
-            <AuthProvider>
-              <CartProvider>
+          <ImagePerformanceProvider>
+            <PWAProvider>
+              <AuthProvider>
+                <CartProvider>
                 <OfflineIndicator />
                 <div className="flex flex-col min-h-screen">
                   <Suspense
@@ -124,10 +126,11 @@ export default function RootLayout({
                   </main>
                   <Footer />
                 </div>
-                <PWAInstallPrompt />
-              </CartProvider>
-            </AuthProvider>
-          </PWAProvider>
+                  <PWAInstallPrompt />
+                </CartProvider>
+              </AuthProvider>
+            </PWAProvider>
+          </ImagePerformanceProvider>
         </ErrorBoundary>
       </body>
     </html>
