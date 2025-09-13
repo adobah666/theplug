@@ -81,8 +81,9 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
                       alt={product.name}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      width={index === 0 ? 800 : 400}
-                      height={index === 0 ? 400 : 400}
+                      width={index === 0 ? 1200 : 400}
+                      height={index === 0 ? 600 : 400}
+                      quality={index === 0 ? 80 : undefined}
                       priority={index < 2}
                       sizes={index === 0 ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 50vw, 25vw'}
                     />
