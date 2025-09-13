@@ -79,6 +79,80 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
   const baseInventory = selectedVariant ? (selectedVariant.inventory || 0) : (product?.inventory || 0);
   const availableQty = Math.max(0, baseInventory - reservedQty);
 
+  // Record a view event on mount/when product changes
+  useEffect(() => {
+    if (!product?._id) return;
+    (async () => {
+      try {
+        await fetch(`/api/products/${product._id}/analytics`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event: 'view' })
+        })
+      } catch {}
+    })()
+  }, [product?._id])
+
+  // Live-refresh product inventory/client state
+  useEffect(() => {
+    if (!product?._id) return;
+    let ignore = false;
+    let intervalId: any = null;
+
+    const normalize = (raw: any): UIProduct => {
+      const imgs = Array.isArray(raw?.images) ? raw.images : (raw?.images ? [raw.images] : []);
+      return {
+        _id: String(raw?._id || raw?.id || ''),
+        name: raw?.name || '',
+        description: raw?.description || '',
+        price: Number(raw?.price || 0),
+        images: imgs.filter(Boolean),
+        category: raw?.category,
+        brand: raw?.brand,
+        rating: raw?.rating ?? 0,
+        reviewCount: raw?.reviewCount ?? 0,
+        inventory: raw?.inventory ?? 0,
+        variants: raw?.variants || [],
+        originalPrice: raw?.originalPrice,
+      };
+    };
+
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/products/${product!._id}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const json = await res.json().catch(() => ({} as any));
+        const raw = (json as any)?.data?.product || (json as any)?.product || json;
+        const nextProd = normalize(raw);
+        if (ignore) return;
+        setProduct(nextProd);
+        if (selectedVariant && Array.isArray(nextProd.variants)) {
+          const updatedVar = (nextProd.variants as any[]).find(v => String(v._id) === String(selectedVariant._id));
+          if (updatedVar) setSelectedVariant(updatedVar);
+        }
+      } catch {}
+    };
+
+    // initial load
+    load();
+
+    // refresh when tab regains focus/visibility
+    const onFocus = () => load();
+    const onVisibility = () => { if (document.visibilityState === 'visible') load(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    // periodic background refresh
+    intervalId = setInterval(load, 20000);
+
+    return () => {
+      ignore = true;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [product?._id, selectedVariant?._id]);
+
   // Load initial wishlist status
   useEffect(() => {
     if (!product?._id) return;

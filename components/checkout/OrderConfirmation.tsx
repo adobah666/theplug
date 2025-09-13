@@ -66,10 +66,15 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
   const [refundMessage, setRefundMessage] = useState<string | null>(null)
   const [refundRequested, setRefundRequested] = useState(false)
   const [refundStatus, setRefundStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null)
+  // Track local paidAt to avoid needing page refresh after verification
+  const [localPaidAt, setLocalPaidAt] = useState<string | undefined>(
+    (order as any)?.paidAt
+  )
 
   const withinRefundWindow = () => {
     try {
-      const paidAt = (order as any).paidAt ? new Date((order as any).paidAt) : null
+      const paidAtIso = localPaidAt || (order as any)?.paidAt
+      const paidAt = paidAtIso ? new Date(paidAtIso) : null
       if (!paidAt) return false
       const now = new Date()
       const hours = (now.getTime() - paidAt.getTime()) / (1000 * 60 * 60)
@@ -116,7 +121,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
     }
   }, [paymentReference, paymentStatus])
 
-  // Persist refund request state on load
+  // Persist refund request state on load and when payment transitions to paid
   useEffect(() => {
     let mounted = true
     ;(async () => {
@@ -134,7 +139,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
       } catch {}
     })()
     return () => { mounted = false }
-  }, [order._id])
+  }, [order._id, paymentStatus])
 
   const verifyPayment = async (reference: string) => {
     setIsVerifying(true)
@@ -156,6 +161,9 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
 
       if (response.ok && data.success) {
         setPaymentStatus('paid')
+        // Prefer server-provided paidAt if returned; otherwise set to now
+        const paidAtFromServer: string | undefined = (data?.data && (data.data.paidAt || data.data.order?.paidAt)) || undefined
+        setLocalPaidAt(paidAtFromServer || new Date().toISOString())
       } else {
         setVerificationError(data.message || 'Payment verification failed')
       }
