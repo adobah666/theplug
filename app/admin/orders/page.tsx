@@ -70,9 +70,14 @@ export default function AdminOrdersPage() {
   const [etaMode, setEtaMode] = useState<'days' | 'date'>('days');
   const [etaDays, setEtaDays] = useState<number>(3);
   const [etaDate, setEtaDate] = useState<string>('');
+  // Refund requests state
+  const [refunds, setRefunds] = useState<Array<any>>([])
+  const [refundsLoading, setRefundsLoading] = useState<boolean>(false)
+  const [refundActionId, setRefundActionId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchOrders();
+    fetchRefunds();
   }, []);
 
   const fetchOrders = async () => {
@@ -88,6 +93,63 @@ export default function AdminOrdersPage() {
       setIsLoading(false);
     }
   };
+
+  // Refund requests helpers
+  const fetchRefunds = async () => {
+    try {
+      setRefundsLoading(true)
+      const res = await fetch('/api/admin/refunds')
+      const json = await res.json().catch(() => ({} as any))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || 'Failed to fetch refunds')
+      setRefunds(Array.isArray(json?.data) ? json.data : [])
+    } catch (err) {
+      console.error('Failed to load refunds', err)
+    } finally {
+      setRefundsLoading(false)
+    }
+  }
+
+  const approveRefund = async (id: string) => {
+    try {
+      setRefundActionId(id)
+      const res = await fetch(`/api/admin/refunds/${id}/approve`, { method: 'POST' })
+      const json = await res.json().catch(() => ({} as any))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || 'Failed to approve refund')
+      await Promise.all([fetchRefunds(), fetchOrders()])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to approve refund')
+    } finally {
+      setRefundActionId(null)
+    }
+  }
+
+  const rejectRefund = async (id: string) => {
+    try {
+      setRefundActionId(id)
+      const res = await fetch(`/api/admin/refunds/${id}/reject`, { method: 'POST' })
+      const json = await res.json().catch(() => ({} as any))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || 'Failed to reject refund')
+      await fetchRefunds()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reject refund')
+    } finally {
+      setRefundActionId(null)
+    }
+  }
+
+  const instantRefund = async (orderId: string) => {
+    try {
+      setUpdatingOrder(orderId)
+      const res = await fetch(`/api/admin/orders/${orderId}/instant-refund`, { method: 'POST' })
+      const json = await res.json().catch(() => ({} as any))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || 'Instant refund failed')
+      await Promise.all([fetchOrders(), fetchRefunds()])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Instant refund failed')
+    } finally {
+      setUpdatingOrder(null)
+    }
+  }
 
   const updateOrderStatus = async (
     orderId: string,
@@ -154,9 +216,42 @@ export default function AdminOrdersPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold">Order Management</h1>
-          <Button onClick={fetchOrders} variant="outline">
+          <div className="flex gap-3">
+            <Button onClick={fetchRefunds} variant="outline">Refresh Refunds</Button>
+            <Button onClick={fetchOrders} variant="outline">
             Refresh Orders
-          </Button>
+            </Button>
+          </div>
+        </div>
+
+        {/* Refund Requests Panel */}
+        <div className="space-y-4 mb-10">
+          <h2 className="text-2xl font-semibold">Refund Requests</h2>
+          <Card className="p-6">
+            {refundsLoading ? (
+              <div className="flex items-center justify-center py-6"><LoadingSpinner /></div>
+            ) : refunds.length === 0 ? (
+              <p className="text-sm text-gray-600">No pending refund requests.</p>
+            ) : (
+              <div className="space-y-4">
+                {refunds.map((r) => (
+                  <div key={r._id} className="flex flex-col md:flex-row md:items-center md:justify-between border-b last:border-b-0 pb-4">
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <div className="font-medium">Order #{r?.order?.orderNumber || (r?.orderId || '').slice(-8)}</div>
+                      <div>Customer: {(r?.order?.userId?.email) || '—'}</div>
+                      <div>Total: {formatCurrency(Number(r?.order?.total) || 0)}</div>
+                      <div>Reason: {r?.reason || '—'}</div>
+                      <div className="text-gray-500">Requested: {new Date(r.createdAt).toLocaleString()}</div>
+                    </div>
+                    <div className="flex gap-2 mt-3 md:mt-0">
+                      <Button size="sm" variant="outline" onClick={() => rejectRefund(r._id)} disabled={refundActionId === r._id}>Reject</Button>
+                      <Button size="sm" onClick={() => approveRefund(r._id)} disabled={refundActionId === r._id}>Approve & Refund</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
 
         <div className="space-y-6">
@@ -219,21 +314,31 @@ export default function AdminOrdersPage() {
                   </div>
 
                   <div className="flex flex-col gap-2 mt-4 lg:mt-0 lg:ml-6">
-                    {/* Start Processing: set ETA and move to processing */}
+                    {/* Instant Refund (before processing) */}
                     {payLc === 'paid' && (statusLc === 'pending' || statusLc === 'confirmed') && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setEtaTargetOrderId(order._id);
-                          setEtaMode('days');
-                          setEtaDays(3);
-                          setEtaDate('');
-                          setEtaModalOpen(true);
-                        }}
-                        disabled={updatingOrder === order._id}
-                      >
-                        Start Processing
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setEtaTargetOrderId(order._id);
+                            setEtaMode('days');
+                            setEtaDays(3);
+                            setEtaDate('');
+                            setEtaModalOpen(true);
+                          }}
+                          disabled={updatingOrder === order._id}
+                        >
+                          Start Processing
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => instantRefund(order._id)}
+                          disabled={updatingOrder === order._id}
+                        >
+                          Instant Refund
+                        </Button>
+                      </div>
                     )}
 
                     {/* Revert to Confirmed if needed */

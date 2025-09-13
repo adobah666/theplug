@@ -52,12 +52,13 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     ;(async () => {
       try {
         setFacetsError(null)
+        // Set loading state before checking serverSections
+        setFacetsLoading(!!serverSections && serverSections.length > 0 ? false : true)
         // If server-provided sections exist, use them and skip client fetching
         if (serverSections && serverSections.length > 0) {
           setFilterSections(serverSections)
           return
         }
-        setFacetsLoading(true)
         const sp = new URLSearchParams()
         if (paramsRoute?.category) sp.set('category', paramsRoute.category)
         const res = await fetch(`/api/products/facets?${sp.toString()}`)

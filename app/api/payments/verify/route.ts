@@ -11,12 +11,14 @@ import Product from '@/lib/db/models/Product';
 import ProductEvent from '@/lib/db/models/ProductEvent';
 import { reserveInventory } from '@/lib/orders/service';
 import { authenticateToken } from '@/lib/auth/middleware';
+import { checkInventoryAvailability } from '@/lib/cart/validation';
 import { 
   verifyPayment, 
   isPaymentSuccessful, 
   validatePaymentAmount,
   koboToNaira 
 } from '@/lib/paystack';
+import RefundRequest from '@/lib/db/models/RefundRequest';
 
 interface PaymentVerifyRequest {
   reference: string;
@@ -84,12 +86,68 @@ export async function POST(request: NextRequest) {
 
     // Check if payment was successful
     if (isPaymentSuccessful(verificationResult)) {
-      // Reserve inventory now that payment is confirmed
+      // Re-validate inventory just before reserving to prevent oversells
+      const insufficient: string[] = []
+      for (const it of order.items as any[]) {
+        const res = await checkInventoryAvailability(String(it.productId), Number(it.quantity), it.variantId)
+        if (!res.available) {
+          insufficient.push(`${(it as any).productName || 'Item'}: ${res.error || 'Out of stock'}`)
+        }
+      }
+
+      if (insufficient.length > 0) {
+        // Do not mark as paid; signal failure so UI can inform user and refund can be handled
+        order.paymentStatus = 'failed'
+        order.paystackReference = reference
+        await order.save()
+        // Auto-create a refund request so admin can act
+        try {
+          const existing = await RefundRequest.findOne({ orderId: order._id, userId: order.userId })
+          if (!existing) {
+            await RefundRequest.create({
+              orderId: order._id,
+              userId: order.userId,
+              status: 'pending',
+              reason: `Auto-created after payment verification failure: ${insufficient.join('; ')}`
+            })
+          }
+        } catch (e) {
+          console.error('Failed to create auto refund request:', e)
+        }
+        return NextResponse.json({
+          success: false,
+          message: 'Some items are no longer available',
+          errors: insufficient,
+        }, { status: 400 })
+      }
+
+      // Reserve inventory now that stock is confirmed
       try {
         await reserveInventory(order.items as any, null) // no transaction session here
       } catch (inventoryError) {
         console.error('Failed to reserve inventory after payment:', inventoryError)
-        // Continue with order update but log the issue
+        // Treat as failure to avoid confirming orders without stock actually reserved
+        order.paymentStatus = 'failed'
+        order.paystackReference = reference
+        await order.save()
+        // Auto-create a refund request so admin can act
+        try {
+          const existing = await RefundRequest.findOne({ orderId: order._id, userId: order.userId })
+          if (!existing) {
+            await RefundRequest.create({
+              orderId: order._id,
+              userId: order.userId,
+              status: 'pending',
+              reason: 'Auto-created after inventory reservation failure during payment verification.'
+            })
+          }
+        } catch (e) {
+          console.error('Failed to create auto refund request:', e)
+        }
+        return NextResponse.json({
+          success: false,
+          message: 'Failed to reserve inventory. Your payment will be reversed automatically by the gateway if not captured.',
+        }, { status: 400 })
       }
 
       // Update order status

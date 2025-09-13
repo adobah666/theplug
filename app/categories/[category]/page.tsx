@@ -313,19 +313,31 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                     >
                       Previous
                     </Link>
-                    {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                      const p = i + 1;
-                      const active = p === page;
-                      return (
-                        <Link
-                          key={p}
-                          href={{ pathname: `/categories/${category}`, query: { ...searchParams, page: String(p) } }}
-                          className={`px-3 py-1.5 text-sm border rounded ${active ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}
-                        >
-                          {p}
-                        </Link>
-                      );
-                    })}
+                    {(() => {
+                      const maxVisible = 5;
+                      let start = Math.max(1, page - Math.floor(maxVisible / 2));
+                      let end = Math.min(totalPages, start + maxVisible - 1);
+
+                      // Adjust start if we're near the end
+                      if (end - start < maxVisible - 1) {
+                        start = Math.max(1, end - maxVisible + 1);
+                      }
+
+                      const pages = [];
+                      for (let p = start; p <= end; p++) {
+                        const active = p === page;
+                        pages.push(
+                          <Link
+                            key={p}
+                            href={{ pathname: `/categories/${category}`, query: { ...searchParams, page: String(p) } }}
+                            className={`px-3 py-1.5 text-sm border rounded ${active ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}
+                          >
+                            {p}
+                          </Link>
+                        );
+                      }
+                      return pages;
+                    })()}
                     <Link
                       href={{ pathname: `/categories/${category}`, query: { ...searchParams, page: String(Math.min(totalPages, page + 1)) } }}
                       className={`px-3 py-1.5 text-sm border rounded ${page >= totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}

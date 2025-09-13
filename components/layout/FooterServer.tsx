@@ -62,7 +62,7 @@ const FooterServer: React.FC = async () => {
         { name: 'Contact Us', href: '/contact' },
         { name: 'Help Center', href: '/help' },
         { name: 'Track Your Order', href: '/account/orders' },
-        { name: 'Returns & Exchanges', href: '/returns' },
+        { name: 'Refund Policy', href: '/refund-policy' },
         { name: 'Size Guide', href: '/size-guide' },
       ],
     },

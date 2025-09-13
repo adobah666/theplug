@@ -40,6 +40,7 @@ interface Order {
   }
   createdAt: string
   updatedAt: string
+  paidAt?: string
 }
 
 interface OrderConfirmationProps {
@@ -59,6 +60,48 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
   const [verificationError, setVerificationError] = useState<string | null>(null)
   const { clearCart } = useCart()
   const [cartCleared, setCartCleared] = useState(false)
+  const [refundOpen, setRefundOpen] = useState(false)
+  const [refundReason, setRefundReason] = useState('')
+  const [refundSubmitting, setRefundSubmitting] = useState(false)
+  const [refundMessage, setRefundMessage] = useState<string | null>(null)
+  const [refundRequested, setRefundRequested] = useState(false)
+  const [refundStatus, setRefundStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null)
+
+  const withinRefundWindow = () => {
+    try {
+      const paidAt = (order as any).paidAt ? new Date((order as any).paidAt) : null
+      if (!paidAt) return false
+      const now = new Date()
+      const hours = (now.getTime() - paidAt.getTime()) / (1000 * 60 * 60)
+      return hours <= 6
+    } catch { return false }
+  }
+
+  const submitRefund = async () => {
+    setRefundSubmitting(true)
+    setRefundMessage(null)
+    try {
+      const res = await fetch(`/api/orders/${order._id}/refund-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: refundReason })
+      })
+      const json = await res.json().catch(() => ({} as any))
+      if (!res.ok || json?.error) {
+        setRefundMessage(json?.error || 'Failed to submit refund request')
+        return
+      }
+      setRefundMessage('Refund request submitted. We will notify you once it is reviewed.')
+      setRefundOpen(false)
+      setRefundReason('')
+      setRefundRequested(true)
+      setRefundStatus('pending')
+    } catch {
+      setRefundMessage('Failed to submit refund request')
+    } finally {
+      setRefundSubmitting(false)
+    }
+  }
 
   // Prefer account email populated by API (userId.email), fallback to shipping email if present
   const paymentEmail: string | undefined =
@@ -72,6 +115,26 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
       verifyPayment(paymentReference)
     }
   }, [paymentReference, paymentStatus])
+
+  // Persist refund request state on load
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/orders/${order._id}/refund-request`, { method: 'GET' })
+        const json = await res.json().catch(() => ({} as any))
+        if (!mounted) return
+        if (res.ok && json?.success && json?.exists) {
+          setRefundRequested(true)
+          if (typeof json.status === 'string') setRefundStatus(json.status as any)
+        } else {
+          setRefundRequested(false)
+          setRefundStatus(null)
+        }
+      } catch {}
+    })()
+    return () => { mounted = false }
+  }, [order._id])
 
   const verifyPayment = async (reference: string) => {
     setIsVerifying(true)
@@ -118,9 +181,31 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
     setShowPayment(false)
   }
 
-  const handleRetryPayment = () => {
-    setShowPayment(true)
+  const handleRetryPayment = async () => {
     setVerificationError(null)
+    setIsVerifying(true)
+    try {
+      const res = await fetch('/api/payments/precheck', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order._id }),
+      })
+      const json = await res.json().catch(() => ({} as any))
+      if (!res.ok || json?.success === false) {
+        const msg = Array.isArray(json?.errors) && json.errors.length > 0
+          ? json.errors.join('\n')
+          : (json?.error || 'One or more items are no longer available. Please update your cart.')
+        setVerificationError(msg)
+        setShowPayment(false)
+        return
+      }
+      setShowPayment(true)
+    } catch (e) {
+      setVerificationError('Unable to start payment. Please try again.')
+      setShowPayment(false)
+    } finally {
+      setIsVerifying(false)
+    }
   }
 
   // If page loads with a paid status (e.g., after redirect), ensure cart is cleared once
@@ -369,6 +454,17 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
             <p>• Estimated delivery: 3-7 business days</p>
           </div>
           
+          {refundStatus && (
+            <div className="mb-3">
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                refundStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                refundStatus === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}>
+                Refund {refundStatus}
+              </span>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/">
               <Button variant="outline">Continue Shopping</Button>
@@ -376,6 +472,61 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
             <Link href="/account/orders">
               <Button variant="outline">View All Orders</Button>
             </Link>
+            {withinRefundWindow() && (
+              <Button
+                variant="outline"
+                onClick={() => { setRefundOpen(true); setRefundMessage(null) }}
+                disabled={refundStatus === 'pending'}
+              >
+                {!refundRequested ? 'Request Refund' : (
+                  refundStatus === 'pending' ? 'Refund Requested' : (
+                    refundStatus === 'approved' ? 'Refund Approved' : 'Refund Rejected'
+                  )
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Refund Modal */}
+      {refundOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="border-b px-6 py-4">
+              <h3 className="text-lg font-semibold">Request a Refund</h3>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <p className="text-sm text-gray-600">
+                You can request a refund within 6 hours after payment. An admin will review your request.
+              </p>
+              {refundStatus && (
+                <div className="text-xs">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full font-medium ${
+                    refundStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    refundStatus === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    Refund {refundStatus}
+                  </span>
+                </div>
+              )}
+              <label className="block text-sm text-gray-700 mb-1">Reason (optional)</label>
+              <textarea
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                rows={4}
+                className="w-full rounded border px-3 py-2 text-sm"
+                placeholder="Tell us briefly why you're requesting a refund"
+                disabled={refundSubmitting}
+              />
+              {refundMessage && (
+                <div className="text-sm text-red-600">{refundMessage}</div>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 border-t px-6 py-4">
+              <Button variant="outline" onClick={() => setRefundOpen(false)} disabled={refundSubmitting}>Cancel</Button>
+              <Button onClick={submitRefund} loading={refundSubmitting}>Submit Request</Button>
+            </div>
           </div>
         </div>
       )}

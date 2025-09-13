@@ -28,11 +28,10 @@ async function getBrands(baseUrl: string): Promise<Brand[]> {
 }
 
 export default async function BrandsPage() {
-  const hdrs = await headers();
-  const host = hdrs.get('host') || 'localhost:3000';
-  const protocol = host.includes('localhost') ? 'http' : 'https';
-  const baseUrl = `${protocol}://${host}`;
-  const brands = await getBrands(baseUrl);
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  const brands = await getBrands(origin);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
