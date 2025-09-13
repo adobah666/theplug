@@ -1,3 +1,4 @@
+export const revalidate = 900
 import Link from 'next/link'
 import Image from 'next/image'
 import { ProductCard } from '@/components/product/ProductCard'
@@ -11,7 +12,7 @@ async function fetchNewArrivals(page: number, limit: number) {
       : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
     const params = new URLSearchParams({ sort: 'newest', order: 'desc', page: String(page), limit: String(limit) })
-    const res = await fetch(`${base}/api/products/search?${params.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+    const res = await fetch(`${base}/api/products/search?${params.toString()}`, { next: { revalidate: 900 } })
     const json = await res.json().catch(() => ({} as any))
 
     const data = Array.isArray(json?.data?.data) ? json.data.data : []

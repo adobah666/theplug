@@ -1,5 +1,4 @@
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 900
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -9,7 +8,7 @@ async function fetchCategories() {
       ? process.env.NEXT_PUBLIC_SITE_URL
       : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
-    const res = await fetch(`${base}/api/categories`, { cache: 'no-store', next: { revalidate: 0 } })
+    const res = await fetch(`${base}/api/categories`, { next: { revalidate: 900 } })
     const json = await res.json().catch(() => ({} as any))
     const baseCats: Array<{ slug: string; name: string }> = (json?.data?.categories || []).map((c: any) => ({ slug: c.slug, name: c.name }))
 
@@ -17,12 +16,12 @@ async function fetchCategories() {
     const withImages = await Promise.all(baseCats.map(async (cat) => {
       try {
         const newestParams = new URLSearchParams({ category: cat.slug, sort: 'newest', order: 'desc', page: '1', limit: '6' })
-        const newestRes = await fetch(`${base}/api/products/search?${newestParams.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+        const newestRes = await fetch(`${base}/api/products/search?${newestParams.toString()}`, { next: { revalidate: 900 } })
         const newestJson = await newestRes.json().catch(() => ({} as any))
         let items: any[] = Array.isArray(newestJson?.data?.data) ? newestJson.data.data : []
         if (!items || items.length === 0) {
           const popParams = new URLSearchParams({ category: cat.slug, sort: 'popularity', order: 'desc', page: '1', limit: '6' })
-          const popRes = await fetch(`${base}/api/products/search?${popParams.toString()}`, { cache: 'no-store', next: { revalidate: 0 } })
+          const popRes = await fetch(`${base}/api/products/search?${popParams.toString()}`, { next: { revalidate: 900 } })
           const popJson = await popRes.json().catch(() => ({} as any))
           items = Array.isArray(popJson?.data?.data) ? popJson.data.data : []
         }
