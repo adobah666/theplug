@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useRef } from 'react'
 import { CartItemData } from '@/components/cart/CartItem'
+import { useAuth } from '@/lib/auth/hooks'
 
 // Cart state interface
 export interface CartState {
@@ -196,6 +197,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState)
   // Track the last time the client mutated cart (to avoid stale refresh overwrites)
   const lastClientMutationTsRef = useRef<number>(0)
+  const { status } = useAuth()
 
   // Load cart from localStorage on mount, then refresh from server
   useEffect(() => {
@@ -227,6 +229,15 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
     loadCartFromStorage()
   }, [])
+
+  // When user logs in, pull server cart (which was merged during login) to replace local
+  useEffect(() => {
+    if (status === 'authenticated') {
+      // Slight delay to allow mergeGuestCart to complete
+      const t = setTimeout(() => { refreshCart() }, 150)
+      return () => clearTimeout(t)
+    }
+  }, [status])
 
   // Save cart to localStorage whenever items change
   useEffect(() => {

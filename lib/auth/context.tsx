@@ -1,9 +1,10 @@
 'use client'
 
-import { createContext, useContext, ReactNode } from 'react'
+import { createContext, useContext, ReactNode, useEffect } from 'react'
 import { SessionProvider, useSession, signIn, signOut } from 'next-auth/react'
 import { Session } from 'next-auth'
 import { LoginFormData, RegisterFormData, PasswordResetFormData } from './validation'
+import type { CartItemData } from '@/components/cart/CartItem'
 
 interface ProfileUpdateData {
   firstName: string
@@ -32,6 +33,55 @@ interface AuthProviderProps {
 function AuthProviderInner({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
 
+  // Merge guest cart (localStorage) into authenticated server cart
+  const mergeGuestCart = async () => {
+    try {
+      if (typeof window === 'undefined') return
+      const saved = localStorage.getItem('cart')
+      if (!saved) return
+      const items: CartItemData[] = JSON.parse(saved)
+      if (!Array.isArray(items) || items.length === 0) return
+      // Ensure session cookies are up-to-date before cart API calls
+      try { await fetch('/api/auth/session?update', { credentials: 'include' }) } catch {}
+      // Sequentially add to server cart to preserve quantities
+      for (const it of items) {
+        await fetch('/api/cart/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            productId: it.productId,
+            variantId: it.variantId,
+            quantity: it.quantity,
+            price: it.price,
+            name: it.name,
+            image: it.image,
+            size: (it as any).size,
+            color: (it as any).color,
+          })
+        }).catch(() => {})
+      }
+
+  // Also run merge when status flips to authenticated (covers OAuth and external flows)
+  useEffect(() => {
+    if (status === 'authenticated') {
+      mergeGuestCart()
+    }
+  }, [status])
+      // Read server cart and persist it locally so reloads survive
+      try {
+        const res = await fetch('/api/cart', { credentials: 'include' })
+        const data = await res.json().catch(() => ({} as any))
+        const serverItems = data?.data?.cart?.items
+        if (Array.isArray(serverItems)) {
+          localStorage.setItem('cart', JSON.stringify(serverItems))
+        }
+      } catch {}
+      // Optionally clear guest cart copy to avoid duplication across devices
+      // localStorage.removeItem('cart')
+    } catch {}
+  }
+
   const login = async (data: LoginFormData) => {
     const result = await signIn('credentials', {
       email: data.email,
@@ -46,6 +96,9 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
     if (!result?.ok) {
       throw new Error('Login failed')
     }
+
+    // On successful login, merge any guest cart into the authenticated cart
+    await mergeGuestCart()
   }
 
   const register = async (data: RegisterFormData) => {
