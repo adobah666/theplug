@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { formatCurrency } from '@/lib/utils/currency'
 import { useCart } from '@/lib/cart/hooks'
+import { optimizeImageUrl, isCloudinaryUrl } from '@/lib/utils/images'
 
 interface ProductCardProps {
   product: {
@@ -97,7 +98,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div className="relative w-48 h-48 flex-shrink-0 overflow-hidden">
             <Link href={`/products/${product._id}`}>
               <Image
-                src={product.images[0] || '/placeholder-product.jpg'}
+                src={(() => {
+                  const raw = product.images[0] || '/placeholder-product.jpg'
+                  return isCloudinaryUrl(raw)
+                    ? optimizeImageUrl(raw, { width: 384, height: 384, format: 'auto', quality: 'auto', crop: 'fill', gravity: 'auto', dpr: 'auto' })
+                    : raw
+                })()}
                 alt={product.name}
                 fill
                 className="object-cover transition-transform group-hover:scale-105"
@@ -190,7 +196,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <div className="relative aspect-square overflow-hidden">
         <Link href={`/products/${product._id}`}>
           <Image
-            src={product.images[0] || '/placeholder-product.jpg'}
+            src={(() => {
+              const raw = product.images[0] || '/placeholder-product.jpg'
+              return isCloudinaryUrl(raw)
+                ? optimizeImageUrl(raw, { width: 800, height: 800, format: 'auto', quality: 'auto', crop: 'fill', gravity: 'auto', dpr: 'auto' })
+                : raw
+            })()}
             alt={product.name}
             fill
             className="object-cover transition-transform group-hover:scale-105"

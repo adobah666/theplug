@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import { optimizeImageUrl, isCloudinaryUrl } from "@/lib/utils/images";
 import { Star, Heart, Share2, ShoppingCart, Truck, Grid, List } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -391,7 +392,12 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
         <div className="space-y-3 sm:space-y-4">
           <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden shadow-sm">
             <Image
-              src={(product.images && product.images[selectedImageIndex]) || '/placeholder-product.jpg'}
+              src={(() => {
+                const raw = (product.images && product.images[selectedImageIndex]) || '/placeholder-product.jpg'
+                return isCloudinaryUrl(raw)
+                  ? optimizeImageUrl(raw, { width: 1200, height: 1200, format: 'auto', quality: 'auto', crop: 'fill', gravity: 'auto', dpr: 'auto' })
+                  : raw
+              })()}
               alt={product.name}
               fill
               className="object-cover"
@@ -410,7 +416,18 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
                     selectedImageIndex === index ? 'border-blue-500' : 'border-gray-200'
                   }`}
                 >
-                  <Image src={image} alt={`${product.name} ${index + 1}`} width={64} height={64} className="object-cover w-full h-full sm:w-20 sm:h-20" />
+                  <Image
+                    src={(() => {
+                      const raw = image
+                      return isCloudinaryUrl(raw)
+                        ? optimizeImageUrl(raw, { width: 80, height: 80, format: 'auto', quality: 'auto', crop: 'fill', gravity: 'auto', dpr: 'auto' })
+                        : raw
+                    })()}
+                    alt={`${product.name} ${index + 1}`}
+                    width={64}
+                    height={64}
+                    className="object-cover w-full h-full sm:w-20 sm:h-20"
+                  />
                 </button>
               ))}
             </div>

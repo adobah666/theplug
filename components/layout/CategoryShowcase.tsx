@@ -1,6 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { isCloudinaryUrl, optimizeImageUrl } from '@/lib/utils/images'
 
 interface Category {
   id: string
@@ -53,7 +54,12 @@ const CategoryShowcase: React.FC<CategoryShowcaseProps> = ({
               <div className={`relative aspect-[4/3]`}>
                 {/* Category Image */}
                 <Image
-                  src={category.image}
+                  src={(() => {
+                    const raw = category.image
+                    return isCloudinaryUrl(raw)
+                      ? optimizeImageUrl(raw, { width: 1200, height: 900, format: 'auto', quality: 'auto', crop: 'fill', gravity: 'auto', dpr: 'auto' })
+                      : raw
+                  })()}
                   alt={category.name}
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-500"
