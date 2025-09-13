@@ -1,106 +1,107 @@
-'use client';
-
-import { useState, useEffect, Suspense } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { headers } from 'next/headers';
 import { ProductGrid } from '@/components/product/ProductGrid';
-import { FilterSidebar } from '@/components/product/FilterSidebar';
-import { MobileFilterDrawer } from '@/components/product/MobileFilterDrawer';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { FilterSidebar, FilterSection } from '@/components/product/FilterSidebar';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
-import { Button } from '@/components/ui/Button';
 import { Filter, Grid, List } from 'lucide-react';
+import { SortSelect } from '@/components/product/SortSelect';
+
+export const revalidate = 900; // 15 minutes
+
 type ProductListItem = any;
 
-interface BrandPageProps {}
-
-export default function BrandPage({}: BrandPageProps) {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const brand = params.brand as string;
-  
-  const [products, setProducts] = useState<ProductListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-
-  const sortBy = searchParams.get('sort') || 'newest';
-  const priceRange = searchParams.get('price') || '';
-  const category = searchParams.get('category') || '';
-  const size = searchParams.get('size') || '';
-  const color = searchParams.get('color') || '';
-
-  const brandName = decodeURIComponent(brand).replace(/-/g, ' ');
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        
-        const params = new URLSearchParams({
-          brand: brandName,
-          page: currentPage.toString(),
-          limit: '20',
-          sort: sortBy
-        });
-
-        if (priceRange) params.append('price', priceRange);
-        if (category) params.append('category', category);
-        if (size) params.append('size', size);
-        if (color) params.append('color', color);
-
-        const response = await fetch(`/api/products/search?${params}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch products');
-        }
-
-        const json = await response.json();
-        const fetchedProducts = json?.data?.data ?? json?.products ?? [];
-        const fetchedTotal = json?.data?.pagination?.total ?? json?.total ?? 0;
-        setProducts(fetchedProducts);
-        setTotalProducts(fetchedTotal);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load products');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [brandName, currentPage, sortBy, priceRange, category, size, color]);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const totalPages = Math.ceil(totalProducts / 20);
-
-  if (loading && products.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+function mapSort(sortBy: string): { sort: string; order?: string } {
+  switch (sortBy) {
+    case 'price-low':
+      return { sort: 'price', order: 'asc' };
+    case 'price-high':
+      return { sort: 'price', order: 'desc' };
+    case 'rating':
+      return { sort: 'rating', order: 'desc' };
+    case 'popular':
+      return { sort: 'popularity', order: 'desc' };
+    case 'newest':
+    default:
+      return { sort: 'createdAt', order: 'desc' };
   }
+}
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <ErrorMessage message={error} />
-      </div>
-    );
-  }
+async function fetchProductsAndFacets(params: { baseUrl: string; brandName: string; page: number; limit: number; sortBy: string; price?: string; category?: string; size?: string; color?: string; }) {
+  const { baseUrl, brandName, page, limit, sortBy, price, category, size, color } = params;
+
+  const sp = new URLSearchParams({
+    brand: brandName,
+    page: String(page),
+    limit: String(limit),
+    ...mapSort(sortBy),
+  });
+  if (price) sp.append('price', price);
+  if (category) sp.append('category', category);
+  if (size) sp.append('size', size);
+  if (color) sp.append('color', color);
+
+  const [productsRes, facetsRes] = await Promise.all([
+    fetch(`${baseUrl}/api/products/search?${sp.toString()}`, { next: { revalidate } }),
+    fetch(`${baseUrl}/api/products/facets?brand=${encodeURIComponent(brandName)}`, { next: { revalidate } })
+  ]);
+
+  const productsJson = await productsRes.json().catch(() => ({} as any));
+  const facetsJson = await facetsRes.json().catch(() => ({} as any));
+
+  const products: ProductListItem[] = productsJson?.data?.data ?? productsJson?.products ?? [];
+  const total: number = productsJson?.data?.pagination?.total ?? productsJson?.total ?? 0;
+
+  const data = facetsJson?.data || {};
+  const sections: FilterSection[] = [
+    { key: 'category', title: 'Category', type: 'radio', options: (data.categories || []).map((c: any) => ({ value: c.slug, label: c.name, count: c.count })) },
+    { key: 'brand', title: 'Brand', type: 'checkbox', options: (data.brands || []).map((b: any) => ({ value: b.name, label: b.name, count: b.count })) },
+    { key: 'price', title: 'Price Range', type: 'range', min: 0, max: 1000000 },
+    { key: 'size', title: 'Size', type: 'checkbox', options: (data.sizes || []).map((s: any) => ({ value: s.value, label: String(s.value).toUpperCase(), count: s.count })) },
+    { key: 'color', title: 'Color', type: 'checkbox', options: (data.colors || []).map((c: any) => ({ value: c.value, label: c.value.charAt(0).toUpperCase() + c.value.slice(1), count: c.count })) },
+    { key: 'rating', title: 'Customer Rating', type: 'radio', options: [
+      { value: '4', label: '4 Stars & Up' },
+      { value: '3', label: '3 Stars & Up' },
+      { value: '2', label: '2 Stars & Up' },
+      { value: '1', label: '1 Star & Up' },
+    ]},
+  ];
+
+  return { products, total, sections };
+}
+
+interface PageProps { params: { brand: string }; searchParams: Record<string, string | string[] | undefined> }
+
+export default async function BrandPage({ params, searchParams }: PageProps) {
+  const slug = params.brand;
+  const brandName = decodeURIComponent(slug).replace(/-/g, ' ');
+
+  const sortBy = String(searchParams.sort ?? 'newest');
+  const priceRange = String(searchParams.price ?? '');
+  const category = String(searchParams.category ?? '');
+  const size = String(searchParams.size ?? '');
+  const color = String(searchParams.color ?? '');
+  const page = Number(searchParams.page ?? '1');
+
+  const hdrs = await headers();
+  const host = hdrs.get('host') || 'localhost:3000';
+  const protocol = host.includes('localhost') ? 'http' : 'https';
+  const baseUrl = `${protocol}://${host}`;
+
+  const { products, total, sections } = await fetchProductsAndFacets({
+    baseUrl,
+    brandName,
+    page: isNaN(page) ? 1 : page,
+    limit: 20,
+    sortBy,
+    price: priceRange || undefined,
+    category: category || undefined,
+    size: size || undefined,
+    color: color || undefined,
+  });
+
+  const totalPages = Math.ceil(total / 20);
 
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    }>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
       <Breadcrumb
@@ -127,7 +128,7 @@ export default function BrandPage({}: BrandPageProps) {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Desktop Filters */}
         <div className="hidden lg:block w-64 flex-shrink-0">
-          <FilterSidebar />
+          <FilterSidebar serverSections={sections} />
         </div>
 
         {/* Main Content */}
@@ -135,123 +136,66 @@ export default function BrandPage({}: BrandPageProps) {
           {/* Toolbar */}
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
             <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setMobileFiltersOpen(true)}
-                className="lg:hidden flex items-center space-x-2"
+              <Link
+                href={{ pathname: `/brands/${slug}`, query: { ...searchParams, filters: 'open' } }}
+                className="lg:hidden inline-flex items-center space-x-2 border border-gray-300 rounded-md px-3 py-2 text-sm hover:bg-gray-50"
               >
                 <Filter className="w-4 h-4" />
                 <span>Filters</span>
-              </Button>
+              </Link>
               
               <p className="text-sm text-gray-600">
-                {totalProducts} products found
+                {total} products found
               </p>
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* View Mode Toggle */}
-              <div className="hidden sm:flex items-center border border-gray-300 rounded-md">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 ${
-                    viewMode === 'grid'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
+              {/* View Mode Toggle - non-functional placeholder server-side */}
+              <div className="hidden sm:flex items-center border border-gray-300 rounded-md opacity-60 pointer-events-none">
+                <button className={`p-2 bg-blue-600 text-white`}>
                   <Grid className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 ${
-                    viewMode === 'list'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
-                  <List className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Sort Dropdown */}
-              <select
-                value={sortBy}
-                onChange={(e) => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set('sort', e.target.value);
-                  window.history.pushState({}, '', url.toString());
-                  window.location.reload();
-                }}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="newest">Newest First</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="rating">Highest Rated</option>
-                <option value="popular">Most Popular</option>
-              </select>
+              <SortSelect value={sortBy} />
             </div>
           </div>
 
           {/* Products Grid */}
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <LoadingSpinner size="lg" />
-            </div>
-          ) : products.length > 0 ? (
+          {products.length > 0 ? (
             <>
-              <ProductGrid products={products} viewMode={viewMode} />
+              <ProductGrid products={products} viewMode={'grid'} />
               
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex justify-center mt-12">
                   <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
+                    <Link
+                      href={{ pathname: `/brands/${slug}`, query: { ...searchParams, page: String(Math.max(1, page - 1)) } }}
+                      className={`px-3 py-1.5 text-sm border rounded ${page <= 1 ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Previous
-                    </Button>
-                    
+                    </Link>
                     {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                      const page = i + 1;
+                      const p = i + 1;
+                      const active = p === page;
                       return (
-                        <Button
-                          key={page}
-                          variant={currentPage === page ? 'primary' : 'outline'}
-                          size="sm"
-                          onClick={() => handlePageChange(page)}
+                        <Link
+                          key={p}
+                          href={{ pathname: `/brands/${slug}`, query: { ...searchParams, page: String(p) } }}
+                          className={`px-3 py-1.5 text-sm border rounded ${active ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}
                         >
-                          {page}
-                        </Button>
+                          {p}
+                        </Link>
                       );
                     })}
-                    
-                    {totalPages > 5 && currentPage < totalPages - 2 && (
-                      <>
-                        <span className="px-2">...</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePageChange(totalPages)}
-                        >
-                          {totalPages}
-                        </Button>
-                      </>
-                    )}
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
+                    <Link
+                      href={{ pathname: `/brands/${slug}`, query: { ...searchParams, page: String(Math.min(totalPages, page + 1)) } }}
+                      className={`px-3 py-1.5 text-sm border rounded ${page >= totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Next
-                    </Button>
+                    </Link>
                   </div>
                 </div>
               )}
@@ -259,20 +203,11 @@ export default function BrandPage({}: BrandPageProps) {
           ) : (
             <div className="text-center py-12">
               <p className="text-gray-600 mb-4">No products found for this brand.</p>
-              <Button onClick={() => window.location.href = '/'}>
-                Browse All Products
-              </Button>
+              <Link href="/" className="inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Browse All Products</Link>
             </div>
           )}
         </div>
       </div>
-
-      {/* Mobile Filter Drawer */}
-      <MobileFilterDrawer
-        isOpen={mobileFiltersOpen}
-        onClose={() => setMobileFiltersOpen(false)}
-      />
     </div>
-    </Suspense>
   );
 }

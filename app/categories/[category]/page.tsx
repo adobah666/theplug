@@ -1,16 +1,13 @@
-'use client';
-
-import { useState, useEffect, Suspense } from 'react';
-import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { ProductGrid } from '@/components/product/ProductGrid';
-import { FilterSidebar } from '@/components/product/FilterSidebar';
-import { MobileFilterDrawer } from '@/components/product/MobileFilterDrawer';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { ErrorMessage } from '@/components/ui/ErrorMessage';
-import { Button } from '@/components/ui/Button';
+import { FilterSidebar, FilterSection } from '@/components/product/FilterSidebar';
 import { Filter, Grid, List } from 'lucide-react';
-// Lightweight product type for client rendering
+import { SortSelect } from '@/components/product/SortSelect';
+
+export const revalidate = 900; // 15 minutes
+
+// Lightweight product type for server rendering into ProductGrid
 type UIProduct = {
   _id: string
   name: string
@@ -23,7 +20,6 @@ type UIProduct = {
   reviewCount: number
   inventory: number
 }
-
 
 interface CategoryInfo {
   name: string;
@@ -58,22 +54,93 @@ const CATEGORY_INFO: Record<string, CategoryInfo> = {
     subcategories: ['bags', 'jewelry', 'watches', 'belts', 'hats', 'sunglasses']
   }
 };
+interface PageProps { params: { category: string }; searchParams: Record<string, string | string[] | undefined> }
 
-export default function CategoryPage() {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const router = useRouter();
+function mapSort(sortBy: string): { sort: string; order?: string } {
+  switch (sortBy) {
+    case 'price-low':
+      return { sort: 'price', order: 'asc' };
+    case 'price-high':
+      return { sort: 'price', order: 'desc' };
+    case 'rating':
+      return { sort: 'rating', order: 'desc' };
+    case 'popular':
+      return { sort: 'popularity', order: 'desc' };
+    case 'newest':
+    default:
+      return { sort: 'createdAt', order: 'desc' };
+  }
+}
+
+async function fetchAll({ baseUrl, category, page, limit, sortBy, price, subcategory, brand, size, color }: { baseUrl: string; category: string; page: number; limit: number; sortBy: string; price?: string; subcategory?: string; brand?: string; size?: string; color?: string; }) {
+  const sp = new URLSearchParams({
+    category,
+    page: String(page),
+    limit: String(limit),
+    ...mapSort(sortBy),
+  });
+  if (price) sp.append('price', price);
+  if (subcategory) sp.append('subcategory', subcategory);
+  if (brand) sp.append('brand', brand);
+  if (size) sp.append('size', size);
+  if (color) sp.append('color', color);
+
+  const [productsRes, facetsRes, heroRes] = await Promise.all([
+    fetch(`${baseUrl}/api/products/search?${sp.toString()}`, { next: { revalidate } }),
+    fetch(`${baseUrl}/api/products/facets?category=${encodeURIComponent(category)}`, { next: { revalidate } }),
+    fetch(`${baseUrl}/api/products/search?${new URLSearchParams({ category, sort: 'popularity', order: 'desc', page: '1', limit: '4' }).toString()}`, { next: { revalidate } }),
+  ]);
+
+  const productsJson = await productsRes.json().catch(() => ({} as any));
+  const facetsJson = await facetsRes.json().catch(() => ({} as any));
+  const heroJson = await heroRes.json().catch(() => ({} as any));
+
+  const payload = productsJson?.data || {};
+  const raw: any[] = payload.data || [];
+  const products: UIProduct[] = raw.map((p: any) => ({
+    _id: p._id,
+    name: p.name,
+    description: p.description,
+    price: p.price,
+    images: p.images || [],
+    brand: p.brand || '',
+    rating: p.rating ?? 0,
+    reviewCount: p.reviewCount ?? 0,
+    inventory: p.inventory ?? 0,
+    category: p.category ? {
+      _id: p.category._id?.toString?.() || p.category._id || '',
+      name: p.category.name || '',
+      slug: p.category.slug || ''
+    } : undefined,
+  }))
+  const total: number = payload.pagination?.total || 0;
+
+  const data = facetsJson?.data || {};
+  const sections: FilterSection[] = [
+    { key: 'category', title: 'Category', type: 'radio', options: (data.categories || []).map((c: any) => ({ value: c.slug, label: c.name, count: c.count })) },
+    { key: 'brand', title: 'Brand', type: 'checkbox', options: (data.brands || []).map((b: any) => ({ value: b.name, label: b.name, count: b.count })) },
+    { key: 'price', title: 'Price Range', type: 'range', min: 0, max: 1000000 },
+    { key: 'size', title: 'Size', type: 'checkbox', options: (data.sizes || []).map((s: any) => ({ value: s.value, label: String(s.value).toUpperCase(), count: s.count })) },
+    { key: 'color', title: 'Color', type: 'checkbox', options: (data.colors || []).map((c: any) => ({ value: c.value, label: c.value.charAt(0).toUpperCase() + c.value.slice(1), count: c.count })) },
+    { key: 'rating', title: 'Customer Rating', type: 'radio', options: [
+      { value: '4', label: '4 Stars & Up' },
+      { value: '3', label: '3 Stars & Up' },
+      { value: '2', label: '2 Stars & Up' },
+      { value: '1', label: '1 Star & Up' },
+    ]},
+  ];
+
+  const heroList: any[] = heroJson?.data?.data || [];
+  const heroImages: string[] = heroList
+    .flatMap((p: any) => (Array.isArray(p?.images) ? p.images : []))
+    .filter((src: any) => typeof src === 'string' && src.length > 0)
+    .slice(0, 4);
+
+  return { products, total, sections, heroImages };
+}
+
+export default async function CategoryPage({ params, searchParams }: PageProps) {
   const category = params.category as string;
-  
-  const [products, setProducts] = useState<UIProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [heroImages, setHeroImages] = useState<string[]>([]);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  
   const categoryInfo = CATEGORY_INFO[category] || {
     name: category.charAt(0).toUpperCase() + category.slice(1),
     description: `Browse our ${category} collection`,
@@ -81,140 +148,35 @@ export default function CategoryPage() {
     subcategories: []
   };
 
-  const sortBy = searchParams.get('sort') || 'newest';
-  const priceRange = searchParams.get('price') || '';
-  const subcategory = searchParams.get('subcategory') || '';
-  const brand = searchParams.get('brand') || '';
-  const size = searchParams.get('size') || '';
-  const color = searchParams.get('color') || '';
+  const sortBy = String(searchParams.sort ?? 'newest');
+  const priceRange = String(searchParams.price ?? '');
+  const subcategory = String(searchParams.subcategory ?? '');
+  const brand = String(searchParams.brand ?? '');
+  const size = String(searchParams.size ?? '');
+  const color = String(searchParams.color ?? '');
+  const page = Number(searchParams.page ?? '1');
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        
-        const params = new URLSearchParams({
-          category,
-          page: currentPage.toString(),
-          limit: '20',
-          // Map UI sort to API sort/order
-          // UI: newest | price-low | price-high | rating | popular
-          // API expects: sort=[createdAt|price|rating|popularity] and optional order=[asc|desc]
-          // We'll set defaults here; order can be appended conditionally below.
-          sort: ((): string => {
-            switch (sortBy) {
-              case 'newest': return 'createdAt';
-              case 'price-low': return 'price';
-              case 'price-high': return 'price';
-              case 'rating': return 'rating';
-              case 'popular': return 'popularity';
-              default: return 'createdAt';
-            }
-          })()
-        });
-        if (sortBy === 'price-low') params.append('order', 'asc');
-        if (sortBy === 'price-high') params.append('order', 'desc');
-        if (sortBy === 'newest') params.append('order', 'desc');
-        if (sortBy === 'rating') params.append('order', 'desc');
-        if (sortBy === 'popular') params.append('order', 'desc');
+  const hdrs = await headers();
+  const host = hdrs.get('host') || 'localhost:3000';
+  const protocol = host.includes('localhost') ? 'http' : 'https';
+  const baseUrl = `${protocol}://${host}`;
 
-        if (priceRange) params.append('price', priceRange);
-        if (subcategory) params.append('subcategory', subcategory);
-        if (brand) params.append('brand', brand);
-        if (size) params.append('size', size);
-        if (color) params.append('color', color);
+  const { products, total, sections, heroImages } = await fetchAll({
+    baseUrl,
+    category,
+    page: isNaN(page) ? 1 : page,
+    limit: 20,
+    sortBy,
+    price: priceRange || undefined,
+    subcategory: subcategory || undefined,
+    brand: brand || undefined,
+    size: size || undefined,
+    color: color || undefined,
+  });
 
-        const response = await fetch(`/api/products/search?${params}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch products');
-        }
-
-        const data = await response.json();
-        const payload = data?.data || {};
-        const raw: any[] = payload.data || [];
-        const normalized: UIProduct[] = raw.map((p: any) => ({
-          _id: p._id,
-          name: p.name,
-          description: p.description,
-          price: p.price,
-          images: p.images || [],
-          brand: p.brand || '',
-          rating: p.rating ?? 0,
-          reviewCount: p.reviewCount ?? 0,
-          inventory: p.inventory ?? 0,
-          category: p.category ? {
-            _id: p.category._id?.toString?.() || p.category._id || '',
-            name: p.category.name || '',
-            slug: p.category.slug || ''
-          } : undefined,
-        }))
-        setProducts(normalized);
-        setTotalProducts(payload.pagination?.total || 0);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load products');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [category, currentPage, sortBy, priceRange, subcategory, brand, size, color]);
-
-  // Fetch top popular items for hero collage
-  useEffect(() => {
-    const fetchHero = async () => {
-      try {
-        const params = new URLSearchParams({
-          category,
-          sort: 'popularity',
-          order: 'desc',
-          page: '1',
-          limit: '4'
-        })
-        const res = await fetch(`/api/products/search?${params.toString()}`, { cache: 'no-store' })
-        const json = await res.json().catch(() => ({}))
-        const list: any[] = json?.data?.data || []
-        const imgs: string[] = list
-          .flatMap((p: any) => (Array.isArray(p?.images) ? p.images : []))
-          .filter((src: any) => typeof src === 'string' && src.length > 0)
-          .slice(0, 4)
-        setHeroImages(imgs)
-      } catch {
-        setHeroImages([])
-      }
-    }
-    fetchHero()
-  }, [category])
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const totalPages = Math.ceil(totalProducts / 20);
-
-  if (loading && products.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <ErrorMessage message={error} />
-      </div>
-    );
-  }
+  const totalPages = Math.ceil(total / 20);
 
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    }>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-xs sm:text-sm text-gray-600 mb-6">
@@ -299,7 +261,7 @@ export default function CategoryPage() {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Desktop Filters */}
         <div className="hidden lg:block w-64 flex-shrink-0">
-          <FilterSidebar />
+          <FilterSidebar serverSections={sections} />
         </div>
 
         {/* Main Content */}
@@ -307,122 +269,69 @@ export default function CategoryPage() {
           {/* Toolbar */}
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
             <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setMobileFiltersOpen(true)}
-                className="lg:hidden flex items-center space-x-2"
+              <Link
+                href={{ pathname: `/categories/${category}`, query: { ...searchParams, filters: 'open' } }}
+                className="lg:hidden inline-flex items-center space-x-2 border border-gray-300 rounded-md px-3 py-2 text-sm hover:bg-gray-50"
               >
                 <Filter className="w-4 h-4" />
                 <span>Filters</span>
-              </Button>
+              </Link>
               
               <p className="text-sm text-gray-600">
-                {totalProducts} products found
+                {total} products found
               </p>
             </div>
 
             <div className="flex items-center space-x-4">
               {/* View Mode Toggle */}
-              <div className="hidden sm:flex items-center border border-gray-300 rounded-md">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 ${
-                    viewMode === 'grid'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
+              <div className="hidden sm:flex items-center border border-gray-300 rounded-md opacity-60 pointer-events-none">
+                <button className={`p-2 bg-blue-600 text-white`}>
                   <Grid className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 ${
-                    viewMode === 'list'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
+                <button className={`p-2 text-gray-600`}>
                   <List className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Sort Dropdown */}
-              <select
-                value={sortBy}
-                onChange={(e) => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set('sort', e.target.value);
-                  router.push(url.pathname + '?' + url.searchParams.toString());
-                }}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="newest">Newest First</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="rating">Highest Rated</option>
-                <option value="popular">Most Popular</option>
-              </select>
+              <SortSelect value={sortBy} />
             </div>
           </div>
 
           {/* Products Grid */}
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <LoadingSpinner size="lg" />
-            </div>
-          ) : products.length > 0 ? (
+          {products.length > 0 ? (
             <>
-              <ProductGrid products={products} viewMode={viewMode} />
+              <ProductGrid products={products} viewMode={'grid'} />
               
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex justify-center mt-12">
                   <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
+                    <Link
+                      href={{ pathname: `/categories/${category}`, query: { ...searchParams, page: String(Math.max(1, page - 1)) } }}
+                      className={`px-3 py-1.5 text-sm border rounded ${page <= 1 ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Previous
-                    </Button>
-                    
+                    </Link>
                     {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                      const page = i + 1;
+                      const p = i + 1;
+                      const active = p === page;
                       return (
-                        <Button
-                          key={page}
-                          variant={currentPage === page ? 'primary' : 'outline'}
-                          size="sm"
-                          onClick={() => handlePageChange(page)}
+                        <Link
+                          key={p}
+                          href={{ pathname: `/categories/${category}`, query: { ...searchParams, page: String(p) } }}
+                          className={`px-3 py-1.5 text-sm border rounded ${active ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}
                         >
-                          {page}
-                        </Button>
+                          {p}
+                        </Link>
                       );
                     })}
-                    
-                    {totalPages > 5 && currentPage < totalPages - 2 && (
-                      <>
-                        <span className="px-2">...</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePageChange(totalPages)}
-                        >
-                          {totalPages}
-                        </Button>
-                      </>
-                    )}
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
+                    <Link
+                      href={{ pathname: `/categories/${category}`, query: { ...searchParams, page: String(Math.min(totalPages, page + 1)) } }}
+                      className={`px-3 py-1.5 text-sm border rounded ${page >= totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Next
-                    </Button>
+                    </Link>
                   </div>
                 </div>
               )}
@@ -430,15 +339,11 @@ export default function CategoryPage() {
           ) : (
             <div className="text-center py-12">
               <p className="text-gray-600 mb-4">No products found in this category.</p>
-              <Button onClick={() => window.location.href = '/'}>
-                Browse All Products
-              </Button>
+              <Link href="/" className="inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Browse All Products</Link>
             </div>
           )}
         </div>
       </div>
-
     </div>
-  </Suspense>
-);
+  );
 }

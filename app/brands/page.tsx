@@ -1,12 +1,10 @@
-'use client';
-
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { headers } from 'next/headers';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Card } from '@/components/ui/Card';
+
+export const revalidate = 900; // 15 minutes
 
 interface Brand {
   name: string;
@@ -16,48 +14,25 @@ interface Brand {
   productCount: number;
 }
 
-export default function BrandsPage() {
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchBrands = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/brands');
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch brands');
-        }
-
-        const data = await response.json();
-        setBrands(data.brands || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load brands');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBrands();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+async function getBrands(baseUrl: string): Promise<Brand[]> {
+  try {
+    const res = await fetch(`${baseUrl}/api/brands`, {
+      next: { revalidate }
+    });
+    if (!res.ok) throw new Error('Failed to fetch brands');
+    const json = await res.json();
+    return json?.brands ?? [];
+  } catch {
+    return [];
   }
+}
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <ErrorMessage message={error} />
-      </div>
-    );
-  }
+export default async function BrandsPage() {
+  const hdrs = await headers();
+  const host = hdrs.get('host') || 'localhost:3000';
+  const protocol = host.includes('localhost') ? 'http' : 'https';
+  const baseUrl = `${protocol}://${host}`;
+  const brands = await getBrands(baseUrl);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

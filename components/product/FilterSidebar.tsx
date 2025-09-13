@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { formatCurrency } from '@/lib/utils/currency'
 
-interface FilterOption {
+export interface FilterOption {
   value: string
   label: string
   count?: number
 }
 
-interface FilterSection {
+export interface FilterSection {
   key: string
   title: string
   type: 'checkbox' | 'range' | 'radio'
@@ -27,12 +27,15 @@ interface FilterSidebarProps {
   className?: string
   onFilterChange?: (filters: Record<string, any>) => void
   isLoading?: boolean
+  // When provided, these sections will be used directly and the client won't fetch facets.
+  serverSections?: FilterSection[]
 }
 
 export const FilterSidebar: React.FC<FilterSidebarProps> = ({
   className = "",
   onFilterChange,
-  isLoading = false
+  isLoading = false,
+  serverSections
 }) => {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -48,8 +51,13 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     let mounted = true
     ;(async () => {
       try {
-        setFacetsLoading(true)
         setFacetsError(null)
+        // If server-provided sections exist, use them and skip client fetching
+        if (serverSections && serverSections.length > 0) {
+          setFilterSections(serverSections)
+          return
+        }
+        setFacetsLoading(true)
         const sp = new URLSearchParams()
         if (paramsRoute?.category) sp.set('category', paramsRoute.category)
         const res = await fetch(`/api/products/facets?${sp.toString()}`)
@@ -83,7 +91,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
       }
     })()
     return () => { mounted = false }
-  }, [paramsRoute?.category])
+  }, [paramsRoute?.category, serverSections])
 
   useEffect(() => {
     const initialFilters: Record<string, any> = {}
