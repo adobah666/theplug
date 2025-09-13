@@ -140,7 +140,10 @@ async function fetchAll({ baseUrl, category, page, limit, sortBy, price, subcate
 }
 
 export default async function CategoryPage({ params, searchParams }: PageProps) {
-  const category = params.category as string;
+  const awaitedParams: any = (typeof (params as any)?.then === 'function') ? await (params as any) : (params as any)
+  const awaitedSearch: any = (typeof (searchParams as any)?.then === 'function') ? await (searchParams as any) : (searchParams as any)
+
+  const category = awaitedParams.category as string;
   const categoryInfo = CATEGORY_INFO[category] || {
     name: category.charAt(0).toUpperCase() + category.slice(1),
     description: `Browse our ${category} collection`,
@@ -148,13 +151,13 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     subcategories: []
   };
 
-  const sortBy = String(searchParams.sort ?? 'newest');
-  const priceRange = String(searchParams.price ?? '');
-  const subcategory = String(searchParams.subcategory ?? '');
-  const brand = String(searchParams.brand ?? '');
-  const size = String(searchParams.size ?? '');
-  const color = String(searchParams.color ?? '');
-  const page = Number(searchParams.page ?? '1');
+  const sortBy = String(awaitedSearch.sort ?? 'newest');
+  const priceRange = String(awaitedSearch.price ?? '');
+  const subcategory = String(awaitedSearch.subcategory ?? '');
+  const brand = String(awaitedSearch.brand ?? '');
+  const size = String(awaitedSearch.size ?? '');
+  const color = String(awaitedSearch.color ?? '');
+  const page = Number(awaitedSearch.page ?? '1');
 
   const hdrs = await headers();
   const host = hdrs.get('host') || 'localhost:3000';

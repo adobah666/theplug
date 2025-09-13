@@ -1,21 +1,45 @@
 export const revalidate = 900
 import Link from 'next/link'
 import Image from 'next/image'
+import { headers } from 'next/headers'
 
 async function fetchCategories() {
   try {
-    const base = (process.env.NEXT_PUBLIC_SITE_URL && process.env.NEXT_PUBLIC_SITE_URL.trim().length > 0)
-      ? process.env.NEXT_PUBLIC_SITE_URL
-      : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-
+    const hdrs = await headers()
+    const host = hdrs.get('host') || 'localhost:3000'
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const base = `${protocol}://${host}`
     const res = await fetch(`${base}/api/categories`, { next: { revalidate: 900 } })
     const json = await res.json().catch(() => ({} as any))
-    const baseCats: Array<{ slug: string; name: string }> = (json?.data?.categories || []).map((c: any) => ({ slug: c.slug, name: c.name }))
+    let baseCats: Array<{ slug: string; name: string }> = (json?.data?.categories || []).map((c: any) => ({ slug: c.slug, name: c.name }))
+
+    // Fallback: derive categories from recent products if API returns none
+    if (!baseCats || baseCats.length === 0) {
+      try {
+        const params = new URLSearchParams({ sort: 'createdAt', order: 'desc', page: '1', limit: '200' })
+        const prodRes = await fetch(`${base}/api/products/search?${params.toString()}`, { next: { revalidate: 900 } })
+        const prodJson = await prodRes.json().catch(() => ({} as any))
+        const list: any[] = Array.isArray(prodJson?.data?.data) ? prodJson.data.data : []
+        const map = new Map<string, { slug: string; name: string; count: number }>()
+        for (const p of list) {
+          const cat = p?.category
+          const slug = (cat?.slug || '').toString().trim()
+          const name = (cat?.name || '').toString().trim()
+          if (!slug || !name) continue
+          const prev = map.get(slug) || { slug, name, count: 0 }
+          prev.count += 1
+          map.set(slug, prev)
+        }
+        baseCats = Array.from(map.values())
+          .sort((a, b) => b.count - a.count)
+          .map(c => ({ slug: c.slug, name: c.name }))
+      } catch {}
+    }
 
     // In parallel, fetch a representative image per category (prefer newest product with an image)
     const withImages = await Promise.all(baseCats.map(async (cat) => {
       try {
-        const newestParams = new URLSearchParams({ category: cat.slug, sort: 'newest', order: 'desc', page: '1', limit: '6' })
+        const newestParams = new URLSearchParams({ category: cat.slug, sort: 'createdAt', order: 'desc', page: '1', limit: '6' })
         const newestRes = await fetch(`${base}/api/products/search?${newestParams.toString()}`, { next: { revalidate: 900 } })
         const newestJson = await newestRes.json().catch(() => ({} as any))
         let items: any[] = Array.isArray(newestJson?.data?.data) ? newestJson.data.data : []

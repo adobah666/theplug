@@ -1,5 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 
 interface Category {
   name: string
@@ -8,9 +9,10 @@ interface Category {
 
 async function getFooterCategories(): Promise<Category[]> {
   try {
-    const base = (process.env.NEXT_PUBLIC_SITE_URL && process.env.NEXT_PUBLIC_SITE_URL.trim().length > 0)
-      ? process.env.NEXT_PUBLIC_SITE_URL
-      : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+    const hdrs = await headers()
+    const host = hdrs.get('host') || 'localhost:3000'
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const base = `${protocol}://${host}`
 
     const res = await fetch(`${base}/api/categories`, { 
       next: { revalidate: 900 } // 15 minutes cache

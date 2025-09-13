@@ -14,24 +14,49 @@ interface Brand {
   productCount: number;
 }
 
-async function getBrands(baseUrl: string): Promise<Brand[]> {
+async function getBrands(): Promise<Brand[]> {
   try {
-    const res = await fetch(`${baseUrl}/api/brands`, {
+    const hdrs = await headers();
+    const host = hdrs.get('host') || 'localhost:3000';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const base = `${protocol}://${host}`;
+    const res = await fetch(`${base}/api/brands`, {
       next: { revalidate }
     });
     if (!res.ok) throw new Error('Failed to fetch brands');
     const json = await res.json();
-    return json?.brands ?? [];
+    let brands: Brand[] = json?.brands ?? [];
+
+    // Fallback: derive brands from products if API returns empty
+    if (!brands || brands.length === 0) {
+      try {
+        const params = new URLSearchParams({ sort: 'createdAt', order: 'desc', page: '1', limit: '100' });
+        const prodRes = await fetch(`${base}/api/products/search?${params.toString()}`, { next: { revalidate } });
+        const prodJson = await prodRes.json().catch(() => ({} as any));
+        const list: any[] = Array.isArray(prodJson?.data?.data) ? prodJson.data.data : [];
+        const map = new Map<string, { name: string; slug: string; count: number }>();
+        for (const p of list) {
+          const name = (p?.brand || '').toString().trim();
+          if (!name) continue;
+          const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+          const prev = map.get(slug) || { name, slug, count: 0 };
+          prev.count += 1;
+          map.set(slug, prev);
+        }
+        brands = Array.from(map.values())
+          .sort((a, b) => b.count - a.count)
+          .map(b => ({ name: b.name, slug: b.slug, description: `Discover the latest collection from ${b.name}.`, productCount: b.count }));
+      } catch {}
+    }
+
+    return brands;
   } catch {
     return [];
   }
 }
 
 export default async function BrandsPage() {
-  const origin =
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-  const brands = await getBrands(origin);
+  const brands = await getBrands();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

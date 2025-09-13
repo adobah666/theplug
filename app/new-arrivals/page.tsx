@@ -1,17 +1,18 @@
 export const revalidate = 900
 import Link from 'next/link'
 import Image from 'next/image'
+import { headers } from 'next/headers'
 import { ProductCard } from '@/components/product/ProductCard'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 
 async function fetchNewArrivals(page: number, limit: number) {
   try {
-    const base = (process.env.NEXT_PUBLIC_SITE_URL && process.env.NEXT_PUBLIC_SITE_URL.trim().length > 0)
-      ? process.env.NEXT_PUBLIC_SITE_URL
-      : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-
-    const params = new URLSearchParams({ sort: 'newest', order: 'desc', page: String(page), limit: String(limit) })
+    const hdrs = await headers()
+    const host = hdrs.get('host') || 'localhost:3000'
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const base = `${protocol}://${host}`
+    const params = new URLSearchParams({ sort: 'createdAt', order: 'desc', page: String(page), limit: String(limit) })
     const res = await fetch(`${base}/api/products/search?${params.toString()}`, { next: { revalidate: 900 } })
     const json = await res.json().catch(() => ({} as any))
 

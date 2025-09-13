@@ -1,5 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { Button } from '@/components/ui/Button'
 import { SearchBar } from '@/components/product/SearchBar'
 import { CartIcon } from '@/components/cart/CartIcon'
@@ -17,9 +18,10 @@ interface Brand {
 
 async function getNavigationData(): Promise<{ categories: Category[], brands: Brand[] }> {
   try {
-    const base = (process.env.NEXT_PUBLIC_SITE_URL && process.env.NEXT_PUBLIC_SITE_URL.trim().length > 0)
-      ? process.env.NEXT_PUBLIC_SITE_URL
-      : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+    const hdrs = await headers()
+    const host = hdrs.get('host') || 'localhost:3000'
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const base = `${protocol}://${host}`
 
     const [categoriesRes, brandsRes] = await Promise.all([
       fetch(`${base}/api/categories`, { 
