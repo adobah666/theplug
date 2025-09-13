@@ -3,7 +3,7 @@ import connectDB from '@/lib/db/connection'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import Order, { PaymentStatus, OrderStatus } from '@/lib/db/models/Order'
-import RefundRequest from '@/lib/db/models/RefundRequest'
+import RefundRequest, { IRefundRequest } from '@/lib/db/models/RefundRequest'
 
 // POST /api/orders/[id]/refund-request
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -89,7 +89,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const existing = await RefundRequest.findOne({ orderId: order._id, userId: order.userId }).lean()
+    const existing = await RefundRequest
+      .findOne({ orderId: order._id, userId: order.userId })
+      .lean<{
+        _id: any;
+        orderId: any;
+        userId: any;
+        reason?: string;
+        status: 'pending' | 'approved' | 'rejected';
+        createdAt: Date;
+        updatedAt: Date;
+      }>()
     if (!existing) {
       return NextResponse.json({ success: true, exists: false }, { headers: { 'Cache-Control': 'no-store' } })
     }

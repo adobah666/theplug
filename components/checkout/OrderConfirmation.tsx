@@ -73,9 +73,12 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
 
   const withinRefundWindow = () => {
     try {
-      const paidAtIso = localPaidAt || (order as any)?.paidAt
-      const paidAt = paidAtIso ? new Date(paidAtIso) : null
-      if (!paidAt) return false
+      const paidAtIso = localPaidAt ?? order.paidAt
+      if (!paidAtIso) return false
+      const paidAt = new Date(paidAtIso)
+      const diffMs = Date.now() - paidAt.getTime()
+      if (!Number.isFinite(diffMs) || diffMs < 0) return false
+      return diffMs <= 6 * 60 * 60 * 1000
       const now = new Date()
       const hours = (now.getTime() - paidAt.getTime()) / (1000 * 60 * 60)
       return hours <= 6

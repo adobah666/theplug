@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Star, Heart, Share2, ShoppingCart, Truck, Grid, List } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -62,6 +62,12 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
   const [canReview, setCanReview] = useState(false);
   const [myReview, setMyReview] = useState<any | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  // Keep a ref of the latest selectedVariant to avoid effect/listener churn
+  const selectedVariantRef = useRef<any | null>(selectedVariant);
+  useEffect(() => {
+    selectedVariantRef.current = selectedVariant;
+  }, [selectedVariant]);
 
   // Compute client-side reserved quantity and available quantity
   const reservedQty = (() => {
@@ -126,9 +132,10 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
         const nextProd = normalize(raw);
         if (ignore) return;
         setProduct(nextProd);
-        if (selectedVariant && Array.isArray(nextProd.variants)) {
-          const updatedVar = (nextProd.variants as any[]).find(v => String(v._id) === String(selectedVariant._id));
-          if (updatedVar) setSelectedVariant(updatedVar);
+        const currSel = selectedVariantRef.current;
+        if (currSel && Array.isArray(nextProd.variants)) {
+          const updatedVar = (nextProd.variants as any[]).find(v => String(v._id) === String(currSel._id));
+          setSelectedVariant(updatedVar || null);
         }
       } catch {}
     };
@@ -136,22 +143,21 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
     // initial load
     load();
 
-    // refresh when tab regains focus/visibility
-    const onFocus = () => load();
+    // refresh when tab becomes visible
     const onVisibility = () => { if (document.visibilityState === 'visible') load(); };
-    window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibility);
 
     // periodic background refresh
-    intervalId = setInterval(load, 20000);
+    intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') load();
+    }, 20000);
 
     return () => {
       ignore = true;
-      window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibility);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [product?._id, selectedVariant?._id]);
+  }, [product?._id]);
 
   // Load initial wishlist status
   useEffect(() => {
