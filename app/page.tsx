@@ -14,6 +14,7 @@ import { Testimonials } from '@/components/layout/Testimonials'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 
+
 // Build dynamic trending list: pick the top product per category (by popularity), then
 // take the overall top 5 across categories (ensures one per category).
 async function getFeaturedProducts() {
