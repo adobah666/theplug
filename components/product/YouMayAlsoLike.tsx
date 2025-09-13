@@ -20,9 +20,10 @@ interface YouMayAlsoLikeProps {
   brand?: string
   limit?: number
   className?: string
+  serverItems?: Item[]
 }
 
-export function YouMayAlsoLike({ productId, category, brand, limit = 16, className = '' }: YouMayAlsoLikeProps) {
+export function YouMayAlsoLike({ productId, category, brand, limit = 16, className = '', serverItems }: YouMayAlsoLikeProps) {
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -32,6 +33,13 @@ export function YouMayAlsoLike({ productId, category, brand, limit = 16, classNa
 
   useEffect(() => {
     let ignore = false
+    // If server-provided items are available, use them and skip fetching
+    if (serverItems && serverItems.length > 0) {
+      setItems(serverItems.slice(0, limit))
+      setLoading(false)
+      setError(null)
+      return () => { /* noop */ }
+    }
 
     const fetchLayer = async (qs: URLSearchParams) => {
       const res = await fetch(`/api/products/search?${qs.toString()}`, { cache: 'no-store' })
@@ -131,7 +139,7 @@ export function YouMayAlsoLike({ productId, category, brand, limit = 16, classNa
 
     fetchAll()
     return () => { ignore = true }
-  }, [productId, category, brand, limit])
+  }, [productId, category, brand, limit, serverItems])
 
   const updateButtons = () => {
     const el = scrollRef.current

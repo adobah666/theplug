@@ -45,6 +45,13 @@ async function fetchProductsAndFacets(params: { baseUrl: string; brandName: stri
     fetch(`${baseUrl}/api/products/facets?brand=${encodeURIComponent(brandName)}`, { next: { revalidate } })
   ]);
 
+  if (!productsRes.ok) {
+    console.error('Failed to fetch products:', productsRes.status);
+  }
+  if (!facetsRes.ok) {
+    console.error('Failed to fetch facets:', facetsRes.status);
+  }
+
   const productsJson = await productsRes.json().catch(() => ({} as any));
   const facetsJson = await facetsRes.json().catch(() => ({} as any));
 

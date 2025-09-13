@@ -1,6 +1,9 @@
 import { Metadata } from 'next'
 import { Suspense } from 'react'
 import { CheckoutForm } from '@/components/checkout/CheckoutForm'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth/config'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -10,7 +13,12 @@ export const metadata: Metadata = {
   description: 'Complete your purchase securely',
 }
 
-export default function CheckoutPage() {
+export default async function CheckoutPage() {
+  const session = await getServerSession(authOptions as any)
+  if (!session) {
+    redirect(`/login?callbackUrl=${encodeURIComponent('/checkout')}`)
+  }
+
   return (
     <Suspense fallback={<div className="min-h-[200px] flex items-center justify-center">Loading…</div>}>
       <div className="min-h-screen bg-white">

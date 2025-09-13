@@ -21,6 +21,7 @@ interface RelatedCarouselProps {
   subtitle?: string
   limit?: number
   className?: string
+  serverItems?: Item[]
 }
 
 export function RelatedCarousel({
@@ -29,7 +30,8 @@ export function RelatedCarousel({
   title = 'Related Products',
   subtitle = 'Customers also viewed these items',
   limit = 16,
-  className = ''
+  className = '',
+  serverItems
 }: RelatedCarouselProps) {
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,6 +41,13 @@ export function RelatedCarousel({
   const [canRight, setCanRight] = useState(false)
 
   useEffect(() => {
+    // If server-provided items are available, use them and skip fetching
+    if (serverItems && serverItems.length > 0) {
+      setItems(serverItems.slice(0, limit))
+      setLoading(false)
+      setError(null)
+      return
+    }
     let ignore = false
     const fetchRelated = async () => {
       try {
