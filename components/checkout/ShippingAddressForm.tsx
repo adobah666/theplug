@@ -302,8 +302,8 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
         setFormData({
           firstName: selected.firstName,
           lastName: selected.lastName,
-          email: initialData.email || '',
-          phone: '',
+          email: (session?.user as any)?.email || initialData.email || '',
+          phone: (session?.user as any)?.phone || '',
           street: selected.street,
           city: selected.city,
           state: selected.state,
@@ -342,10 +342,20 @@ const ShippingAddressForm: React.FC<ShippingAddressFormProps> = ({
     
     // If using saved address, submit directly
     if (selectedAddressId && selectedAddressId !== 'new' && !showNewAddressForm) {
-      const validation = validateShippingAddress(formData)
+      // Ensure we include session email/phone if available
+      const enriched = {
+        ...formData,
+        email: (session?.user as any)?.email || formData.email,
+        phone: (session?.user as any)?.phone || formData.phone,
+      }
+      const validation = validateShippingAddress(enriched)
       if (validation.success) {
         onSubmit(validation.data, { saveAddress: false })
+        return
       }
+      // If validation fails (typically due to missing phone/email), reveal the form and show errors
+      setShowNewAddressForm(true)
+      setErrors(formatValidationErrors(validation.error))
       return
     }
     
