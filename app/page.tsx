@@ -388,11 +388,13 @@ function HomePageContent({ featuredProducts, categories, categorySlides }: HomeP
       />*/}
 
       {/* Trending Section - Horizontal Scrolling */}
-      <TrendingSectionServer 
-        excludeIds={featuredProducts.map(p => p.id)}
-        title="Trending Now"
-        subtitle="Discover what's popular with our customers this week"
-      />
+      <div id="trending-now" className="scroll-mt-28">
+        <TrendingSectionServer 
+          excludeIds={featuredProducts.map(p => p.id)}
+          title="Trending Now"
+          subtitle="Discover what's popular with our customers this week"
+        />
+      </div>
 
       {/* Category Showcase */}
       <CategoryShowcase 

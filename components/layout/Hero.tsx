@@ -1,6 +1,5 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency } from '@/lib/utils/currency'
 import { HeroImage } from '@/components/ui/OptimizedImage'
@@ -207,8 +206,19 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
     )
   }
 
+  const scrollToTrending = () => {
+    if (typeof window === 'undefined') return
+    const el = document.getElementById('trending-now')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      // Fallback: navigate
+      window.location.hash = '#trending-now'
+    }
+  }
+
   return (
-    <section className="relative h-screen w-full overflow-hidden">
+    <section className="relative w-full overflow-hidden h-[calc(100svh-9.5rem)] sm:h-[calc(100svh-8rem)] lg:h-screen">
       {/* Slideshow Container */}
       <div className="relative h-full">
         {slides.map((slide, index) => (
@@ -241,8 +251,9 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
                 <Button 
                   size="lg" 
                   className="bg-white text-black hover:bg-gray-100 font-semibold px-8 py-3 text-lg"
+                  onClick={scrollToTrending}
                 >
-                  <Link href={slide.ctaLink}>{slide.cta}</Link>
+                  {slide.cta}
                 </Button>
               </div>
             </div>
