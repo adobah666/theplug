@@ -15,7 +15,7 @@ export interface ShippingAddress {
 }
 
 export interface PaymentMethod {
-  type: 'card' | 'bank_transfer'
+  type: 'card'
   cardNumber?: string
   expiryMonth?: string
   expiryYear?: string

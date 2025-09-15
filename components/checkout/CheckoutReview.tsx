@@ -114,12 +114,9 @@ const CheckoutReview: React.FC<CheckoutReviewProps> = ({
             <h3 className="text-sm font-medium text-yellow-800">Important Information</h3>
             <div className="mt-2 text-sm text-yellow-700">
               <ul className="list-disc list-inside space-y-1">
-                <li>Orders are typically processed within 1-2 business days</li>
+                <li>Orders are typically processed within 1–2 business days</li>
                 <li>You will receive an email confirmation once your order is placed</li>
                 <li>Delivery times may vary based on your location</li>
-                {paymentMethod.type === 'bank_transfer' && (
-                  <li>Please complete bank transfer within 24 hours to secure your order</li>
-                )}
               </ul>
             </div>
           </div>

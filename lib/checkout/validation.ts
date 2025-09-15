@@ -18,7 +18,7 @@ export const shippingAddressSchema = z.object({
 
 // Payment method validation schema
 export const paymentMethodSchema = z.object({
-  type: z.enum(['card', 'bank_transfer']),
+  type: z.literal('card'),
   cardNumber: z.string().optional(),
   expiryMonth: z.string().optional(),
   expiryYear: z.string().optional(),

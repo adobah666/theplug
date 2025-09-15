@@ -26,19 +26,19 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   }
 
   return (
-    <nav aria-label="Checkout progress" className="mb-8">
-      <ol className="flex items-center justify-center space-x-8">
+    <nav aria-label="Checkout progress" className="mb-6 sm:mb-8">
+      <ol className="flex items-center w-full justify-between sm:justify-center sm:space-x-8">
         {steps.map((step, index) => {
           const status = getStepStatus(step.key)
           const isLast = index === steps.length - 1
 
           return (
-            <li key={step.key} className="flex items-center">
+            <li key={step.key} className="flex items-center flex-1">
               <div className="flex flex-col items-center">
                 {/* Step Circle */}
                 <div
                   className={cn(
-                    'flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-medium',
+                    'flex items-center justify-center rounded-full border-2 font-medium h-8 w-8 text-xs sm:h-10 sm:w-10 sm:text-sm',
                     {
                       'border-green-500 bg-green-500 text-white': status === 'completed',
                       'border-blue-500 bg-blue-500 text-white': status === 'current',
@@ -62,7 +62,7 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                 {/* Step Label */}
                 <span
                   className={cn(
-                    'mt-2 text-sm font-medium',
+                    'mt-1 sm:mt-2 text-[11px] sm:text-sm font-medium',
                     {
                       'text-green-600': status === 'completed',
                       'text-blue-600': status === 'current',
@@ -78,7 +78,7 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
               {!isLast && (
                 <div
                   className={cn(
-                    'ml-8 h-0.5 w-16',
+                    'mx-2 h-0.5 flex-1 min-w-[24px] sm:ml-8 sm:w-16 sm:flex-none',
                     {
                       'bg-green-500': completedSteps.includes(step.key),
                       'bg-gray-300': !completedSteps.includes(step.key)

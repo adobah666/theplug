@@ -30,6 +30,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
   // Form data state
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
+  const [settings, setSettings] = useState<{ taxRate: number; deliveryFeeDefault: number; deliveryFeeByRegion: Array<{ region: string; fee: number }> } | null>(null)
 
   // Hydrate cart once on mount to avoid infinite loop when empty
   const didHydrateRef = useRef(false)
@@ -73,12 +74,28 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
     return () => { ignore = true }
   }, [session])
 
+  // Load admin-configurable settings (delivery fee + tax)
+  useEffect(() => {
+    let ignore = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/settings', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({} as any))
+        if (!res.ok) return
+        if (!ignore) setSettings(json?.data || { taxRate: 0, deliveryFeeDefault: 0, deliveryFeeByRegion: [] })
+      } catch {}
+    })()
+    return () => { ignore = true }
+  }, [])
+
   // Calculate order totals
   const subtotal = cartState.subtotal
-  const shipping = subtotal > 50000 ? 0 : 2500 // Free shipping over ₦50,000
-  const taxRate = 0.075 // 7.5% VAT
+  const region = (shippingAddress?.state || '').trim()
+  const regionalOverride = settings?.deliveryFeeByRegion?.find(r => r.region?.toLowerCase() === region.toLowerCase())
+  const shipping = Math.max(0, regionalOverride?.fee ?? settings?.deliveryFeeDefault ?? 0)
+  const taxRate = Math.max(0, settings?.taxRate ?? 0)
   const tax = Math.round(subtotal * taxRate)
-  const total = subtotal + shipping + tax
+  const total = subtotal + (shipping || 0) + (tax || 0)
 
   // Handle shipping form submission
   const handleShippingSubmit = useCallback(async (data: ShippingAddress, options?: { saveAddress?: boolean }) => {
@@ -223,17 +240,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
         } catch {}
       }
 
-      // For bank transfer, redirect to order page immediately
-      if (paymentMethod.type === 'bank_transfer') {
-        if (onOrderComplete) {
-          onOrderComplete(orderId)
-        } else {
-          router.push(`/orders/${orderId}?success=true`)
-        }
-        return
-      }
-
-      // For card payment, redirect to order page where Paystack payment will be handled
+      // Redirect to order page where Paystack payment will be handled
       if (onOrderComplete) {
         onOrderComplete(orderId)
       } else {

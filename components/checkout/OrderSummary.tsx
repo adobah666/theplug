@@ -146,17 +146,19 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
             <span className="text-gray-900">{formatPrice(subtotal)}</span>
           </div>
           
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Shipping</span>
-            <span className="text-gray-900">
-              {shipping === 0 ? 'Free' : formatPrice(shipping)}
-            </span>
-          </div>
+          {shipping > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Delivery fee</span>
+              <span className="text-gray-900">{formatPrice(shipping)}</span>
+            </div>
+          )}
           
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Tax</span>
-            <span className="text-gray-900">{formatPrice(tax)}</span>
-          </div>
+          {tax > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Tax</span>
+              <span className="text-gray-900">{formatPrice(tax)}</span>
+            </div>
+          )}
           
           <div className="border-t border-gray-200 pt-3">
             <div className="flex justify-between text-lg font-medium">

@@ -52,6 +52,9 @@ export default async function AdminPage() {
                 )}
               </Button>
             </Link>
+            <Link href="/admin/settings">
+              <Button variant="outline" className="whitespace-nowrap">Settings</Button>
+            </Link>
           </div>
         </div>
       </div>
