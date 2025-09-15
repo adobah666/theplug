@@ -32,45 +32,79 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> | { id: string } }
 ) {
-  try {
-    await connectDB()
+  const maxRetries = 3;
+  let lastError: Error | null = null;
 
-    const { id } = 'then' in (context.params as any)
-      ? await (context.params as Promise<{ id: string }>)
-      : (context.params as { id: string })
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await connectDB()
 
-    // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        error: 'Invalid product ID format'
-      }, { status: 400 })
+      const { id } = 'then' in (context.params as any)
+        ? await (context.params as Promise<{ id: string }>)
+        : (context.params as { id: string })
+
+      // Validate ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Invalid product ID format'
+        }, { status: 400 })
+      }
+
+      // Find product by ID with shorter timeout and better error handling
+      const product = await Promise.race([
+        Product.findById(id)
+          .populate('category', 'name')
+          .lean()
+          .maxTimeMS(3000), // 3 second timeout instead of 10
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database query timeout')), 3000)
+        )
+      ]) as any;
+
+      if (!product) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Product not found'
+        }, { status: 404 })
+      }
+
+      const response = NextResponse.json<ApiResponse>({
+        success: true,
+        data: { product }
+      })
+      
+      // Add caching headers for better performance
+      response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
+      response.headers.set('CDN-Cache-Control', 'public, max-age=60')
+      
+      return response
+
+    } catch (error) {
+      lastError = error as Error;
+      console.error(`Get product error (attempt ${attempt}/${maxRetries}):`, error)
+      
+      // Don't retry on validation errors or 404s
+      if (error instanceof Error && 
+          (error.message.includes('Invalid product ID') || 
+           error.message.includes('Product not found'))) {
+        break;
+      }
+      
+      // If this is the last attempt, return the error
+      if (attempt === maxRetries) {
+        break;
+      }
+      
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt - 1) * 1000));
     }
-
-    // Find product by ID
-    const product = await Product.findById(id)
-      .populate('category', 'name')
-      .lean()
-
-    if (!product) {
-      return NextResponse.json<ApiResponse>({
-        success: false,
-        error: 'Product not found'
-      }, { status: 404 })
-    }
-
-    return NextResponse.json<ApiResponse>({
-      success: true,
-      data: { product }
-    })
-
-  } catch (error) {
-    console.error('Get product error:', error)
-    return NextResponse.json<ApiResponse>({
-      success: false,
-      error: 'Failed to fetch product'
-    }, { status: 500 })
   }
+
+  return NextResponse.json<ApiResponse>({
+    success: false,
+    error: lastError?.message || 'Failed to fetch product'
+  }, { status: 500 })
 }
 
 // PUT /api/products/[id] - Update product (admin only)
