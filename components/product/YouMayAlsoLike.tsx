@@ -13,7 +13,7 @@ interface Item {
   rating?: number
   reviewCount?: number
 }
-
+ 
 interface YouMayAlsoLikeProps {
   productId: string
   category: string
