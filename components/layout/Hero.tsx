@@ -83,7 +83,7 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
         id: `slide-${i}`,
         title: slideProducts.length > 1 ? 'Featured Collection' : mainProduct.name,
         subtitle: slideProducts.length > 1 
-          ? `Discover ${slideProducts.length} amazing products` 
+          ? 'Today’s top picks' 
           : `Starting at ${formatCurrency(mainProduct.price)}`,
         cta: 'Shop Now',
         ctaLink: slideProducts.length > 1 ? '/search' : mainProduct.href,
