@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { headers, cookies } from 'next/headers'
+import { cookies } from 'next/headers'
+import { getBaseUrl } from '@/lib/utils/server'
 import { OrderConfirmation } from '@/components/checkout/OrderConfirmation'
 
 interface OrderPageProps {
@@ -15,10 +16,7 @@ export const metadata: Metadata = {
 
 async function getOrder(orderId: string) {
   try {
-    const hdrs = await headers()
-    const proto = hdrs.get('x-forwarded-proto') || 'http'
-    const host = hdrs.get('host') || 'localhost:3000'
-    const url = `${proto}://${host}/api/orders/${orderId}`
+    const url = `${getBaseUrl()}/api/orders/${orderId}`
     const cookieStore = await cookies()
     const cookieHeader = cookieStore.toString()
 

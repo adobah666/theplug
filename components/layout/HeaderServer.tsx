@@ -1,6 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
-import { headers } from 'next/headers'
+import { getBaseUrl } from '@/lib/utils/server'
 import { Button } from '@/components/ui/Button'
 import { SearchBar } from '@/components/product/SearchBar'
 import { CartIcon } from '@/components/cart/CartIcon'
@@ -18,18 +18,11 @@ interface Brand {
 
 async function getNavigationData(): Promise<{ categories: Category[], brands: Brand[] }> {
   try {
-    const hdrs = await headers()
-    const host = hdrs.get('host') || 'localhost:3000'
-    const protocol = host.includes('localhost') ? 'http' : 'https'
-    const base = `${protocol}://${host}`
+    const base = getBaseUrl()
 
     const [categoriesRes, brandsRes] = await Promise.all([
-      fetch(`${base}/api/categories`, { 
-        next: { revalidate: 900 } // 15 minutes cache
-      }),
-      fetch(`${base}/api/brands`, { 
-        next: { revalidate: 900 } // 15 minutes cache
-      })
+      fetch(`${base}/api/categories`, { next: { revalidate: 900 } }),
+      fetch(`${base}/api/brands`, { next: { revalidate: 900 } })
     ])
 
     let categories: Category[] = []

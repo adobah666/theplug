@@ -1,5 +1,5 @@
-import { headers } from 'next/headers';
 import ProductPageClient, { UIProduct, UIItem } from '@/components/product/ProductPageClient';
+import { getBaseUrl } from '@/lib/utils/server';
 
 export const revalidate = 900; // 15 minutes for better performance
 export const dynamic = 'force-static'; // Enable static generation with ISR
@@ -13,7 +13,6 @@ async function fetchJSON<T>(url: string, retries = 3): Promise<T> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, { 
-        next: { revalidate: 900 }, // Cache for 15 minutes
         cache: 'force-cache', // Use cache when available
         headers: {
           'Cache-Control': 'public, max-age=900, stale-while-revalidate=900',
@@ -101,10 +100,7 @@ export default async function ProductPage({ params }: PageProps) {
   } else {
     id = (params as { id: string }).id;
   }
-  const hdrs = await headers();
-  const host = hdrs.get('host') || 'localhost:3000';
-  const protocol = host.includes('localhost') ? 'http' : 'https';
-  const baseUrl = `${protocol}://${host}`;
+  const baseUrl = getBaseUrl();
 
   // Fetch product with enhanced error handling
   let product: UIProduct | null = null;

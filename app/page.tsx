@@ -9,7 +9,7 @@ import { CategoryShowcase } from '@/components/layout/CategoryShowcase'
 import { CategoryProductsRowServer } from '@/components/product/CategoryProductsRowServer'
 import { PromotionalBanner } from '@/components/layout/PromotionalBanner'
 import { Newsletter } from '@/components/layout/Newsletter'
-import { headers } from 'next/headers'
+import { getBaseUrl } from '@/lib/utils/server'
 import { Testimonials } from '@/components/layout/Testimonials'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
@@ -21,10 +21,7 @@ import { ImagePreloader } from '@/components/ui/ImagePreloader'
 async function getFeaturedProducts() {
   try {
     // 1) Get active categories (already filtered to those with products)
-    const hdrs = await headers()
-    const host = hdrs.get('host') || 'localhost:3000'
-    const protocol = host.includes('localhost') ? 'http' : 'https'
-    const base = `${protocol}://${host}`
+    const base = getBaseUrl()
     const catRes = await fetch(`${base}/api/categories`, { next: { revalidate: 900 } })
     if (!catRes.ok) {
       console.error('[home:getFeatured] /api/categories HTTP', catRes.status, catRes.statusText)
@@ -69,7 +66,7 @@ async function getFeaturedProducts() {
     // If we don't have any categories (e.g., categories not populated), fallback to overall popularity unique-by-category
     if (!catList || catList.length === 0) {
       const p = new URLSearchParams({ sort: 'popularity', order: 'desc', page: '1', limit: '50' })
-      const r = await fetch(`/api/products/search?${p.toString()}`, { next: { revalidate: 900 } })
+      const r = await fetch(`${base}/api/products/search?${p.toString()}`, { next: { revalidate: 900 } })
       const j = await r.json().catch(() => ({} as any))
       const list: any[] = Array.isArray(j?.data?.data) ? j.data.data : []
       const seen = new Set<string>()
@@ -196,10 +193,7 @@ async function getFeaturedProducts() {
 async function getCategories() {
   try {
     console.log('[home:getCategories] Fetching real categories with product images')
-    const hdrs = await headers()
-    const host = hdrs.get('host') || 'localhost:3000'
-    const protocol = host.includes('localhost') ? 'http' : 'https'
-    const base = `${protocol}://${host}`
+    const base = getBaseUrl()
     // 1) Get all categories
     const catRes = await fetch(`${base}/api/categories`, { next: { revalidate: 900 } })
     if (!catRes.ok) {
@@ -302,10 +296,7 @@ async function getCategories() {
 // Build slides for the promo banner: one slide per category with latest items (side-by-side)
 async function getCategorySlides() {
   try {
-    const hdrs = await headers()
-    const host = hdrs.get('host') || 'localhost:3000'
-    const protocol = host.includes('localhost') ? 'http' : 'https'
-    const base = `${protocol}://${host}`
+    const base = getBaseUrl()
     const catRes = await fetch(`${base}/api/categories`, { next: { revalidate: 900 } })
     const catJson = await catRes.json().catch(() => ({} as any))
     const cats: Array<{ slug: string; name: string }> = (catJson?.data?.categories || []).map((c: any) => ({ slug: c.slug, name: c.name }))
