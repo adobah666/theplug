@@ -1,10 +1,11 @@
 import { headers } from 'next/headers';
 import ProductPageClient, { UIProduct, UIItem } from '@/components/product/ProductPageClient';
 
-export const revalidate = 60; // 1 minute for better performance
+export const revalidate = 900; // 15 minutes for better performance
 export const dynamic = 'force-static'; // Enable static generation with ISR
 
-type PageProps = { params: { id: string } };
+type PageParams = { id: string } | Promise<{ id: string }>;
+type PageProps = { params: PageParams };
 
 async function fetchJSON<T>(url: string, retries = 3): Promise<T> {
   let lastError: Error | null = null;
@@ -91,7 +92,15 @@ function normalizeItems(list: any[]): UIItem[] {
 }
 
 export default async function ProductPage({ params }: PageProps) {
-  const id = params.id;
+  // Support both synchronous and Promise-based params (Next.js dynamic APIs)
+  let id: string;
+  const maybe: any = params as any;
+  if (maybe && typeof maybe.then === 'function') {
+    const resolved = await (params as Promise<{ id: string }>);
+    id = resolved.id;
+  } else {
+    id = (params as { id: string }).id;
+  }
   const hdrs = await headers();
   const host = hdrs.get('host') || 'localhost:3000';
   const protocol = host.includes('localhost') ? 'http' : 'https';

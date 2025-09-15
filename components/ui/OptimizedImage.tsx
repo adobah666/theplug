@@ -125,7 +125,6 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     src: optimizedSrc,
     alt,
     className: `transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'} ${className}`,
-    onLoadingComplete: () => setImageLoaded(true),
     onLoad: handleLoad,
     onError: handleError,
     priority,
