@@ -2,7 +2,7 @@ import ProductPageClient, { UIProduct, UIItem } from '@/components/product/Produ
 import { getBaseUrl } from '@/lib/utils/server';
 
 export const revalidate = 900; // 15 minutes for better performance
-export const dynamic = 'force-static'; // Enable static generation with ISR
+export const dynamic = 'force-dynamic'; // Enable server-side rendering for dynamic product data
 
 type PageParams = { id: string } | Promise<{ id: string }>;
 type PageProps = { params: PageParams };
