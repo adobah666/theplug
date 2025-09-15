@@ -4,7 +4,7 @@
  * Script to initialize Meilisearch index and sync existing products
  * Run with: npm run init:meilisearch or tsx scripts/init-meilisearch.ts
  */
-
+ 
 import { config } from 'dotenv'
 import connectDB from '../lib/db/connection'
 import Product from '../lib/db/models/Product'
