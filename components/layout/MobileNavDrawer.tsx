@@ -108,11 +108,11 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) =>
                 </Link>
               ) : (
                 <Link
-                  href="/track-order"
+                  href="/account/orders"
                   className="relative flex items-center justify-between p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors text-blue-700 font-medium"
                   onClick={onClose}
                 >
-                  <span>Track Order</span>
+                  <span>My Orders</span>
                 </Link>
               )}
             </div>
@@ -133,12 +133,16 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) =>
               </div>
             ) : (
               <div className="p-4 border-b border-gray-200 space-y-2">
-                <Button className="w-full" onClick={onClose}>
-                  <Link href="/login">Sign In</Link>
-                </Button>
-                <Button variant="outline" className="w-full" onClick={onClose}>
-                  <Link href="/register">Create Account</Link>
-                </Button>
+                <Link href="/login" onClick={onClose}>
+                  <Button className="w-full flex items-center justify-center">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/register" onClick={onClose}>
+                  <Button variant="outline" className="w-full flex items-center justify-center">
+                    Create Account
+                  </Button>
+                </Link>
               </div>
             )}
 
@@ -234,11 +238,11 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) =>
                   Contact Us
                 </Link>
                 <Link
-                  href="/track-order"
+                  href="/account/orders"
                   className="block p-3 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
                   onClick={onClose}
                 >
-                  Track Order
+                  My Orders
                 </Link>
               </div>
             </div>

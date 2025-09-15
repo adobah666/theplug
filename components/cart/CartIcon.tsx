@@ -31,12 +31,14 @@ const CartIcon: React.FC<CartIconProps> = ({
             strokeLinecap="round" 
             strokeLinejoin="round" 
             strokeWidth={2} 
-            d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" 
+            d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5" 
           />
+          <circle cx="9" cy="20" r="1"/>
+          <circle cx="20" cy="20" r="1"/>
         </svg>
         {itemCount > 0 && (
           <span 
-            className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white"
+            className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-medium text-white leading-none"
             aria-label={`${itemCount} items in cart`}
           >
             {itemCount > 99 ? '99+' : itemCount}

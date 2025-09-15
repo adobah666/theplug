@@ -47,7 +47,7 @@ const HeaderClient: React.FC = () => {
   return (
     <>
       {/* Right side actions */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
         {/* Account */}
         {user ? (
           <div className="hidden lg:flex items-center space-x-3">
@@ -120,7 +120,6 @@ const HeaderClient: React.FC = () => {
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 7.5l-9 4.5-9-4.5m18 0L12 3 3 7.5m18 0V16.5L12 21l-9-4.5V7.5m9 4.5V21" />
           </svg>
-          <span className="mt-0.5 text-[10px] leading-none">My Orders</span>
           {openOrdersCount > 0 && (
             <span className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 rounded-full bg-blue-600 text-white text-[10px] leading-none px-1.5 py-0.5">
               {openOrdersCount}

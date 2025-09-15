@@ -140,49 +140,54 @@ const Header: React.FC = () => {
               )}
             </Link>
 
-            {/* Cart (icon only on mobile / medium) */}
-            <div className="lg:hidden w-12 flex flex-col items-center justify-center">
-              <CartIcon 
-                itemCount={state.itemCount}
-                onClick={() => setIsCartOpen(true)}
-              />
+            {/* Mobile icons container - tighter spacing */}
+            <div className="lg:hidden flex items-center space-x-1">
+              {/* Cart icon */}
+              <div className="flex flex-col items-center justify-center px-2">
+                <CartIcon 
+                  itemCount={state.itemCount}
+                  onClick={() => setIsCartOpen(true)}
+                />
+              </div>
+
+              {/* Orders icon */}
+              <Link
+                href="/account/orders"
+                className="relative px-2 py-1 text-gray-700 hover:text-gray-900 flex flex-col items-center justify-center"
+                aria-label="Orders"
+              >
+                {/* Package icon */}
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 7.5l-9 4.5-9-4.5m18 0L12 3 3 7.5m18 0V16.5L12 21l-9-4.5V7.5m9 4.5V21" />
+                </svg>
+                <span className="mt-0.5 text-[10px] leading-none">My Orders</span>
+                {openOrdersCount > 0 && (
+                  <span className="absolute -top-1 -right-1 rounded-full bg-blue-600 text-white text-[10px] leading-none px-1.5 py-0.5">
+                    {openOrdersCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Mobile menu button */}
+              <div className="flex flex-col items-center justify-center px-2">
+                <button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="p-2 text-gray-700 hover:text-gray-900"
+                  aria-label="Menu"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </div>
             </div>
+
+            {/* Desktop cart */}
             <div className="hidden lg:block">
               <CartIcon 
                 itemCount={state.itemCount}
                 onClick={() => setIsCartOpen(true)}
               />
-            </div>
-
-            {/* Orders icon (mobile / medium) */}
-            <Link
-              href="/account/orders"
-              className="relative lg:hidden w-12 px-0 py-1 text-gray-700 hover:text-gray-900 flex flex-col items-center justify-center"
-              aria-label="Orders"
-            >
-              {/* Package icon */}
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 7.5l-9 4.5-9-4.5m18 0L12 3 3 7.5m18 0V16.5L12 21l-9-4.5V7.5m9 4.5V21" />
-              </svg>
-              <span className="mt-0.5 text-[10px] leading-none">My Orders</span>
-              {openOrdersCount > 0 && (
-                <span className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 rounded-full bg-blue-600 text-white text-[10px] leading-none px-1.5 py-0.5">
-                  {openOrdersCount}
-                </span>
-              )}
-            </Link>
-
-            {/* Mobile menu button (icon only) shown on mobile/medium */}
-            <div className="lg:hidden w-12 flex flex-col items-center justify-center">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 text-gray-700 hover:text-gray-900"
-                aria-label="Menu"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
             </div>
           </div>
         </div>
