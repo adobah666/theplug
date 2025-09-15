@@ -1,4 +1,14 @@
 import mongoose from 'mongoose'
+// Import all models to ensure schemas are registered
+import '@/lib/db/models/Category'
+import '@/lib/db/models/Product'
+import '@/lib/db/models/User'
+import '@/lib/db/models/Order'
+import '@/lib/db/models/ProductEvent'
+import '@/lib/db/models/Cart'
+import '@/lib/db/models/RefundRequest'
+import '@/lib/db/models/Review'
+import '@/lib/db/models/Setting'
 
 type ConnectionObject = {
   isConnected?: number
