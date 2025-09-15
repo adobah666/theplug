@@ -15,6 +15,7 @@ interface OptimizedImageProps {
   preset?: keyof typeof IMAGE_PRESETS
   priority?: boolean
   loading?: 'lazy' | 'eager'
+  fetchPriority?: 'high' | 'low' | 'auto'
   sizes?: string
   quality?: CloudinaryOptions['quality']
   onLoad?: () => void
@@ -33,6 +34,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   preset = 'card',
   priority = false,
   loading = 'lazy',
+  fetchPriority,
   sizes,
   quality,
   onLoad,
@@ -129,6 +131,8 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     onError: handleError,
     priority,
     ...(effectiveLoading ? { loading: effectiveLoading } : {}),
+    // Next/Image supports fetchPriority for better LCP
+    ...(typeof fetchPriority !== 'undefined' ? { fetchPriority } : {}),
     sizes: sizes || (fill ? '100vw' : `${width}px`),
     // Only pass Next.js blur placeholder when we have a data URL (required by Next/Image)
     ...((blurPlaceholderUrl && blurPlaceholderUrl.startsWith('data:')) ? { 
@@ -163,7 +167,8 @@ export const ProductImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = (prop
 )
 
 export const HeroImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = (props) => (
-  <OptimizedImage {...props} preset="hero" priority />
+  // Let callers decide priority per-usage (e.g., only the visible slide)
+  <OptimizedImage {...props} preset="hero" />
 )
 
 export const ThumbnailImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = (props) => (

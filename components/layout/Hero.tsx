@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/Button'
 import { formatCurrency } from '@/lib/utils/currency'
 import { HeroImage } from '@/components/ui/OptimizedImage'
+import { preloadImages, getOptimizedImageUrl } from '@/lib/utils/images'
 
 interface Product {
   id: string
@@ -31,10 +32,13 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
 
   // Detect mobile viewport
   useEffect(() => {
     if (typeof window === 'undefined') return
+    // Mark as hydrated as soon as we're on the client to avoid SSR/CSR mismatch flashes
+    setHydrated(true)
     const mq = window.matchMedia('(max-width: 640px)')
     const handler = (e: MediaQueryListEvent | MediaQueryList) => {
       // MediaQueryListEvent for modern browsers; initial set with MediaQueryList
@@ -108,6 +112,17 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
     return () => clearInterval(interval)
   }, [isAutoPlaying, slides.length])
 
+  // Preload the next slide's images to make transitions feel instant
+  useEffect(() => {
+    if (!slides || slides.length === 0) return
+    const nextIndex = (currentSlide + 1) % slides.length
+    const nextProducts = slides[nextIndex]?.products || []
+    const urls = nextProducts.map(p => getOptimizedImageUrl(p.image, 'hero'))
+    if (urls.length) {
+      preloadImages(urls, 3).catch(() => {})
+    }
+  }, [currentSlide, slides])
+
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length)
     setIsAutoPlaying(false)
@@ -131,7 +146,7 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
     }
   }, [isAutoPlaying])
 
-  const renderProductImages = (products: Product[]) => {
+  const renderProductImages = (products: Product[], isActive: boolean) => {
     if (products.length === 0) {
       return (
         <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
@@ -148,7 +163,9 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
           alt={products[0].name}
           fill
           className="object-cover"
-          priority={currentSlide === 0}
+          priority={isActive}
+          fetchPriority={isActive ? 'high' : 'auto'}
+          loading={isActive ? 'eager' : 'lazy'}
           sizes="100vw"
           quality={90}
         />
@@ -166,6 +183,9 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
                 alt={product.name}
                 fill
                 className="object-cover"
+                priority={isActive}
+                fetchPriority={isActive ? 'high' : 'auto'}
+                loading={isActive ? 'eager' : 'lazy'}
                 sizes="50vw"
                 quality={85}
               />
@@ -184,6 +204,9 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
             alt={products[0].name}
             fill
             className="object-cover"
+            priority={isActive}
+            fetchPriority={isActive ? 'high' : 'auto'}
+            loading={isActive ? 'eager' : 'lazy'}
             sizes="66vw"
             quality={85}
           />
@@ -196,6 +219,9 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
                 alt={product.name}
                 fill
                 className="object-cover"
+                priority={isActive}
+                fetchPriority={isActive ? 'high' : 'auto'}
+                loading={isActive ? 'eager' : 'lazy'}
                 sizes="33vw"
                 quality={80}
               />
@@ -217,6 +243,36 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
     }
   }
 
+  // While server-rendered (pre-hydration), show a CSS-only, responsive skeleton to prevent
+  // flashing desktop layout on small screens. This avoids relying on JS-driven isMobile logic.
+  // We do this regardless of whether products are already available to ensure no layout shift.
+  if (!hydrated) {
+    return (
+      <section className="relative w-full overflow-hidden h-[calc(100svh-9.5rem)] sm:h-[calc(100svh-8rem)] lg:h-screen">
+        {/* Mobile skeleton */}
+        <div className="sm:hidden relative h-full">
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900 to-slate-800" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-11/12 h-5/6 rounded-xl bg-gray-200/40 animate-pulse" />
+          </div>
+        </div>
+        {/* Desktop/Tablet skeleton (hidden on small screens) */}
+        <div className="hidden sm:block relative h-full">
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900 to-slate-800" />
+          <div className="absolute inset-0 grid grid-cols-12 gap-4 p-6">
+            <div className="col-span-7 rounded-xl bg-gray-200/40 animate-pulse" />
+            <div className="col-span-5 space-y-4">
+              <div className="h-12 rounded bg-gray-200/40 animate-pulse" />
+              <div className="h-6 rounded bg-gray-200/30 animate-pulse" />
+              <div className="h-6 rounded bg-gray-200/30 animate-pulse" />
+              <div className="h-12 w-40 rounded bg-gray-200/40 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="relative w-full overflow-hidden h-[calc(100svh-9.5rem)] sm:h-[calc(100svh-8rem)] lg:h-screen">
       {/* Slideshow Container */}
@@ -234,7 +290,7 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
             
             {/* Product Images */}
             <div className="absolute inset-0">
-              {renderProductImages(slide.products)}
+              {renderProductImages(slide.products, index === currentSlide)}
               {/* Dark overlay for text readability */}
               <div className="absolute inset-0 bg-black/40" />
             </div>
