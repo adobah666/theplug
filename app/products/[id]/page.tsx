@@ -13,7 +13,7 @@ async function fetchJSON<T>(url: string, retries = 3): Promise<T> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, { 
-        cache: 'force-cache', // Use cache when available
+        next: { revalidate: 900 }, // Cache for 15 minutes (900 seconds)
         headers: {
           'Cache-Control': 'public, max-age=900, stale-while-revalidate=900',
         }

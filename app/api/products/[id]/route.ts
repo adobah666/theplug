@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import connectDB from '@/lib/db/connection'
 import Product from '@/lib/db/models/Product'
+import Category from '@/lib/db/models/Category'
 import { ApiResponse } from '@/types'
 import { authenticateToken } from '@/lib/auth/middleware'
 import mongoose from 'mongoose'
