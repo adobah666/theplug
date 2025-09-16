@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { SearchBar } from '@/components/product/SearchBar'
 import { CartIcon } from '@/components/cart/CartIcon'
 import { HeaderClient } from '@/components/layout/HeaderClient'
+import { Unbounded } from 'next/font/google'
 
 interface Category {
   name: string
@@ -15,6 +16,8 @@ interface Brand {
   name: string
   slug?: string
 }
+
+const brandFont = Unbounded({ subsets: ['latin'], weight: ['700'] })
 
 async function getNavigationData(): Promise<{ categories: Category[], brands: Brand[] }> {
   try {
@@ -56,8 +59,12 @@ const HeaderServer: React.FC = async () => {
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-full bg-blue-600"></div>
-            <span className="text-xl font-bold text-gray-900">ThePlug</span>
+            <div className={`leading-tight ${brandFont.className}`}>
+              <div className="text-xl font-extrabold text-gray-900">ThePlug</div>
+              <div className="mt-0.5 w-fit rounded px-1 py-0.5 text-[10px] uppercase tracking-[0.2em] text-blue-600 bg-blue-50">
+                online
+              </div>
+            </div>
           </Link>
 
           {/* Search bar - Desktop (lg and up) */}

@@ -304,8 +304,27 @@ export default function ProductCreateForm() {
               setUploading(true)
               setError(null)
               try {
+                // Import compression utility dynamically
+                const { compressImages, getCompressionStats } = await import('@/lib/utils/image-compression')
+                
+                // Compress images before upload
+                const fileArray = Array.from(files)
+                const compressedFiles = await compressImages(fileArray, {
+                  maxWidth: 1920,
+                  maxHeight: 1920,
+                  quality: 0.85,
+                  format: 'jpeg',
+                  maxSizeKB: 400
+                })
+
+                // Log compression stats for debugging
+                compressedFiles.forEach((compressed, i) => {
+                  const stats = getCompressionStats(fileArray[i], compressed)
+                  console.log(`Compressed ${fileArray[i].name}: ${stats.ratio} (${stats.savings}% savings)`)
+                })
+
                 const form = new FormData()
-                for (const file of Array.from(files)) {
+                for (const file of compressedFiles) {
                   form.append('files', file)
                 }
                 const res = await fetch('/api/uploads', { method: 'POST', body: form })

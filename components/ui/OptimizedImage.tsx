@@ -22,6 +22,8 @@ interface OptimizedImageProps {
   onError?: () => void
   placeholder?: 'blur' | 'empty'
   blurDataURL?: string
+  /** When true, shows a gray overlay while the image loads. Default: true */
+  showLoadingOverlay?: boolean
 }
 
 export const OptimizedImage: React.FC<OptimizedImageProps> = ({
@@ -40,20 +42,34 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   onLoad,
   onError,
   placeholder = 'blur',
-  blurDataURL
+  blurDataURL,
+  showLoadingOverlay = true
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
   const imgRef = useRef<HTMLImageElement>(null)
 
-  // Generate optimized URLs
-  const optimizedSrc = isCloudinaryUrl(src) 
-    ? getOptimizedImageUrl(src, preset, { 
-        width, 
-        height, 
-        quality: quality || IMAGE_PRESETS[preset].quality 
-      })
-    : src
+  // Generate optimized URLs with fallback
+  const optimizedSrc = (() => {
+    try {
+      // If retrying for thumbnails, use original URL
+      if (preset === 'thumbnail' && retryCount > 0) {
+        return src
+      }
+      
+      return isCloudinaryUrl(src) 
+        ? getOptimizedImageUrl(src, preset, { 
+            width, 
+            height, 
+            quality: quality || IMAGE_PRESETS[preset].quality 
+          })
+        : src
+    } catch (error) {
+      console.warn(`Failed to optimize image URL: ${src}`, error)
+      return src // Fallback to original URL
+    }
+  })()
 
   // Generate blur placeholder if using Cloudinary
   const blurPlaceholderUrl = blurDataURL || (
@@ -87,11 +103,23 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
   const handleLoad = () => {
     setImageLoaded(true)
+    setImageError(false)
     onLoad?.()
   }
 
   const handleError = () => {
+    console.warn(`Failed to load image: ${src}`)
+    
+    // For thumbnails, try fallback to original URL if optimized version fails
+    if (preset === 'thumbnail' && retryCount === 0 && isCloudinaryUrl(src)) {
+      setRetryCount(1)
+      setImageError(false)
+      // Force re-render with original URL
+      return
+    }
+    
     setImageError(true)
+    setImageLoaded(false)
     onError?.()
   }
 
@@ -103,7 +131,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         style={fill ? undefined : { width, height }}
       >
         <svg 
-          className="w-8 h-8 text-gray-400" 
+          className={`${preset === 'thumbnail' ? 'w-4 h-4' : 'w-8 h-8'} text-gray-400`}
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24"
@@ -139,6 +167,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
       placeholder: 'blur' as const,
       blurDataURL: blurPlaceholderUrl 
     } : {}),
+    // We already apply Cloudinary transformations in the URL; bypass Next's image optimizer
+    // to avoid proxy timeouts (/_next/image 500s) when offline or under poor connectivity.
+    ...(isCloudinaryUrl(src) ? { unoptimized: true } : {}),
     ...(fill ? { fill: true } : { width, height })
   }
 
@@ -152,7 +183,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
       <Image {...imageProps} />
       
       {/* Loading state */}
-      {!imageLoaded && !imageError && (
+      {showLoadingOverlay && !imageLoaded && !imageError && (
         <div 
           className="absolute inset-0 bg-gray-200 animate-pulse"
         />
@@ -168,9 +199,9 @@ export const ProductImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = (prop
 
 export const HeroImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = (props) => (
   // Let callers decide priority per-usage (e.g., only the visible slide)
-  <OptimizedImage {...props} preset="hero" />
+  <OptimizedImage {...props} preset="hero" showLoadingOverlay={false} />
 )
 
 export const ThumbnailImage: React.FC<Omit<OptimizedImageProps, 'preset'>> = (props) => (
-  <OptimizedImage {...props} preset="thumbnail" />
+  <OptimizedImage {...props} preset="thumbnail" showLoadingOverlay={false} />
 )

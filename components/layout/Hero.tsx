@@ -33,6 +33,7 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [hydrated, setHydrated] = useState(false)
+  const [loadedSlides, setLoadedSlides] = useState<Set<number>>(new Set([0])) // Track which slides have loaded images
 
   // Detect mobile viewport
   useEffect(() => {
@@ -101,40 +102,117 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
 
   const slides = createSlides()
 
-  // Auto-advance slides
+  // Auto-advance slides - only advance if next slide images are loaded
   useEffect(() => {
     if (!isAutoPlaying || slides.length <= 1) return
 
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length)
-    }, 5000) // Change slide every 5 seconds
+      setCurrentSlide((prev) => {
+        const nextIndex = (prev + 1) % slides.length
+        // Only advance if the next slide's images are loaded
+        if (loadedSlides.has(nextIndex)) {
+          return nextIndex
+        }
+        // If next slide isn't loaded, try to preload it but don't advance yet
+        const nextProducts = slides[nextIndex]?.products || []
+        const urls = nextProducts.map(p => getOptimizedImageUrl(p.image, 'hero'))
+        if (urls.length) {
+          preloadImages(urls, 3).then(() => {
+            setLoadedSlides(prev => new Set([...prev, nextIndex]))
+          }).catch(() => {})
+        }
+        return prev // Stay on current slide
+      })
+    }, 5000) // Check every 5 seconds
 
     return () => clearInterval(interval)
-  }, [isAutoPlaying, slides.length])
+  }, [isAutoPlaying, slides.length, loadedSlides, slides])
 
-  // Preload the next slide's images to make transitions feel instant
+  // Preload the next slide's images and mark as loaded
   useEffect(() => {
     if (!slides || slides.length === 0) return
     const nextIndex = (currentSlide + 1) % slides.length
+    
+    // Skip if already loaded
+    if (loadedSlides.has(nextIndex)) return
+    
     const nextProducts = slides[nextIndex]?.products || []
     const urls = nextProducts.map(p => getOptimizedImageUrl(p.image, 'hero'))
     if (urls.length) {
-      preloadImages(urls, 3).catch(() => {})
+      preloadImages(urls, 3).then(() => {
+        setLoadedSlides(prev => new Set([...prev, nextIndex]))
+      }).catch(() => {})
+    } else {
+      // No images to load, mark as loaded
+      setLoadedSlides(prev => new Set([...prev, nextIndex]))
     }
-  }, [currentSlide, slides])
+  }, [currentSlide, slides, loadedSlides])
 
   const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length)
+    const nextIndex = (currentSlide + 1) % slides.length
+    // Preload target slide if not already loaded
+    if (!loadedSlides.has(nextIndex)) {
+      const targetProducts = slides[nextIndex]?.products || []
+      const urls = targetProducts.map(p => getOptimizedImageUrl(p.image, 'hero'))
+      if (urls.length) {
+        preloadImages(urls, 3).then(() => {
+          setLoadedSlides(prev => new Set([...prev, nextIndex]))
+          setCurrentSlide(nextIndex)
+        }).catch(() => {
+          // Even if preload fails, allow navigation
+          setCurrentSlide(nextIndex)
+        })
+      } else {
+        setCurrentSlide(nextIndex)
+      }
+    } else {
+      setCurrentSlide(nextIndex)
+    }
     setIsAutoPlaying(false)
   }
 
   const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)
+    const prevIndex = (currentSlide - 1 + slides.length) % slides.length
+    // Preload target slide if not already loaded
+    if (!loadedSlides.has(prevIndex)) {
+      const targetProducts = slides[prevIndex]?.products || []
+      const urls = targetProducts.map(p => getOptimizedImageUrl(p.image, 'hero'))
+      if (urls.length) {
+        preloadImages(urls, 3).then(() => {
+          setLoadedSlides(prev => new Set([...prev, prevIndex]))
+          setCurrentSlide(prevIndex)
+        }).catch(() => {
+          // Even if preload fails, allow navigation
+          setCurrentSlide(prevIndex)
+        })
+      } else {
+        setCurrentSlide(prevIndex)
+      }
+    } else {
+      setCurrentSlide(prevIndex)
+    }
     setIsAutoPlaying(false)
   }
 
   const goToSlide = (index: number) => {
-    setCurrentSlide(index)
+    // Preload target slide if not already loaded
+    if (!loadedSlides.has(index)) {
+      const targetProducts = slides[index]?.products || []
+      const urls = targetProducts.map(p => getOptimizedImageUrl(p.image, 'hero'))
+      if (urls.length) {
+        preloadImages(urls, 3).then(() => {
+          setLoadedSlides(prev => new Set([...prev, index]))
+          setCurrentSlide(index)
+        }).catch(() => {
+          // Even if preload fails, allow navigation
+          setCurrentSlide(index)
+        })
+      } else {
+        setCurrentSlide(index)
+      }
+    } else {
+      setCurrentSlide(index)
+    }
     setIsAutoPlaying(false)
   }
 
@@ -249,26 +327,8 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
   if (!hydrated) {
     return (
       <section className="relative w-full overflow-hidden h-[calc(100svh-9.5rem)] sm:h-[calc(100svh-8rem)] lg:h-screen">
-        {/* Mobile skeleton */}
-        <div className="sm:hidden relative h-full">
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-900 to-slate-800" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-11/12 h-5/6 rounded-xl bg-gray-200/40 animate-pulse" />
-          </div>
-        </div>
-        {/* Desktop/Tablet skeleton (hidden on small screens) */}
-        <div className="hidden sm:block relative h-full">
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-900 to-slate-800" />
-          <div className="absolute inset-0 grid grid-cols-12 gap-4 p-6">
-            <div className="col-span-7 rounded-xl bg-gray-200/40 animate-pulse" />
-            <div className="col-span-5 space-y-4">
-              <div className="h-12 rounded bg-gray-200/40 animate-pulse" />
-              <div className="h-6 rounded bg-gray-200/30 animate-pulse" />
-              <div className="h-6 rounded bg-gray-200/30 animate-pulse" />
-              <div className="h-12 w-40 rounded bg-gray-200/40 animate-pulse" />
-            </div>
-          </div>
-        </div>
+        {/* Static background only (no skeleton loaders) */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900 to-slate-800" />
       </section>
     )
   }
@@ -359,24 +419,6 @@ const Hero: React.FC<HeroProps> = ({ featuredProducts = [] }) => {
         </div>
       )}
 
-      {/* Play/Pause indicator (optional) */}
-      <div className="absolute top-4 right-4 z-10">
-        <button
-          onClick={() => setIsAutoPlaying(!isAutoPlaying)}
-          className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-200"
-          aria-label={isAutoPlaying ? 'Pause slideshow' : 'Play slideshow'}
-        >
-          {isAutoPlaying ? (
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-            </svg>
-          ) : (
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z"/>
-            </svg>
-          )}
-        </button>
-      </div>
     </section>
   )
 }
