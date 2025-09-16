@@ -5,7 +5,7 @@
 export type CloudinaryOptions = {
   width?: number
   height?: number
-  quality?: number | 'auto' | 'eco' | 'low'
+  quality?: number | 'auto' | 'eco' | 'low' | 'auto:best'
   format?: 'auto' | 'webp' | 'avif' | 'jpg' | 'jpeg' | 'png' | string
   crop?: 'fill' | 'fit' | 'scale' | 'pad' | 'crop' | 'thumb' | string
   gravity?: 'auto' | 'face' | 'faces' | 'center' | 'north' | 'south' | 'east' | 'west' | string
@@ -35,14 +35,14 @@ export const IMAGE_PRESETS = {
     dpr: 'auto' as const,
     flags: ['progressive', 'immutable_cache']
   },
-  // Hero images - slightly better quality but still fast
+  // Hero images - optimized for speed like Nike/Adidas
   hero: {
-    quality: 'auto' as const,
+    quality: 'auto:best' as const,
     format: 'auto' as const,
     crop: 'fill' as const,
     gravity: 'auto' as const,
     dpr: 'auto' as const,
-    flags: ['progressive', 'immutable_cache']
+    flags: ['progressive', 'immutable_cache', 'lossy']
   },
   // Blur placeholder for progressive loading
   placeholder: {
