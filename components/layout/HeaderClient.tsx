@@ -47,7 +47,7 @@ const HeaderClient: React.FC = () => {
   return (
     <>
       {/* Right side actions */}
-      <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
+      <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4">
         {/* Account */}
         {user ? (
           <div className="hidden lg:flex items-center space-x-3">
@@ -97,7 +97,7 @@ const HeaderClient: React.FC = () => {
         </Link>
 
         {/* Cart (icon only on mobile / medium) */}
-        <div className="lg:hidden w-12 flex flex-col items-center justify-center">
+        <div className="lg:hidden w-10 flex flex-col items-center justify-center">
           <CartIcon 
             itemCount={state.itemCount}
             onClick={() => setIsCartOpen(true)}
@@ -113,7 +113,7 @@ const HeaderClient: React.FC = () => {
         {/* Orders icon (mobile / medium) */}
         <Link
           href="/account/orders"
-          className="relative lg:hidden w-12 px-0 py-1 text-gray-700 hover:text-gray-900 flex flex-col items-center justify-center"
+          className="relative lg:hidden w-10 px-0 py-1 text-gray-700 hover:text-gray-900 flex flex-col items-center justify-center"
           aria-label="Orders"
         >
           {/* Package icon */}
@@ -121,17 +121,17 @@ const HeaderClient: React.FC = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 7.5l-9 4.5-9-4.5m18 0L12 3 3 7.5m18 0V16.5L12 21l-9-4.5V7.5m9 4.5V21" />
           </svg>
           {openOrdersCount > 0 && (
-            <span className="absolute top-0 right-0 translate-x-1/4 -translate-y-1/4 rounded-full bg-blue-600 text-white text-[10px] leading-none px-1.5 py-0.5">
+            <span className="absolute -top-1 -right-1 rounded-full bg-red-500 text-white text-[9px] leading-none px-1 py-0.5 min-w-[16px] h-4 flex items-center justify-center">
               {openOrdersCount}
             </span>
           )}
         </Link>
 
         {/* Mobile menu button (icon only) shown on mobile/medium */}
-        <div className="lg:hidden w-12 flex flex-col items-center justify-center">
+        <div className="lg:hidden w-10 flex flex-col items-center justify-center">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="p-2 text-gray-700 hover:text-gray-900"
+            className="p-1.5 text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors"
             aria-label="Menu"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

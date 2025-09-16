@@ -55,7 +55,7 @@ const HeaderServer: React.FC = async () => {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white">
       {/* Main header */}
-      <div className="px-4 py-4">
+      <div className="px-3 py-3 sm:px-4 sm:py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
@@ -77,8 +77,10 @@ const HeaderServer: React.FC = async () => {
         </div>
 
         {/* Mobile/medium search */}
-        <div className="mt-4 lg:hidden">
-          <SearchBar />
+        <div className="mt-3 lg:hidden">
+          <div className="bg-gray-50 rounded-lg p-2">
+            <SearchBar />
+          </div>
         </div>
       </div>
 
