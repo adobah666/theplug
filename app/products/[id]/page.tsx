@@ -1,11 +1,98 @@
 import ProductPageClient, { UIProduct, UIItem } from '@/components/product/ProductPageClient';
 import { getBaseUrl } from '@/lib/utils/server';
+import { Metadata } from 'next';
+import { formatCurrency } from '@/lib/utils/currency';
 
 export const revalidate = 900; // 15 minutes for better performance
 export const dynamic = 'force-dynamic'; // Enable server-side rendering for dynamic product data
 
 type PageParams = { id: string } | Promise<{ id: string }>;
 type PageProps = { params: PageParams };
+
+// Generate dynamic metadata for product pages
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  let id: string;
+  const maybe: any = params as any;
+  if (maybe && typeof maybe.then === 'function') {
+    const resolved = await (params as Promise<{ id: string }>);
+    id = resolved.id;
+  } else {
+    id = (params as { id: string }).id;
+  }
+
+  const baseUrl = getBaseUrl();
+  
+  try {
+    const pj = await fetchJSON<any>(`${baseUrl}/api/products/${id}`);
+    const raw = (pj as any)?.data?.product || (pj as any)?.product || pj;
+    
+    if (!raw || !raw._id) {
+      return {
+        title: 'Product Not Found | ThePlugOnline',
+        description: 'The requested product could not be found.',
+      };
+    }
+
+    const product = normalizeProduct(raw);
+    const categoryName = typeof product.category === 'string' 
+      ? product.category 
+      : product.category?.name || 'Fashion';
+    
+    const title = `${product.name} | ThePlugOnline`;
+    const description = product.description 
+      ? `${product.description.slice(0, 150)}...` 
+      : `Shop ${product.name} at ThePlugOnline, Ghana. ${categoryName} from ${formatCurrency(product.price)}. Enjoy local delivery promos across Ghana.`;
+    
+    const images = product.images && product.images.length > 0 
+      ? product.images.map(img => ({
+          url: img,
+          width: 800,
+          height: 800,
+          alt: product.name,
+        }))
+      : [];
+
+    return {
+      title,
+      description,
+      keywords: `${product.name}, ${categoryName}, ${product.brand || 'fashion'}, online shopping, Ghana, ThePlugOnline`,
+      openGraph: {
+        title,
+        description,
+        type: 'website',
+        locale: 'en_GH',
+        siteName: 'ThePlugOnline',
+        images,
+        url: `${baseUrl}/products/${id}`,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: images.map(img => img.url),
+      },
+      robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          'max-video-preview': -1,
+          'max-image-preview': 'large',
+          'max-snippet': -1,
+        },
+      },
+      alternates: {
+        canonical: `/products/${id}`,
+      },
+    };
+  } catch (error) {
+    return {
+      title: 'Product | ThePlugOnline',
+      description: 'Discover premium fashion in Ghana at ThePlugOnline.',
+    };
+  }
+}
 
 async function fetchJSON<T>(url: string, retries = 3): Promise<T> {
   let lastError: Error | null = null;
@@ -230,7 +317,81 @@ export default async function ProductPage({ params }: PageProps) {
     suggestedItems = suggestedResult.value;
   }
 
+  // Generate structured data for the product
+  const productCategoryName = typeof product.category === 'string' 
+    ? product.category 
+    : product.category?.name || 'Fashion';
+
+  const productStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": product.name,
+    "description": product.description || `${product.name} - Premium ${productCategoryName} at ThePlugOnline (Ghana)`,
+    "image": product.images,
+    "brand": {
+      "@type": "Brand",
+      "name": product.brand || "ThePlugOnline"
+    },
+    "category": productCategoryName,
+    "offers": {
+      "@type": "Offer",
+      "price": product.price,
+      "priceCurrency": "GHS",
+      "availability": (product.inventory ?? 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "seller": {
+        "@type": "Organization",
+        "name": "ThePlugOnline"
+      }
+    },
+    "aggregateRating": product.rating && (product.reviewCount ?? 0) > 0 ? {
+      "@type": "AggregateRating",
+      "ratingValue": product.rating,
+      "reviewCount": product.reviewCount ?? 0,
+      "bestRating": 5,
+      "worstRating": 1
+    } : undefined,
+    "sku": product._id,
+    "mpn": product._id
+  };
+
+  const breadcrumbStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": getBaseUrl()
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": productCategoryName,
+        "item": `${getBaseUrl()}/categories/${typeof product.category === 'object' ? product.category?.slug : product.category}`
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": product.name,
+        "item": `${getBaseUrl()}/products/${product._id}`
+      }
+    ]
+  };
+
   return (
-    <ProductPageClient product={product} relatedItems={relatedItems} suggestedItems={suggestedItems} />
+    <>
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
+      />
+      
+      <ProductPageClient product={product} relatedItems={relatedItems} suggestedItems={suggestedItems} />
+    </>
   );
 }

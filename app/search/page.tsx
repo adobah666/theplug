@@ -3,8 +3,45 @@ import { Metadata } from 'next'
 import SearchResults from './SearchResults'
 
 export const metadata: Metadata = {
-  title: 'Search Products | Fashion Store',
-  description: 'Search and filter through our collection of fashion items including clothing, shoes, and accessories.',
+  title: 'Search Products - Find Your Perfect Style | ThePlug',
+  description: 'Search and filter through our extensive collection of fashion items including clothing, shoes, and accessories for men, women, and kids. Find exactly what you\'re looking for at ThePlug.',
+  keywords: 'search products, fashion search, clothing search, shoes search, accessories search, filter products, ThePlug search',
+  openGraph: {
+    title: 'Search Products - Find Your Perfect Style | ThePlug',
+    description: 'Search and filter through our extensive collection of fashion items including clothing, shoes, and accessories.',
+    type: 'website',
+    locale: 'en_GH',
+    siteName: 'ThePlug',
+    images: [
+      {
+        url: '/og-search.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Search Products at ThePlug',
+      },
+    ],
+    url: '/search',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Search Products - Find Your Perfect Style | ThePlug',
+    description: 'Search and filter through our extensive collection of fashion items.',
+    images: ['/og-search.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: '/search',
+  },
 }
 
 interface SearchPageProps {

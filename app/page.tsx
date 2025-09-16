@@ -1,7 +1,49 @@
 import { Suspense } from 'react'
+import { Metadata } from 'next'
 
 // Enable caching with 15-minute revalidation for optimal performance
 export const revalidate = 900 // 15 minutes
+
+export const metadata: Metadata = {
+  title: 'ThePlugOnline - Ghana’s Premium Fashion & Style Store',
+  description: 'Discover the latest fashion trends at ThePlugOnline in Ghana. Shop premium clothing, shoes, and accessories for men, women, and kids. Free delivery promos within Ghana on eligible orders.',
+  keywords: 'ghana fashion, ghana online shopping, fashion ghana, clothing, shoes, accessories, men fashion, women fashion, kids fashion, Accra',
+  openGraph: {
+    title: 'ThePlugOnline - Ghana’s Premium Fashion & Style Store',
+    description: 'Discover the latest fashion trends at ThePlugOnline. Shop premium clothing, shoes, and accessories for men, women, and kids across Ghana.',
+    type: 'website',
+    locale: 'en_GH',
+    siteName: 'ThePlugOnline',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'ThePlugOnline Fashion Store in Ghana',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ThePlugOnline - Ghana’s Premium Fashion & Style Store',
+    description: 'Discover the latest fashion trends at ThePlugOnline. Shop premium clothing, shoes, and accessories across Ghana.',
+    images: ['/og-image.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: '/',
+  },
+}
 import { Hero } from '@/components/layout/Hero'
 import { FeaturedProducts } from '@/components/product/FeaturedProducts'
 import { TrendingSectionServer } from '@/components/product/TrendingSectionServer'
@@ -360,8 +402,60 @@ function HomePageContent({ featuredProducts, categories, categorySlides }: HomeP
     ...categories.slice(0, 6).map(c => c.image)
   ].filter(Boolean)
 
+  // Generate structured data for the homepage
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "ThePlugOnline",
+    "description": "Premium Ghana-based fashion and style online store",
+    "url": "https://theplug.com",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://theplug.com/search?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    },
+    "sameAs": [
+      "https://facebook.com/theplug",
+      "https://instagram.com/theplug",
+      "https://twitter.com/theplug"
+    ]
+  }
+
+  const organizationData = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "ThePlugOnline",
+    "description": "Premium Ghana-based fashion and style online store",
+    "url": "https://theplug.com",
+    "logo": "https://theplug.com/logo.png",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "+233-XXX-XXXX",
+      "contactType": "customer service",
+      "availableLanguage": ["English"]
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressCountry": "GH",
+      "addressLocality": "Accra"
+    }
+  }
+
   return (
     <>
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationData) }}
+      />
+      
       {/* Preload critical images for instant loading */}
       <ImagePreloader images={criticalImages} priority maxConcurrent={5} />
       

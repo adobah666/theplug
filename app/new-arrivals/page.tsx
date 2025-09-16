@@ -1,10 +1,54 @@
 export const revalidate = 900
+
 import Link from 'next/link'
 import Image from 'next/image'
 import { headers } from 'next/headers'
+import { Metadata } from 'next'
 import { ProductCard } from '@/components/product/ProductCard'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+
+export const metadata: Metadata = {
+  title: 'New Arrivals - Latest Fashion Trends | ThePlug',
+  description: 'Discover the newest fashion arrivals at ThePlug. Shop the latest trends in clothing, shoes, and accessories for men, women, and kids. Updated daily with fresh styles.',
+  keywords: 'new arrivals, latest fashion, new products, trending styles, fresh arrivals, ThePlug, Ghana fashion',
+  openGraph: {
+    title: 'New Arrivals - Latest Fashion Trends | ThePlug',
+    description: 'Discover the newest fashion arrivals at ThePlug. Shop the latest trends in clothing, shoes, and accessories.',
+    type: 'website',
+    locale: 'en_GH',
+    siteName: 'ThePlug',
+    images: [
+      {
+        url: '/og-new-arrivals.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'New Arrivals at ThePlug',
+      },
+    ],
+    url: '/new-arrivals',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'New Arrivals - Latest Fashion Trends | ThePlug',
+    description: 'Discover the newest fashion arrivals at ThePlug. Shop the latest trends in clothing, shoes, and accessories.',
+    images: ['/og-new-arrivals.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: '/new-arrivals',
+  },
+}
 
 async function fetchNewArrivals(page: number, limit: number) {
   try {
@@ -40,8 +84,70 @@ export default async function NewArrivalsPage({ searchParams }: { searchParams?:
   const displayTotal = total && total > 0 ? total : items.length
   const totalPages = total && total > 0 ? Math.max(1, Math.ceil(total / limit)) : Math.max(1, Math.ceil(displayTotal / limit))
 
+  // Get base URL for structured data
+  const hdrs = await headers()
+  const host = hdrs.get('host') || 'localhost:3000'
+  const protocol = host.includes('localhost') ? 'http' : 'https'
+  const baseUrl = `${protocol}://${host}`
+
+  // Generate structured data for new arrivals page
+  const newArrivalsStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "New Arrivals",
+    "description": "Latest fashion arrivals at ThePlug",
+    "url": `${baseUrl}/new-arrivals`,
+    "mainEntity": {
+      "@type": "ItemList",
+      "numberOfItems": displayTotal,
+      "itemListElement": items.slice(0, 10).map((product: any, index: number) => ({
+        "@type": "Product",
+        "position": index + 1,
+        "name": product.name,
+        "description": product.description,
+        "image": Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : '/images/placeholder.png',
+        "offers": {
+          "@type": "Offer",
+          "price": product.price,
+          "priceCurrency": "GHS",
+          "availability": (product.inventory ?? 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+        }
+      }))
+    }
+  };
+
+  const breadcrumbStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": baseUrl
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "New Arrivals",
+        "item": `${baseUrl}/new-arrivals`
+      }
+    ]
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10">
+    <>
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(newArrivalsStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
+      />
+      
+      <div className="max-w-7xl mx-auto px-4 py-10">
       <Breadcrumb
         items={[{ label: 'Home', href: '/' }, { label: 'New Arrivals' }]}
         className="mb-6"
@@ -98,5 +204,6 @@ export default async function NewArrivalsPage({ searchParams }: { searchParams?:
         </div>
       )}
     </div>
+    </>
   )
 }

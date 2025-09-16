@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
+import { Metadata } from 'next';
 import { ProductGrid } from '@/components/product/ProductGrid';
 import { FilterSidebar, FilterSection } from '@/components/product/FilterSidebar';
 import { Filter, Grid, List } from 'lucide-react';
@@ -55,6 +56,68 @@ const CATEGORY_INFO: Record<string, CategoryInfo> = {
   }
 };
 interface PageProps { params: { category: string }; searchParams: Record<string, string | string[] | undefined> }
+
+// Generate dynamic metadata for category pages
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+  const category = params.category;
+  const categoryInfo = CATEGORY_INFO[category] || {
+    name: category.charAt(0).toUpperCase() + category.slice(1),
+    description: `Browse our ${category} collection`,
+    image: '/categories/default-banner.jpg',
+    subcategories: []
+  };
+
+  const subcategory = String(searchParams.subcategory ?? '');
+  const title = subcategory 
+    ? `${subcategory.charAt(0).toUpperCase() + subcategory.slice(1)} ${categoryInfo.name} | ThePlugOnline`
+    : `${categoryInfo.name} | ThePlugOnline`;
+  
+  const description = subcategory
+    ? `Shop ${subcategory} in our ${categoryInfo.name.toLowerCase()} collection. ${categoryInfo.description}`
+    : `${categoryInfo.description} Shop in Ghana with local delivery options.`;
+
+  return {
+    title,
+    description,
+    keywords: `${categoryInfo.name}, ${category}, fashion, clothing, online shopping, Ghana, ThePlugOnline${subcategory ? `, ${subcategory}` : ''}`,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      locale: 'en_GH',
+      siteName: 'ThePlugOnline',
+      images: [
+        {
+          url: categoryInfo.image,
+          width: 1200,
+          height: 630,
+          alt: categoryInfo.name,
+        },
+      ],
+      url: `/categories/${category}${subcategory ? `?subcategory=${subcategory}` : ''}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [categoryInfo.image],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
+    },
+    alternates: {
+      canonical: `/categories/${category}${subcategory ? `?subcategory=${subcategory}` : ''}`,
+    },
+  };
+}
 
 function mapSort(sortBy: string): { sort: string; order?: string } {
   switch (sortBy) {
@@ -203,8 +266,70 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     return qs ? `${base}?${qs}` : base;
   };
 
+  // Generate structured data for the category page
+  const categoryStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": categoryInfo.name,
+    "description": categoryInfo.description,
+    "url": `${baseUrl}/categories/${category}`,
+    "mainEntity": {
+      "@type": "ItemList",
+      "numberOfItems": total,
+      "itemListElement": products.slice(0, 10).map((product, index) => ({
+        "@type": "Product",
+        "position": index + 1,
+        "name": product.name,
+        "description": product.description,
+        "image": product.images[0],
+        "offers": {
+          "@type": "Offer",
+          "price": product.price,
+          "priceCurrency": "GHS",
+          "availability": product.inventory > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+        }
+      }))
+    }
+  };
+
+  const breadcrumbStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": baseUrl
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": categoryInfo.name,
+        "item": `${baseUrl}/categories/${category}`
+      },
+      ...(subcategory ? [{
+        "@type": "ListItem",
+        "position": 3,
+        "name": subcategory.charAt(0).toUpperCase() + subcategory.slice(1),
+        "item": `${baseUrl}/categories/${category}?subcategory=${subcategory}`
+      }] : [])
+    ]
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <>
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(categoryStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
+      />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-xs sm:text-sm text-gray-600 mb-6">
         <Link href="/" className="inline-flex items-center leading-none hover:text-gray-900">Home</Link>
@@ -384,5 +509,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         </div>
       </div>
     </div>
+    </>
   );
 }
