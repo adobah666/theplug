@@ -73,6 +73,7 @@ const CheckoutReview: React.FC<CheckoutReviewProps> = ({
         showItems={true}
         showShipping={true}
         showPayment={true}
+        allowItemRemoval={true}
       />
 
       {/* Terms and Conditions */}

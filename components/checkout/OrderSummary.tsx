@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { CartItemData } from '@/components/cart/CartItem'
 import { ShippingAddress, PaymentMethod } from '@/types/checkout'
 import { formatCurrency } from '@/lib/utils/currency'
+import { useCart } from '@/lib/cart/context'
 
 interface OrderSummaryProps {
   items: CartItemData[]
@@ -17,6 +18,7 @@ interface OrderSummaryProps {
   showItems?: boolean
   showShipping?: boolean
   showPayment?: boolean
+  allowItemRemoval?: boolean
 }
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({
@@ -29,9 +31,22 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   total,
   showItems = true,
   showShipping = false,
-  showPayment = false
+  showPayment = false,
+  allowItemRemoval = false
 }) => {
   const formatPrice = (price: number) => formatCurrency(price)
+  const { removeItem, state } = useCart()
+  const onRemove = async (item: CartItemData) => {
+    try {
+      const productId = typeof (item as any).productId === 'string'
+        ? (item as any).productId
+        : String((item as any).productId?._id || (item as any).productId || '')
+      const variantId = typeof (item as any).variantId === 'string'
+        ? (item as any).variantId
+        : ((item as any).variantId || undefined)
+      await removeItem(productId, variantId)
+    } catch {}
+  }
 
   const formatCardNumber = (cardNumber: string) => {
     // Show only last 4 digits
@@ -46,8 +61,13 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
         <div>
           <h3 className="text-lg font-medium text-gray-900 mb-4">Order Items</h3>
           <div className="space-y-4">
-            {items.map((item, index) => (
-              <div key={`${item.productId}-${item.variantId || 'default'}-${index}`} className="flex items-center space-x-4">
+            {items.map((item, index) => {
+              const productId = typeof (item as any).productId === 'string' ? (item as any).productId : String((item as any).productId?._id || (item as any).productId || '')
+              const variantId = typeof (item as any).variantId === 'string' ? (item as any).variantId : ((item as any).variantId || undefined)
+              const key = variantId ? `${productId}-${variantId}` : productId
+              const isRemoving = state.removingItems.has(key)
+              return (
+              <div key={`${productId}-${variantId || 'default'}-${index}`} className="flex items-center space-x-4">
                 <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md border border-gray-200">
                   <Image
                     src={item.image}
@@ -72,11 +92,23 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
                   <p className="mt-1 text-sm text-gray-500">Qty: {item.quantity}</p>
                 </div>
                 
-                <div className="text-sm font-medium text-gray-900">
-                  {formatPrice(item.price * item.quantity)}
+                <div className="flex flex-col items-end gap-1">
+                  <div className="text-sm font-medium text-gray-900">
+                    {formatPrice(item.price * item.quantity)}
+                  </div>
+                  {allowItemRemoval && (
+                    <button
+                      type="button"
+                      onClick={() => onRemove(item)}
+                      disabled={isRemoving}
+                      className="text-xs text-red-600 hover:text-red-700 disabled:opacity-50"
+                    >
+                      {isRemoving ? 'Removing...' : 'Remove'}
+                    </button>
+                  )}
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       )}

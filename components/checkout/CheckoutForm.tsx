@@ -367,6 +367,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onOrderComplete }) => {
                 showItems={true}
                 showShipping={false}
                 showPayment={false}
+                allowItemRemoval={true}
               />
             </div>
           </div>

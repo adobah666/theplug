@@ -270,18 +270,30 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
     if (!product || availableQty === 0) return;
     try {
       setBuyNowLoading(true);
-      await addItem({
-        productId: product._id,
-        variantId: selectedVariant?._id,
-        quantity,
-        price: (selectedVariant?.price ?? product.price) || 0,
-        name: product.name,
-        image: (product.images && product.images[0]) || '/placeholder-product.jpg',
-        size: selectedVariant?.size,
-        color: selectedVariant?.color,
-        maxInventory: selectedVariant?.inventory ?? (product.inventory || 0),
-      });
-      await refreshCart();
+      // Check if this exact product/variant is already in the cart
+      const alreadyInCart = state.items.some(
+        (it) =>
+          it.productId === product._id &&
+          (it.variantId || undefined) === (selectedVariant?._id || undefined)
+      );
+
+      if (!alreadyInCart) {
+        // Only add if it's not already present
+        await addItem({
+          productId: product._id,
+          variantId: selectedVariant?._id,
+          quantity,
+          price: (selectedVariant?.price ?? product.price) || 0,
+          name: product.name,
+          image: (product.images && product.images[0]) || '/placeholder-product.jpg',
+          size: selectedVariant?.size,
+          color: selectedVariant?.color,
+          maxInventory: selectedVariant?.inventory ?? (product.inventory || 0),
+        });
+        await refreshCart();
+      }
+
+      // Navigate to checkout regardless
       window.location.href = '/checkout';
     } catch (err) {
       console.error('Failed to start checkout:', err);

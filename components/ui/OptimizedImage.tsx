@@ -150,6 +150,15 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   // Ensure compliance with Next/Image: do not set loading="lazy" when priority is true
   const effectiveLoading: 'lazy' | 'eager' | undefined = priority ? undefined : loading
 
+  // Determine if the image is cross-origin (for CORS/crossOrigin handling)
+  let isCrossOrigin = false
+  try {
+    const u = new URL(optimizedSrc, typeof window !== 'undefined' ? window.location.href : 'http://localhost')
+    if (typeof window !== 'undefined') {
+      isCrossOrigin = u.origin !== window.location.origin
+    }
+  } catch {}
+
   const imageProps = {
     ref: imgRef,
     src: optimizedSrc,
@@ -170,6 +179,8 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     // We already apply Cloudinary transformations in the URL; bypass Next's image optimizer
     // to avoid proxy timeouts (/_next/image 500s) when offline or under poor connectivity.
     ...(isCloudinaryUrl(src) ? { unoptimized: true } : {}),
+    // Align the image request credentials mode with the <link rel="preload"> we create
+    ...(isCrossOrigin ? { crossOrigin: 'anonymous' as const } : {}),
     ...(fill ? { fill: true } : { width, height })
   }
 
