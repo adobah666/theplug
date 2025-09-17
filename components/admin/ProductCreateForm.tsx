@@ -30,6 +30,7 @@ export default function ProductCreateForm() {
   const [uploading, setUploading] = useState(false)
   const [category, setCategory] = useState('') // Mongo ObjectId
   const [brand, setBrand] = useState('')
+  const [gender, setGender] = useState<'male' | 'female' | 'unisex'>('unisex')
   const [inventory, setInventory] = useState<number | ''>('')
   const [variants, setVariants] = useState<VariantInput[]>([])
 
@@ -199,6 +200,7 @@ export default function ProductCreateForm() {
         images,
         category: category.trim(),
         brand: brand.trim(),
+        gender,
         variants: variants.map(v => ({
           size: v.size?.trim() || undefined,
           color: v.color?.trim() || undefined,
@@ -241,6 +243,7 @@ export default function ProductCreateForm() {
       setCategory(prev => (prev && prev.length > 0 ? prev : (categories[0]?._id || '')))
       // Keep selected brand if any, otherwise default to first available
       setBrand(prev => (prev && prev.length > 0 ? prev : (brands[0]?.name || '')))
+      setGender('unisex')
       setInventory('')
       setVariants([])
     } catch (err) {
@@ -498,6 +501,18 @@ export default function ProductCreateForm() {
                 </div>
               </div>
             )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Product Gender</label>
+            <select
+              value={gender}
+              onChange={e => setGender(e.target.value as 'male' | 'female' | 'unisex')}
+              className="w-full border rounded-md p-2 bg-white"
+            >
+              <option value="unisex">Unisex</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
           </div>
         </div>
       </div>

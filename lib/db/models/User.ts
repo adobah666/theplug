@@ -41,6 +41,7 @@ export interface IUser extends Document {
   firstName: string
   lastName: string
   phone?: string
+  gender?: 'male' | 'female'
   password: string
   role: 'user' | 'admin'
   addresses?: IAddress[]
@@ -188,6 +189,11 @@ const UserSchema = new Schema<IUser>({
     type: String,
     trim: true,
     match: [/^\+?[\d\s\-\(\)]{10,}$/, 'Please enter a valid phone number']
+  },
+  gender: {
+    type: String,
+    enum: ['male', 'female'],
+    required: false
   },
   password: {
     type: String,

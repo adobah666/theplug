@@ -25,6 +25,7 @@ export const registerSchema = z.object({
     .string()
     .min(1, 'Phone number is required')
     .regex(/^\+?[\d\s-()]+$/, 'Please enter a valid phone number'),
+  gender: z.enum(['male', 'female']),
   password: z
     .string()
     .min(1, 'Password is required')

@@ -19,6 +19,7 @@ export interface IProduct extends Document {
   images: string[]
   category: mongoose.Types.ObjectId
   brand: string
+  gender?: 'male' | 'female' | 'unisex'
   variants: IProductVariant[]
   inventory: number
   rating: number
@@ -113,6 +114,11 @@ const ProductSchema = new Schema<IProduct>({
     trim: true,
     minlength: [2, 'Brand name must be at least 2 characters long'],
     maxlength: [100, 'Brand name cannot exceed 100 characters']
+  },
+  gender: {
+    type: String,
+    enum: ['male', 'female', 'unisex'],
+    default: 'unisex'
   },
   variants: [ProductVariantSchema],
   inventory: {

@@ -8,6 +8,7 @@ interface RegisterRequest {
   email: string
   name: string
   phone?: string
+  gender?: 'male' | 'female'
   password: string
 }
 
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body: RegisterRequest = await request.json()
-    const { email, name, phone, password } = body
+    const { email, name, phone, gender, password } = body
 
     // Validate required fields
     if (!email || !name || !password) {
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
       firstName,
       lastName,
       phone: phone?.trim(),
+      ...(gender ? { gender } : {}),
       password
     })
 
@@ -92,6 +94,7 @@ export async function POST(request: NextRequest) {
       firstName: newUser.firstName,
       lastName: newUser.lastName,
       phone: newUser.phone,
+      gender: newUser.gender,
       emailVerified: newUser.emailVerified,
       createdAt: newUser.createdAt
     }

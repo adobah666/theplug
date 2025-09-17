@@ -14,6 +14,12 @@ interface ProductVariantSelectorProps {
   variants: ProductVariant[]
   selectedVariant: ProductVariant | null
   onVariantChange: (variant: ProductVariant | null) => void
+  // New: allow parent to manage partial selection state
+  selectedSize?: string | null
+  selectedColor?: string | null
+  onSizeSelect?: (size: string) => void
+  onColorSelect?: (color: string) => void
+  onMessage?: (msg: string | null) => void
   className?: string
 }
 
@@ -21,6 +27,11 @@ const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
   variants,
   selectedVariant,
   onVariantChange,
+  selectedSize,
+  selectedColor,
+  onSizeSelect,
+  onColorSelect,
+  onMessage,
   className
 }) => {
   // Group variants by size and color (ensure arrays are string[])
@@ -43,37 +54,25 @@ const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
   const getAvailableVariants = (filterBy: 'size' | 'color', value: string) => {
     return variants.filter(variant => {
       if (filterBy === 'size') {
-        return variant.size === value && (!selectedVariant?.color || variant.color === selectedVariant.color)
+        const colorRef = selectedVariant?.color ?? selectedColor ?? null
+        return variant.size === value && (!colorRef || variant.color === colorRef)
       } else {
-        return variant.color === value && (!selectedVariant?.size || variant.size === selectedVariant.size)
+        const sizeRef = selectedVariant?.size ?? selectedSize ?? null
+        return variant.color === value && (!sizeRef || variant.size === sizeRef)
       }
     })
   }
 
   const handleSizeSelect = (size: string) => {
-    const availableVariants = getAvailableVariants('size', size)
-    if (availableVariants.length > 0) {
-      // If there's a color selected, try to find a variant with both size and color
-      if (selectedVariant?.color) {
-        const exactMatch = availableVariants.find(v => v.color === selectedVariant.color)
-        onVariantChange(exactMatch || availableVariants[0])
-      } else {
-        onVariantChange(availableVariants[0])
-      }
-    }
+    // Bubble up to parent so it can manage partial selection and messaging
+    onMessage && onMessage(null)
+    if (onSizeSelect) onSizeSelect(size)
   }
 
   const handleColorSelect = (color: string) => {
-    const availableVariants = getAvailableVariants('color', color)
-    if (availableVariants.length > 0) {
-      // If there's a size selected, try to find a variant with both size and color
-      if (selectedVariant?.size) {
-        const exactMatch = availableVariants.find(v => v.size === selectedVariant.size)
-        onVariantChange(exactMatch || availableVariants[0])
-      } else {
-        onVariantChange(availableVariants[0])
-      }
-    }
+    // Bubble up to parent so it can manage partial selection and messaging
+    onMessage && onMessage(null)
+    if (onColorSelect) onColorSelect(color)
   }
 
   const isSizeAvailable = (size: string) => {
@@ -98,7 +97,7 @@ const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
           <h4 className="text-sm font-medium text-gray-900 mb-2">Size</h4>
           <div className="flex flex-wrap gap-2">
             {sizes.map((size) => {
-              const isSelected = selectedVariant?.size === size
+              const isSelected = (selectedVariant?.size ?? selectedSize) === size
               const isAvailable = isSizeAvailable(size)
               
               return (
@@ -129,7 +128,7 @@ const ProductVariantSelector: React.FC<ProductVariantSelectorProps> = ({
           <h4 className="text-sm font-medium text-gray-900 mb-2">Color</h4>
           <div className="flex flex-wrap gap-2">
             {colors.map((color) => {
-              const isSelected = selectedVariant?.color === color
+              const isSelected = (selectedVariant?.color ?? selectedColor) === color
               const isAvailable = isColorAvailable(color)
               
               return (

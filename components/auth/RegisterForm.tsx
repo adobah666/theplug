@@ -103,6 +103,35 @@ export function RegisterForm({ onSubmit, className }: RegisterFormProps) {
         </div>
 
         <div>
+          <span className="block text-sm font-medium text-gray-700 mb-1">Gender</span>
+          <div className="flex items-center gap-6">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                value="male"
+                {...register('gender')}
+                className="h-4 w-4"
+                disabled={isSubmitting}
+              />
+              <span className="text-sm text-gray-700">Male</span>
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                value="female"
+                {...register('gender')}
+                className="h-4 w-4"
+                disabled={isSubmitting}
+              />
+              <span className="text-sm text-gray-700">Female</span>
+            </label>
+          </div>
+          {errors.gender?.message && (
+            <p className="mt-1 text-sm text-red-600">{errors.gender.message as string}</p>
+          )}
+        </div>
+
+        <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
             Password
           </label>

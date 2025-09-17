@@ -18,6 +18,7 @@ interface ProductCreateRequest {
   images: string[]
   category: string
   brand: string
+  gender?: 'male' | 'female' | 'unisex'
   variants?: Array<{
     size?: string
     color?: string
@@ -153,6 +154,7 @@ export async function POST(request: NextRequest) {
 
     const body: ProductCreateRequest = await request.json()
     const { name, description, price, images, category, brand } = body
+    let { gender } = body
     let { variants, inventory } = body
 
     // Validate required fields (description is optional)
@@ -180,6 +182,13 @@ export async function POST(request: NextRequest) {
       inventory: Number(v.inventory) || 0,
     }))
 
+    // Normalize and validate gender
+    const allowedGenders = new Set(['male', 'female', 'unisex'])
+    if (gender && !allowedGenders.has(gender)) {
+      return NextResponse.json<ApiResponse>({ success: false, error: 'Invalid product gender' }, { status: 400 })
+    }
+    if (!gender) gender = 'unisex'
+
     // If variants exist, validate inventory equals sum of variant inventories
     if (variants && variants.length > 0) {
       const variantsTotal = variants.reduce((sum, v) => sum + (Number(v.inventory) || 0), 0)
@@ -206,6 +215,7 @@ export async function POST(request: NextRequest) {
       images,
       category: new mongoose.Types.ObjectId(category),
       brand: brand.trim(),
+      gender,
       variants: variants || [],
       inventory: Number(inventory) || 0
     })

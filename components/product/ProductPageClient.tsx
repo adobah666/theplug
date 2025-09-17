@@ -50,7 +50,11 @@ interface ProductPageClientProps {
 
 export default function ProductPageClient({ product: initialProduct, relatedItems, suggestedItems }: ProductPageClientProps) {
   const [product, setProduct] = useState<UIProduct | null>(initialProduct);
-  const [selectedVariant, setSelectedVariant] = useState<any | null>(initialProduct?.variants?.[0] || null);
+  // Do not auto-select a variant by default
+  const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectionMessage, setSelectionMessage] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const { addItem, refreshCart, state } = useCart();
@@ -248,6 +252,11 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
 
   const handleAddToCart = async () => {
     if (!product) return;
+    // If product has variants, require a selected variant
+    if (Array.isArray(product.variants) && product.variants.length > 0 && !selectedVariant) {
+      setSelectionMessage('Please select a size and/or color before adding to cart.');
+      return;
+    }
     try {
       await addItem({
         productId: product._id,
@@ -268,6 +277,10 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
 
   const handleBuyNow = async () => {
     if (!product || availableQty === 0) return;
+    if (Array.isArray(product.variants) && product.variants.length > 0 && !selectedVariant) {
+      setSelectionMessage('Please select a size and/or color before proceeding.');
+      return;
+    }
     try {
       setBuyNowLoading(true);
       // Check if this exact product/variant is already in the cart
@@ -466,7 +479,99 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
             <ProductVariantSelector
               variants={product.variants}
               selectedVariant={selectedVariant}
-              onVariantChange={setSelectedVariant}
+              selectedSize={selectedSize}
+              selectedColor={selectedColor}
+              onSizeSelect={(size: string) => {
+                setSelectionMessage(null);
+                setSelectedSize(size);
+                const variantsList = product.variants as any[];
+                if (selectedColor) {
+                  // Prefer exact match with inventory
+                  const exact = variantsList.find(v => v.size === size && v.color === selectedColor && (v.inventory || 0) > 0)
+                    || variantsList.find(v => v.size === size && v.color === selectedColor);
+                  if (exact) {
+                    setSelectedVariant(exact);
+                  } else {
+                    // Auto-pick first available color for this size
+                    const firstAvail = variantsList.find(v => v.size === size && (v.inventory || 0) > 0);
+                    if (firstAvail) {
+                      setSelectedColor(firstAvail.color ?? null);
+                      setSelectedVariant(firstAvail);
+                    } else {
+                      setSelectedVariant(null);
+                      setSelectionMessage(`No colors available in size “${size}”.`);
+                    }
+                  }
+                } else {
+                  const anyColors = variantsList.some(v => !!v.color);
+                  if (!anyColors) {
+                    // Only size dimension exists
+                    const exact = variantsList.find(v => v.size === size && (v.inventory || 0) > 0) || variantsList.find(v => v.size === size);
+                    setSelectedVariant(exact || null);
+                    if (!exact) setSelectionMessage(`Selected size “${size}” is out of stock.`);
+                  } else {
+                    // Auto-pick first available color for this size
+                    const firstAvail = variantsList.find(v => v.size === size && (v.inventory || 0) > 0) || variantsList.find(v => v.size === size);
+                    if (firstAvail) {
+                      setSelectedColor(firstAvail.color ?? null);
+                      setSelectedVariant(firstAvail);
+                    } else {
+                      setSelectedVariant(null);
+                      setSelectionMessage(`No colors available in size “${size}”.`);
+                    }
+                  }
+                }
+              }}
+              onColorSelect={(color: string) => {
+                setSelectionMessage(null);
+                setSelectedColor(color);
+                const variantsList = product.variants as any[];
+                if (selectedSize) {
+                  // Prefer exact match with inventory
+                  const exact = variantsList.find(v => v.size === selectedSize && v.color === color && (v.inventory || 0) > 0)
+                    || variantsList.find(v => v.size === selectedSize && v.color === color);
+                  if (exact) {
+                    setSelectedVariant(exact);
+                  } else {
+                    // Auto-pick first available size for this color
+                    const firstAvail = variantsList.find(v => v.color === color && (v.inventory || 0) > 0);
+                    if (firstAvail) {
+                      setSelectedSize(firstAvail.size ?? null);
+                      setSelectedVariant(firstAvail);
+                    } else {
+                      setSelectedVariant(null);
+                      setSelectionMessage(`No sizes available in color “${color}”.`);
+                    }
+                  }
+                } else {
+                  const anySizes = variantsList.some(v => !!v.size);
+                  if (!anySizes) {
+                    // Only color dimension exists
+                    const exact = variantsList.find(v => v.color === color && (v.inventory || 0) > 0) || variantsList.find(v => v.color === color);
+                    setSelectedVariant(exact || null);
+                    if (!exact) setSelectionMessage(`Selected color “${color}” is out of stock.`);
+                  } else {
+                    // Auto-pick first available size for this color
+                    const firstAvail = variantsList.find(v => v.color === color && (v.inventory || 0) > 0) || variantsList.find(v => v.color === color);
+                    if (firstAvail) {
+                      setSelectedSize(firstAvail.size ?? null);
+                      setSelectedVariant(firstAvail);
+                    } else {
+                      setSelectedVariant(null);
+                      setSelectionMessage(`No sizes available in color “${color}”.`);
+                    }
+                  }
+                }
+              }}
+              onVariantChange={(v) => {
+                setSelectedVariant(v);
+                if (!v) {
+                  setSelectedSize(null);
+                  setSelectedColor(null);
+                  setSelectionMessage(null);
+                }
+              }}
+              onMessage={setSelectionMessage}
             />
           )}
 
@@ -480,6 +585,9 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
 
           {/* Quantity and Add to Cart */}
           <div className="space-y-4 sm:space-y-6">
+            {selectionMessage && (
+              <div className="text-sm text-red-600">{selectionMessage}</div>
+            )}
             <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
               <label className="text-sm font-medium text-gray-700">Quantity:</label>
               <div className="flex items-center justify-between sm:justify-start">
