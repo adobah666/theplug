@@ -167,6 +167,35 @@ export async function POST(request: NextRequest) {
 
       await order.save();
 
+      // Send payment success SMS notification
+      try {
+        const { smsQueue } = await import('@/lib/sms/queue');
+        const { SMSService } = await import('@/lib/sms/service');
+        const User = (await import('@/lib/db/models/User')).default;
+        
+        const user = await User.findById(order.userId);
+        if (user) {
+          const phoneNumber = user.phone || order.shippingAddress.recipientPhone;
+          if (phoneNumber) {
+            const customerName = `${user.firstName} ${user.lastName}`;
+            const smsContent = `Hi ${customerName}! Payment confirmed for order ${order.orderNumber}. Your order is being processed and will be shipped soon. Total: GHS ${order.total.toFixed(2)}. Track: https://theplugonline.com/orders/${order._id} - ThePlug`;
+
+            await smsQueue.addToQueue({
+              to: phoneNumber,
+              content: smsContent,
+              type: 'ORDER_CONFIRMATION',
+              priority: 1, // High priority for payment success
+              userId: String(order.userId),
+              orderId: String(order._id),
+              recipientId: String(order.userId)
+            });
+          }
+        }
+      } catch (smsError) {
+        console.error('Failed to send payment success SMS:', smsError);
+        // Don't fail payment verification if SMS fails
+      }
+
       // Increment analytics for successful purchase
       try {
         if (order.items && order.items.length > 0) {
@@ -231,6 +260,35 @@ export async function POST(request: NextRequest) {
       order.paymentStatus = 'failed';
       order.paystackReference = reference;
       await order.save();
+
+      // Send payment failed SMS notification
+      try {
+        const { smsQueue } = await import('@/lib/sms/queue');
+        const { SMSService } = await import('@/lib/sms/service');
+        const User = (await import('@/lib/db/models/User')).default;
+        
+        const user = await User.findById(order.userId);
+        if (user) {
+          const phoneNumber = user.phone || order.shippingAddress.recipientPhone;
+          if (phoneNumber) {
+            const customerName = `${user.firstName} ${user.lastName}`;
+            const smsContent = SMSService.getPaymentFailedMessage(customerName, order.orderNumber);
+
+            await smsQueue.addToQueue({
+              to: phoneNumber,
+              content: smsContent,
+              type: 'PAYMENT_FAILED',
+              priority: 1, // High priority for payment failures
+              userId: String(order.userId),
+              orderId: String(order._id),
+              recipientId: String(order.userId)
+            });
+          }
+        }
+      } catch (smsError) {
+        console.error('Failed to send payment failed SMS:', smsError);
+        // Don't fail payment verification if SMS fails
+      }
 
       return NextResponse.json({
         success: false,

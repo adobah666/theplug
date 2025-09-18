@@ -63,9 +63,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       console.error('Failed to restore inventory on refund approval:', restockErr)
     }
 
-    // Email customer
+    // Email and SMS customer
     try {
       const to = ((order.userId as any)?.email as string) || ''
+      const user = order.userId as any;
+      
       if (to) {
         await emailService.sendEmail({
           to,
@@ -74,8 +76,28 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           text: `Your refund request for order ${order.orderNumber || order._id} has been approved. The refund is being processed by Paystack.`,
         })
       }
+
+      // Send SMS notification for refund approval
+      const phoneNumber = user?.phone || order.shippingAddress.recipientPhone;
+      if (phoneNumber) {
+        const { smsQueue } = await import('@/lib/sms/queue');
+        const { SMSService } = await import('@/lib/sms/service');
+        
+        const customerName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Customer';
+        const smsContent = SMSService.getRefundApprovedMessage(customerName, order.orderNumber, order.total);
+
+        await smsQueue.addToQueue({
+          to: phoneNumber,
+          content: smsContent,
+          type: 'REFUND_APPROVED',
+          priority: 1, // High priority for refund approvals
+          userId: String(order.userId),
+          orderId: String(order._id),
+          recipientId: String(order.userId)
+        });
+      }
     } catch (e) {
-      console.error('Failed to send refund approval email:', e)
+      console.error('Failed to send refund approval notifications:', e)
     }
 
     return NextResponse.json({ success: true, message: 'Refund approved', data: { refund: rr, orderId: order._id } })

@@ -102,13 +102,16 @@ export async function POST(request: NextRequest) {
 
     // Note: Do NOT increment analytics here. This should only happen after successful payment.
 
-    // Send order confirmation email
+    // Send order confirmation email and SMS
     try {
       const { emailNotificationService } = await import('@/lib/email');
+      const { smsQueue } = await import('@/lib/sms/queue');
+      const { SMSService } = await import('@/lib/sms/service');
       const User = (await import('@/lib/db/models/User')).default;
       
       const user = await User.findById(userId);
       if (user) {
+        // Send email confirmation
         await emailNotificationService.queueOrderConfirmation(user.email, {
           customerName: `${user.firstName} ${user.lastName}`,
           orderNumber: result.order!.orderNumber,
@@ -132,10 +135,12 @@ export async function POST(request: NextRequest) {
             country: result.order!.shippingAddress.country
           }
         });
+
+        // SMS notification removed - only send email confirmation at order creation
       }
     } catch (emailError) {
-      console.error('Failed to send order confirmation email:', emailError);
-      // Don't fail order creation if email fails
+      console.error('Failed to send order confirmation notifications:', emailError);
+      // Don't fail order creation if notifications fail
     }
 
     return NextResponse.json({

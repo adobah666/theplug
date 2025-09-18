@@ -38,11 +38,13 @@ interface Order {
     state: string;
     zipCode: string;
     country: string;
-    phone: string;
+    phone?: string; // legacy
+    recipientPhone?: string; // accurate per Order model
   };
   userId: {
     email: string;
     name?: string;
+    phone?: string;
   };
 }
 
@@ -290,6 +292,7 @@ export default function AdminOrdersPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                       <div>
                         <p><strong>Customer:</strong> {order.userId.email}</p>
+                        <p><strong>Phone:</strong> {order.userId.phone || order.shippingAddress.recipientPhone || order.shippingAddress.phone || '—'}</p>
                         <p><strong>Date:</strong> {new Date(order.createdAt).toLocaleDateString()}</p>
                         <p><strong>Total:</strong> {formatCurrency(order.total)}</p>
                         {order.trackingNumber && (

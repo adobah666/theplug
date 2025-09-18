@@ -459,10 +459,7 @@ const OrderConfirmation: React.FC<OrderConfirmationProps> = ({
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">What's Next?</h2>
           <div className="space-y-3 text-sm text-gray-600 mb-6">
-            <p>• You will receive an email confirmation shortly</p>
-            <p>• Your order will be processed within 1-2 business days</p>
-            <p>• You'll receive tracking information once your order ships</p>
-            <p>• Estimated delivery: 3-7 business days</p>
+            <p>You will soon receive an SMS or email telling you when you will receive the products and the actual delivery date.</p>
           </div>
           
           {refundStatus && (

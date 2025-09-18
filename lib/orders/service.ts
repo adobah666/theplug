@@ -292,13 +292,16 @@ export async function restoreInventory(orderId: string): Promise<void> {
 export async function updateOrderStatus(
   orderId: string, 
   status: OrderStatus, 
-  cancelReason?: string
+  cancelReason?: string,
+  trackingNumber?: string
 ): Promise<IOrder | null> {
   const order = await Order.findById(orderId)
   
   if (!order) {
     return null
   }
+
+  const previousStatus = order.status
 
   // If cancelling order, restore inventory
   if (status === OrderStatus.CANCELLED && order.status !== OrderStatus.CANCELLED) {
@@ -309,8 +312,68 @@ export async function updateOrderStatus(
     }
   }
 
+  // Set tracking number if provided
+  if (trackingNumber) {
+    order.trackingNumber = trackingNumber
+  }
+
   order.status = status
   await order.save()
+
+  // Send SMS notification for status changes
+  try {
+    const { smsQueue } = await import('@/lib/sms/queue');
+    const { SMSService } = await import('@/lib/sms/service');
+    const User = (await import('@/lib/db/models/User')).default;
+    
+    const user = await User.findById(order.userId);
+    if (user && previousStatus !== status) {
+      const phoneNumber = user.phone || order.shippingAddress.recipientPhone;
+      if (phoneNumber) {
+        const customerName = `${user.firstName} ${user.lastName}`;
+        let smsContent = '';
+        let smsType: 'ORDER_SHIPPED' | 'ORDER_DELIVERED' | 'ORDER_CANCELLED' | 'MANUAL' = 'MANUAL';
+        let priority = 2; // Medium priority by default
+
+        switch (status) {
+          case OrderStatus.SHIPPED:
+            smsContent = SMSService.getOrderShippedMessage(customerName, order.orderNumber, trackingNumber, String(order._id));
+            smsType = 'ORDER_SHIPPED';
+            priority = 2;
+            break;
+          case OrderStatus.DELIVERED:
+            smsContent = SMSService.getOrderDeliveredMessage(customerName, order.orderNumber, String(order._id));
+            smsType = 'ORDER_DELIVERED';
+            priority = 2;
+            break;
+          case OrderStatus.CANCELLED:
+            smsContent = SMSService.getOrderCancelledMessage(customerName, order.orderNumber, cancelReason, String(order._id));
+            smsType = 'ORDER_CANCELLED';
+            priority = 1; // High priority for cancellations
+            break;
+          case OrderStatus.PROCESSING:
+            smsContent = `Hi ${customerName}! Your order ${order.orderNumber} is now being processed. We'll notify you when it ships. Track: https://theplugonline.com/orders/${order._id} - ThePlug`;
+            priority = 3; // Low priority for processing updates
+            break;
+        }
+
+        if (smsContent) {
+          await smsQueue.addToQueue({
+            to: phoneNumber,
+            content: smsContent,
+            type: smsType,
+            priority: priority,
+            userId: String(order.userId),
+            orderId: String(order._id),
+            recipientId: String(order.userId)
+          });
+        }
+      }
+    }
+  } catch (smsError) {
+    console.error('Failed to send order status SMS:', smsError);
+    // Don't fail order update if SMS fails
+  }
 
   return order
 }

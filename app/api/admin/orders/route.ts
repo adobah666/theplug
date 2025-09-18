@@ -19,13 +19,24 @@ export async function GET(request: NextRequest) {
     await connectDB()
 
     const orders = await Order.find({})
-      .populate('userId', 'email name')
+      .populate('userId', 'email name phone')
       .sort({ createdAt: -1 })
       .lean()
 
+    // Ensure phone is present: fallback to shippingAddress.recipientPhone
+    const normalized = orders.map((o: any) => {
+      if (o && o.userId) {
+        o.userId = {
+          ...o.userId,
+          phone: o?.userId?.phone || o?.shippingAddress?.recipientPhone || o?.shippingAddress?.phone || null,
+        }
+      }
+      return o
+    })
+
     return NextResponse.json({
       success: true,
-      data: orders
+      data: normalized
     })
 
   } catch (error) {

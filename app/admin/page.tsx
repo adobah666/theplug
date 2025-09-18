@@ -39,6 +39,11 @@ export default async function AdminPage() {
             <p className="text-sm text-gray-600 mt-1">Manage your store: products, orders and more.</p>
           </div>
           <div className="flex items-center gap-2">
+            <Link href="/admin/finances">
+              <Button variant="primary" className="whitespace-nowrap bg-green-600 hover:bg-green-700">
+                Finances
+              </Button>
+            </Link>
             <Link href="/admin/orders">
               <Button className="relative whitespace-nowrap">
                 Manage Orders
