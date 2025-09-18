@@ -55,11 +55,12 @@ const CATEGORY_INFO: Record<string, CategoryInfo> = {
     subcategories: ['bags', 'jewelry', 'watches', 'belts', 'hats', 'sunglasses']
   }
 };
-interface PageProps { params: { category: string }; searchParams: Record<string, string | string[] | undefined> }
+interface PageProps { params: Promise<{ category: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> }
 
 // Generate dynamic metadata for category pages
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
-  const category = params.category;
+  const { category } = await params;
+  const sp = searchParams ? await searchParams : {} as Record<string, string | string[] | undefined>;
   const categoryInfo = CATEGORY_INFO[category] || {
     name: category.charAt(0).toUpperCase() + category.slice(1),
     description: `Browse our ${category} collection`,
@@ -67,7 +68,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     subcategories: []
   };
 
-  const subcategory = String(searchParams.subcategory ?? '');
+  const subcategory = String(sp.subcategory ?? '');
   const title = subcategory 
     ? `${subcategory.charAt(0).toUpperCase() + subcategory.slice(1)} ${categoryInfo.name} | ThePlugOnline`
     : `${categoryInfo.name} | ThePlugOnline`;
@@ -203,8 +204,8 @@ async function fetchAll({ baseUrl, category, page, limit, sortBy, price, subcate
 }
 
 export default async function CategoryPage({ params, searchParams }: PageProps) {
-  const awaitedParams: any = (typeof (params as any)?.then === 'function') ? await (params as any) : (params as any)
-  const awaitedSearch: any = (typeof (searchParams as any)?.then === 'function') ? await (searchParams as any) : (searchParams as any)
+  const awaitedParams = await params;
+  const awaitedSearch: Record<string, string | string[] | undefined> = searchParams ? await searchParams : {};
 
   const category = awaitedParams.category as string;
   const categoryInfo = CATEGORY_INFO[category] || {
@@ -257,7 +258,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     return usp;
   };
   const buildHref = (base: string, overrides: Record<string, string | undefined> = {}) => {
-    const usp = toURLSearchParams(searchParams);
+    const usp = toURLSearchParams(awaitedSearch);
     for (const [k, v] of Object.entries(overrides)) {
       if (v === undefined || v === null || v === '') usp.delete(k);
       else usp.set(k, v);

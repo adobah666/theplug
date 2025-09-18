@@ -31,7 +31,7 @@ interface ProductUpdateRequest {
 // GET /api/products/[id] - Get individual product details
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> | { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const maxRetries = 3;
   let lastError: Error | null = null;
@@ -40,9 +40,7 @@ export async function GET(
     try {
       await connectDB()
 
-      const { id } = 'then' in (context.params as any)
-        ? await (context.params as Promise<{ id: string }>)
-        : (context.params as { id: string })
+      const { id } = await context.params
 
       // Validate ObjectId format
       if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -111,7 +109,7 @@ export async function GET(
 // PUT /api/products/[id] - Update product (admin only)
 export async function PUT(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> | { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB()
@@ -132,9 +130,7 @@ export async function PUT(
       return NextResponse.json<ApiResponse>({ success: false, error: 'Admin privileges required' }, { status: 403 })
     }
 
-    const { id } = 'then' in (context.params as any)
-      ? await (context.params as Promise<{ id: string }>)
-      : (context.params as { id: string })
+    const { id } = await context.params
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -250,7 +246,7 @@ export async function PUT(
 // DELETE /api/products/[id] - Delete product (admin only)
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> | { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB()
@@ -271,9 +267,7 @@ export async function DELETE(
       return NextResponse.json<ApiResponse>({ success: false, error: 'Admin privileges required' }, { status: 403 })
     }
 
-    const { id } = 'then' in (context.params as any)
-      ? await (context.params as Promise<{ id: string }>)
-      : (context.params as { id: string })
+    const { id } = await context.params
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {

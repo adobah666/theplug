@@ -11,7 +11,7 @@ import { ApiResponse } from '@/types'
 // Returns: counters and daily series for views, add_to_cart, purchase
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> | { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB()
@@ -21,9 +21,7 @@ export async function GET(
       return NextResponse.json<ApiResponse>({ success: false, error: 'Admin privileges required' }, { status: 403 })
     }
 
-    const { id } = 'then' in (context.params as any)
-      ? await (context.params as Promise<{ id: string }>)
-      : (context.params as { id: string })
+    const { id } = await context.params
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json<ApiResponse>({ success: false, error: 'Invalid product ID format' }, { status: 400 })

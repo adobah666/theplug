@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to send order notifications
-export async function sendOrderNotification(
+async function sendOrderNotification(
   userEmail: string, 
   type: 'confirmed' | 'shipped' | 'delivered',
   orderData: any

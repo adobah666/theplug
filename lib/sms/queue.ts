@@ -29,7 +29,29 @@ export class SMSQueueService {
   private readonly MAX_RETRIES = 3;
 
   private constructor() {
-    this.startProcessing();
+    if (!isBuildTime()) {
+      this.startProcessing();
+    } else {
+      console.log('[SMSQueue] Skipping queue processing during build');
+    }
+  }
+
+  // Public: run a single processing cycle (for cron/uptime robot)
+  public async tick(): Promise<{ pendingBefore: number; pendingAfter: number; ran: boolean }> {
+    try {
+      await connectDB();
+      // If not running interval (e.g., in serverless or during cron), ensure we have latest pending
+      if (!this.processingInterval || this.queue.length === 0) {
+        await this.loadPendingMessages();
+      }
+      const before = this.queue.length;
+      await this.processQueue();
+      const after = this.queue.length;
+      return { pendingBefore: before, pendingAfter: after, ran: true };
+    } catch (e) {
+      console.error('SMSQueue tick error:', e);
+      return { pendingBefore: this.queue.length, pendingAfter: this.queue.length, ran: false };
+    }
   }
 
   public static getInstance(): SMSQueueService {
@@ -191,8 +213,8 @@ export class SMSQueueService {
     console.log('SMS Queue processing started');
   }
 
-  // Load pending messages from database
-  private async loadPendingMessages(): Promise<void> {
+  // Load pending messages from database (exposed for cron tick)
+  public async loadPendingMessages(): Promise<void> {
     try {
       await connectDB();
       
@@ -511,5 +533,16 @@ export class SMSQueueService {
   }
 }
 
-// Export singleton instance
+function isBuildTime(): boolean {
+  try {
+    // NEXT_PHASE is set during build, but also detect by argv
+    if (process.env.NEXT_PHASE === 'phase-production-build') return true;
+    const argv = (process.argv || []).join(' ');
+    return argv.includes('next build') || argv.includes('next/dist/build');
+  } catch {
+    return false;
+  }
+}
+
+// Export singleton instance (always defined; constructor itself is guarded)
 export const smsQueue = SMSQueueService.getInstance();

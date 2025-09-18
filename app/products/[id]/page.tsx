@@ -6,19 +6,11 @@ import { formatCurrency } from '@/lib/utils/currency';
 export const revalidate = 900; // 15 minutes for better performance
 export const dynamic = 'force-dynamic'; // Enable server-side rendering for dynamic product data
 
-type PageParams = { id: string } | Promise<{ id: string }>;
-type PageProps = { params: PageParams };
+type PageProps = { params: Promise<{ id: string }> };
 
 // Generate dynamic metadata for product pages
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  let id: string;
-  const maybe: any = params as any;
-  if (maybe && typeof maybe.then === 'function') {
-    const resolved = await (params as Promise<{ id: string }>);
-    id = resolved.id;
-  } else {
-    id = (params as { id: string }).id;
-  }
+  const { id } = await params;
 
   const baseUrl = getBaseUrl();
   
@@ -178,15 +170,7 @@ function normalizeItems(list: any[]): UIItem[] {
 }
 
 export default async function ProductPage({ params }: PageProps) {
-  // Support both synchronous and Promise-based params (Next.js dynamic APIs)
-  let id: string;
-  const maybe: any = params as any;
-  if (maybe && typeof maybe.then === 'function') {
-    const resolved = await (params as Promise<{ id: string }>);
-    id = resolved.id;
-  } else {
-    id = (params as { id: string }).id;
-  }
+  const { id } = await params;
   const baseUrl = getBaseUrl();
 
   // Fetch product with enhanced error handling

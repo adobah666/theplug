@@ -3,6 +3,7 @@ import { Metadata } from 'next'
 
 // Enable caching with 15-minute revalidation for optimal performance
 export const revalidate = 900 // 15 minutes
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'ThePlugOnline - Ghana’s Premium Fashion & Style Store',

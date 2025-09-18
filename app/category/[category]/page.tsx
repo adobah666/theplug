@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation'
 
-export default function CategorySingularPage({ params }: { params: { category: string } }) {
+interface PageProps { params: Promise<{ category: string }> }
+
+export default async function CategorySingularPage({ params }: PageProps) {
   // Redirect singular /category/:category to existing /categories/:category route
-  redirect(`/categories/${params.category}`)
+  const { category } = await params
+  redirect(`/categories/${category}`)
 }

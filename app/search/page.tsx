@@ -45,15 +45,16 @@ export const metadata: Metadata = {
 }
 
 interface SearchPageProps {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export default function SearchPage({ searchParams }: SearchPageProps) {
+export default async function SearchPage({ searchParams }: SearchPageProps) {
+  const sp = searchParams ? await searchParams : {};
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <Suspense fallback={<SearchPageSkeleton />}>
-          <SearchResults searchParams={searchParams} />
+          <SearchResults searchParams={sp} />
         </Suspense>
       </div>
     </div>

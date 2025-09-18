@@ -11,14 +11,12 @@ import { ApiResponse } from '@/types'
 // Body: { event: 'view' | 'add_to_cart' | 'purchase' }
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> | { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB()
 
-    const { id } = 'then' in (context.params as any)
-      ? await (context.params as Promise<{ id: string }>)
-      : (context.params as { id: string })
+    const { id } = await context.params
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json<ApiResponse>({ success: false, error: 'Invalid product ID format' }, { status: 400 })

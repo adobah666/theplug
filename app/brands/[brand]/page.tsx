@@ -76,18 +76,22 @@ async function fetchProductsAndFacets(params: { baseUrl: string; brandName: stri
   return { products, total, sections };
 }
 
-interface PageProps { params: { brand: string }; searchParams: Record<string, string | string[] | undefined> }
+interface PageProps { params: Promise<{ brand: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> }
 
 export default async function BrandPage({ params, searchParams }: PageProps) {
-  const slug = params.brand;
+  const { brand: slug } = await params;
+  let spAll: Record<string, string | string[] | undefined> = {};
+  if (searchParams && typeof (searchParams as any).then === 'function') {
+    spAll = await searchParams as Record<string, string | string[] | undefined>;
+  }
   const brandName = decodeURIComponent(slug).replace(/-/g, ' ');
 
-  const sortBy = String(searchParams.sort ?? 'newest');
-  const priceRange = String(searchParams.price ?? '');
-  const category = String(searchParams.category ?? '');
-  const size = String(searchParams.size ?? '');
-  const color = String(searchParams.color ?? '');
-  const page = Number(searchParams.page ?? '1');
+  const sortBy = String(spAll.sort ?? 'newest');
+  const priceRange = String(spAll.price ?? '');
+  const category = String(spAll.category ?? '');
+  const size = String(spAll.size ?? '');
+  const color = String(spAll.color ?? '');
+  const page = Number(spAll.page ?? '1');
 
   const hdrs = await headers();
   const host = hdrs.get('host') || 'localhost:3000';
@@ -144,7 +148,7 @@ export default async function BrandPage({ params, searchParams }: PageProps) {
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
             <div className="flex items-center space-x-4">
               <Link
-                href={{ pathname: `/brands/${slug}`, query: { ...searchParams, filters: 'open' } }}
+                href={{ pathname: `/brands/${slug}`, query: { ...spAll, filters: 'open' } }}
                 className="lg:hidden inline-flex items-center space-x-2 border border-gray-300 rounded-md px-3 py-2 text-sm hover:bg-gray-50"
               >
                 <Filter className="w-4 h-4" />
@@ -179,7 +183,7 @@ export default async function BrandPage({ params, searchParams }: PageProps) {
                 <div className="flex justify-center mt-12">
                   <div className="flex items-center space-x-2">
                     <Link
-                      href={{ pathname: `/brands/${slug}`, query: { ...searchParams, page: String(Math.max(1, page - 1)) } }}
+                      href={{ pathname: `/brands/${slug}`, query: { ...spAll, page: String(Math.max(1, page - 1)) } }}
                       className={`px-3 py-1.5 text-sm border rounded ${page <= 1 ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Previous
@@ -190,7 +194,7 @@ export default async function BrandPage({ params, searchParams }: PageProps) {
                       return (
                         <Link
                           key={p}
-                          href={{ pathname: `/brands/${slug}`, query: { ...searchParams, page: String(p) } }}
+                          href={{ pathname: `/brands/${slug}`, query: { ...spAll, page: String(p) } }}
                           className={`px-3 py-1.5 text-sm border rounded ${active ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}
                         >
                           {p}
@@ -198,7 +202,7 @@ export default async function BrandPage({ params, searchParams }: PageProps) {
                       );
                     })}
                     <Link
-                      href={{ pathname: `/brands/${slug}`, query: { ...searchParams, page: String(Math.min(totalPages, page + 1)) } }}
+                      href={{ pathname: `/brands/${slug}`, query: { ...spAll, page: String(Math.min(totalPages, page + 1)) } }}
                       className={`px-3 py-1.5 text-sm border rounded ${page >= totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Next
