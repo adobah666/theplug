@@ -94,6 +94,16 @@ export async function PATCH(
         const today = new Date()
         const etaDays = etaDate ? Math.max(0, Math.ceil((etaDate.getTime() - today.getTime()) / (1000*60*60*24))) : undefined
 
+        // Build concise item summary: "Item A (x2)" or "Item A + 2 more"
+        const items: any[] = Array.isArray(o?.items) ? o.items : []
+        const firstItem = items[0]
+        const firstName = (firstItem?.productName || firstItem?.name || 'item') as string
+        const firstQty = Number(firstItem?.quantity || 1)
+        const moreCount = Math.max(0, items.length - 1)
+        const itemSummary = moreCount > 0
+          ? `${firstName} (x${firstQty}) + ${moreCount} more`
+          : `${firstName} (x${firstQty})`
+
         let smsContent: string | null = null
         let emailSubject = ''
         let emailBodyText = ''
@@ -101,22 +111,22 @@ export async function PATCH(
 
         if (statusLc === 'processing') {
           const etaText = etaDate ? `${etaDays} day${(etaDays||0)===1?'':'s'} (by ${etaDate.toLocaleDateString()})` : 'soon'
-          smsContent = `Hi ${customerName}! Your order ${orderNumber} is now processing. Estimated delivery: ${etaText}. We'll notify you when it ships. - ThePlug`
-          emailSubject = `Your order ${orderNumber} is now processing`
-          emailBodyText = `Hi ${customerName},\n\nYour order ${orderNumber} is now processing. Estimated delivery: ${etaText}. We'll notify you when it ships.\n\nThank you for shopping at ThePlug!`
-          emailBodyHtml = `<p>Hi ${customerName},</p><p>Your order <strong>${orderNumber}</strong> is now <strong>processing</strong>.</p><p>Estimated delivery: <strong>${etaText}</strong>.</p><p>We'll notify you when it ships.</p><p>Thank you for shopping at <strong>ThePlug</strong>!</p>`
+          smsContent = `Hi ${customerName}! Your order ${orderNumber} (${itemSummary}) is now processing. ETA: ${etaText}. - ThePlug`
+          emailSubject = `Order ${orderNumber} is processing`
+          emailBodyText = `Hi ${customerName},\n\nYour order ${orderNumber} (${itemSummary}) is now processing. Estimated delivery: ${etaText}. We'll notify you when it ships.\n\nThank you for shopping at ThePlug!`
+          emailBodyHtml = `<p>Hi ${customerName},</p><p>Your order <strong>${orderNumber}</strong> (<em>${itemSummary}</em>) is now <strong>processing</strong>.</p><p>Estimated delivery: <strong>${etaText}</strong>.</p><p>We'll notify you when it ships.</p><p>Thank you for shopping at <strong>ThePlug</strong>!</p>`
         } else if (statusLc === 'shipped') {
           const etaText = etaDate ? `Estimated delivery by ${etaDate.toLocaleDateString()}.` : ''
           const trackText = trackingNumber ? ` Tracking: ${trackingNumber}.` : ''
-          smsContent = `Hi ${customerName}! Your order ${orderNumber} has shipped.${trackText} ${etaText} - ThePlug`
-          emailSubject = `Your order ${orderNumber} has shipped`
-          emailBodyText = `Hi ${customerName},\n\nYour order ${orderNumber} has shipped.${trackText ? ` ${trackText}` : ''} ${etaText}\n\nThank you for shopping at ThePlug!`
-          emailBodyHtml = `<p>Hi ${customerName},</p><p>Your order <strong>${orderNumber}</strong> has <strong>shipped</strong>.</p><p>${trackText || ''} ${etaText}</p><p>Thank you for shopping at <strong>ThePlug</strong>!</p>`
+          smsContent = `Hi ${customerName}! Your order ${orderNumber} (${itemSummary}) has shipped.${trackText} ${etaText} - ThePlug`
+          emailSubject = `Order ${orderNumber} has shipped`
+          emailBodyText = `Hi ${customerName},\n\nYour order ${orderNumber} (${itemSummary}) has shipped.${trackText ? ` ${trackText}` : ''} ${etaText}\n\nThank you for shopping at ThePlug!`
+          emailBodyHtml = `<p>Hi ${customerName},</p><p>Your order <strong>${orderNumber}</strong> (<em>${itemSummary}</em>) has <strong>shipped</strong>.</p><p>${trackText || ''} ${etaText}</p><p>Thank you for shopping at <strong>ThePlug</strong>!</p>`
         } else if (statusLc === 'delivered') {
-          smsContent = `Hi ${customerName}! Your order ${orderNumber} has been delivered. We hope you love it! - ThePlug`
-          emailSubject = `Your order ${orderNumber} was delivered`
-          emailBodyText = `Hi ${customerName},\n\nYour order ${orderNumber} has been delivered. We hope you love your purchase!\n\n- ThePlug`
-          emailBodyHtml = `<p>Hi ${customerName},</p><p>Your order <strong>${orderNumber}</strong> has been <strong>delivered</strong>. We hope you love your purchase!</p><p>- ThePlug</p>`
+          smsContent = `Hi ${customerName}! Your order ${orderNumber} (${itemSummary}) has been delivered. We hope you love it! - ThePlug`
+          emailSubject = `Order ${orderNumber} delivered`
+          emailBodyText = `Hi ${customerName},\n\nYour order ${orderNumber} (${itemSummary}) has been delivered. We hope you love your purchase!\n\n- ThePlug`
+          emailBodyHtml = `<p>Hi ${customerName},</p><p>Your order <strong>${orderNumber}</strong> (<em>${itemSummary}</em>) has been <strong>delivered</strong>. We hope you love your purchase!</p><p>- ThePlug</p>`
         }
 
         // Queue SMS if we have content and a valid phone
