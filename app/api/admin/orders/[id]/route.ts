@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/config'
 import connectDB from '@/lib/db/connection'
 import Order from '@/lib/db/models/Order'
+import { smsQueue } from '@/lib/sms/queue'
+import { emailService } from '@/lib/email/service'
 
 // PATCH /api/admin/orders/[id] - Update order status
 export async function PATCH(
@@ -69,7 +71,7 @@ export async function PATCH(
       id,
       updateData,
       { new: true }
-    ).populate('userId', 'email name')
+    ).populate('userId', 'email name phone')
 
     if (!order) {
       return NextResponse.json({
@@ -77,6 +79,78 @@ export async function PATCH(
         error: 'Order not found'
       }, { status: 404 })
     }
+
+    // Fire-and-forget notifications (best-effort; do not block response)
+    ;(async () => {
+      try {
+        const o: any = order
+        const statusLc = String(o.status || '').toLowerCase()
+        const orderNumber = o.orderNumber || String(o._id).slice(-8)
+        const email = o?.userId?.email
+        const phone: string | undefined = o?.userId?.phone || o?.shippingAddress?.recipientPhone || o?.shippingAddress?.phone
+        const customerName = (o?.userId?.name) || `${o?.shippingAddress?.firstName || ''} ${o?.shippingAddress?.lastName || ''}`.trim() || 'Customer'
+        const trackingNumber: string | undefined = o?.trackingNumber
+        const etaDate: Date | undefined = o?.estimatedDelivery ? new Date(o.estimatedDelivery) : undefined
+        const today = new Date()
+        const etaDays = etaDate ? Math.max(0, Math.ceil((etaDate.getTime() - today.getTime()) / (1000*60*60*24))) : undefined
+
+        let smsContent: string | null = null
+        let emailSubject = ''
+        let emailBodyText = ''
+        let emailBodyHtml = ''
+
+        if (statusLc === 'processing') {
+          const etaText = etaDate ? `${etaDays} day${(etaDays||0)===1?'':'s'} (by ${etaDate.toLocaleDateString()})` : 'soon'
+          smsContent = `Hi ${customerName}! Your order ${orderNumber} is now processing. Estimated delivery: ${etaText}. We'll notify you when it ships. - ThePlug`
+          emailSubject = `Your order ${orderNumber} is now processing`
+          emailBodyText = `Hi ${customerName},\n\nYour order ${orderNumber} is now processing. Estimated delivery: ${etaText}. We'll notify you when it ships.\n\nThank you for shopping at ThePlug!`
+          emailBodyHtml = `<p>Hi ${customerName},</p><p>Your order <strong>${orderNumber}</strong> is now <strong>processing</strong>.</p><p>Estimated delivery: <strong>${etaText}</strong>.</p><p>We'll notify you when it ships.</p><p>Thank you for shopping at <strong>ThePlug</strong>!</p>`
+        } else if (statusLc === 'shipped') {
+          const etaText = etaDate ? `Estimated delivery by ${etaDate.toLocaleDateString()}.` : ''
+          const trackText = trackingNumber ? ` Tracking: ${trackingNumber}.` : ''
+          smsContent = `Hi ${customerName}! Your order ${orderNumber} has shipped.${trackText} ${etaText} - ThePlug`
+          emailSubject = `Your order ${orderNumber} has shipped`
+          emailBodyText = `Hi ${customerName},\n\nYour order ${orderNumber} has shipped.${trackText ? ` ${trackText}` : ''} ${etaText}\n\nThank you for shopping at ThePlug!`
+          emailBodyHtml = `<p>Hi ${customerName},</p><p>Your order <strong>${orderNumber}</strong> has <strong>shipped</strong>.</p><p>${trackText || ''} ${etaText}</p><p>Thank you for shopping at <strong>ThePlug</strong>!</p>`
+        } else if (statusLc === 'delivered') {
+          smsContent = `Hi ${customerName}! Your order ${orderNumber} has been delivered. We hope you love it! - ThePlug`
+          emailSubject = `Your order ${orderNumber} was delivered`
+          emailBodyText = `Hi ${customerName},\n\nYour order ${orderNumber} has been delivered. We hope you love your purchase!\n\n- ThePlug`
+          emailBodyHtml = `<p>Hi ${customerName},</p><p>Your order <strong>${orderNumber}</strong> has been <strong>delivered</strong>. We hope you love your purchase!</p><p>- ThePlug</p>`
+        }
+
+        // Queue SMS if we have content and a valid phone
+        if (smsContent && phone) {
+          try {
+            await smsQueue.addToQueue({
+              to: phone,
+              content: smsContent,
+              type: statusLc === 'delivered' ? 'ORDER_DELIVERED' : statusLc === 'shipped' ? 'ORDER_SHIPPED' : 'MANUAL',
+              recipientId: String(o?.userId?._id || ''),
+              orderId: String(o?._id || ''),
+            })
+          } catch (e) {
+            console.warn('Order status SMS queue failed:', e)
+          }
+        }
+
+        // Send email if available
+        if (email && emailSubject) {
+          try {
+            await emailService.sendEmail({
+              to: email,
+              subject: emailSubject,
+              text: emailBodyText,
+              html: emailBodyHtml,
+            })
+          } catch (e) {
+            console.warn('Order status email send failed:', e)
+          }
+        }
+      } catch (notifyErr) {
+        console.warn('Order status notifications error:', notifyErr)
+      }
+    })()
 
     return NextResponse.json({
       success: true,
