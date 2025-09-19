@@ -1,10 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/auth/middleware'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth/config'
 import { ApiResponse } from '@/types'
+import connectDB from '@/lib/db/connection'
+import User from '@/lib/db/models/User'
 
 // Protected route that requires authentication
-export const GET = withAuth(async (request: NextRequest, { user, userId }) => {
+export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'Unauthorized'
+      }, { status: 401 })
+    }
+
+    await connectDB()
+    const user = await User.findById(session.user.id)
+    
+    if (!user) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'User not found'
+      }, { status: 404 })
+    }
+
     // Return user profile data
     const userProfile = {
       id: user._id,
@@ -32,25 +54,62 @@ export const GET = withAuth(async (request: NextRequest, { user, userId }) => {
       error: 'Failed to retrieve profile'
     }, { status: 500 })
   }
-})
+}
 
 // Update user profile (also protected)
-export const PUT = withAuth(async (request: NextRequest, { user, userId }) => {
+export async function PUT(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'Unauthorized'
+      }, { status: 401 })
+    }
+
+    await connectDB()
+    const user = await User.findById(session.user.id)
+    
+    if (!user) {
+      return NextResponse.json<ApiResponse>({
+        success: false,
+        error: 'User not found'
+      }, { status: 404 })
+    }
+
     const body = await request.json()
-    const { name, phone } = body
+    const { firstName, lastName, email, phone } = body
 
     // Validate input
-    if (name !== undefined) {
-      if (typeof name !== 'string' || name.trim().length < 2) {
+    if (firstName !== undefined) {
+      if (typeof firstName !== 'string' || firstName.trim().length < 1) {
         return NextResponse.json<ApiResponse>({
           success: false,
-          error: 'Name must be at least 2 characters long'
+          error: 'First name is required'
         }, { status: 400 })
       }
     }
 
-    if (phone !== undefined) {
+    if (lastName !== undefined) {
+      if (typeof lastName !== 'string' || lastName.trim().length < 1) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Last name is required'
+        }, { status: 400 })
+      }
+    }
+
+    if (email !== undefined) {
+      if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return NextResponse.json<ApiResponse>({
+          success: false,
+          error: 'Please enter a valid email address'
+        }, { status: 400 })
+      }
+    }
+
+    if (phone !== undefined && phone !== '') {
       if (typeof phone !== 'string' || !/^\+?[\d\s\-\(\)]{10,}$/.test(phone.trim())) {
         return NextResponse.json<ApiResponse>({
           success: false,
@@ -60,18 +119,10 @@ export const PUT = withAuth(async (request: NextRequest, { user, userId }) => {
     }
 
     // Update user fields
-    if (name) {
-      const full = name.trim()
-      const firstSpace = full.indexOf(' ')
-      if (firstSpace === -1) {
-        user.firstName = full
-        user.lastName = user.lastName || ''
-      } else {
-        user.firstName = full.slice(0, firstSpace)
-        user.lastName = full.slice(firstSpace + 1).trim()
-      }
-    }
-    if (phone) user.phone = phone.trim()
+    if (firstName !== undefined) user.firstName = firstName.trim()
+    if (lastName !== undefined) user.lastName = lastName.trim()
+    if (email !== undefined) user.email = email.trim()
+    if (phone !== undefined) user.phone = phone.trim()
 
     await user.save()
 
@@ -102,4 +153,4 @@ export const PUT = withAuth(async (request: NextRequest, { user, userId }) => {
       error: 'Failed to update profile'
     }, { status: 500 })
   }
-})
+}

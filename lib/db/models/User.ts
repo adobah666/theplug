@@ -246,8 +246,16 @@ UserSchema.pre('save', async function(next) {
 // Instance method to compare password
 UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   try {
+    if (!candidatePassword || !this.password) {
+      return false
+    }
     return await bcrypt.compare(candidatePassword, this.password)
   } catch (error) {
+    console.error('Password comparison error:', {
+      userId: this._id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    })
     throw new Error('Password comparison failed')
   }
 }

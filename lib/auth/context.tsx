@@ -153,6 +153,7 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(data),
     })
 
@@ -162,7 +163,7 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
     }
 
     // Refresh session to get updated user data
-    await fetch('/api/auth/session?update')
+    await fetch('/api/auth/session?update', { credentials: 'include' })
   }
 
   const value: AuthContextType = {
