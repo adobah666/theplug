@@ -141,16 +141,49 @@ export const authOptions: NextAuthOptions = {
     }
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
+    async jwt({ token, user, account }) {
+      // Initial sign in
+      if (account && user) {
         const t = token as any
         t.id = (user as any).id
         t.phone = (user as any).phone
         t.firstName = (user as any).firstName
         t.lastName = (user as any).lastName
         t.role = (user as any).role
+        t.iat = Math.floor(Date.now() / 1000)
+        t.exp = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60) // 30 days
       }
-      return token
+      
+      // Return previous token if the access token has not expired yet
+      if (Date.now() < (token.exp as number) * 1000) {
+        return token
+      }
+      
+      // Access token has expired, try to update it
+      try {
+        await connectDB()
+        const user = await User.findById((token as any).id)
+        
+        if (!user) {
+          // User no longer exists, invalidate token
+          throw new Error('User not found')
+        }
+        
+        // Update token with fresh user data
+        const t = token as any
+        t.phone = user.phone
+        t.firstName = user.firstName
+        t.lastName = user.lastName
+        t.role = user.role
+        t.iat = Math.floor(Date.now() / 1000)
+        t.exp = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60)
+        
+        return token
+      } catch (error) {
+        console.error('JWT refresh error:', error)
+        // Return null to force sign out
+        return null
+      }
     },
     async session({ session, token }) {
       if (token) {

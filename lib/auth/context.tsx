@@ -83,22 +83,55 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
   }
 
   const login = async (data: LoginFormData) => {
-    const result = await signIn('credentials', {
-      email: data.email,
-      password: data.password,
-      redirect: false,
-    })
+    try {
+      const result = await signIn('credentials', {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      })
 
-    if (result?.error) {
-      throw new Error(result.error)
+      if (result?.error) {
+        // If we get a 401 error, try cleaning up auth data first
+        if (result.error.includes('401') || result.error.includes('Authentication failed')) {
+          try {
+            await fetch('/api/auth/cleanup', { 
+              method: 'POST',
+              credentials: 'include'
+            })
+            
+            // Try login again after cleanup
+            const retryResult = await signIn('credentials', {
+              email: data.email,
+              password: data.password,
+              redirect: false,
+            })
+            
+            if (retryResult?.error) {
+              throw new Error(retryResult.error)
+            }
+            
+            if (!retryResult?.ok) {
+              throw new Error('Login failed after cleanup')
+            }
+          } catch (cleanupError) {
+            // If cleanup fails, throw original error
+            throw new Error(result.error)
+          }
+        } else {
+          throw new Error(result.error)
+        }
+      }
+
+      if (!result?.ok) {
+        throw new Error('Login failed')
+      }
+
+      // On successful login, merge any guest cart into the authenticated cart
+      await mergeGuestCart()
+    } catch (error) {
+      console.error('Login error:', error)
+      throw error
     }
-
-    if (!result?.ok) {
-      throw new Error('Login failed')
-    }
-
-    // On successful login, merge any guest cart into the authenticated cart
-    await mergeGuestCart()
   }
 
   const register = async (data: RegisterFormData) => {
@@ -123,13 +156,39 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    // Clear cart client-side to avoid persisting previous user's items
     try {
+      // Clear cart client-side to avoid persisting previous user's items
       if (typeof window !== 'undefined') {
         localStorage.removeItem('cart')
+        // Clear any other auth-related localStorage items
+        localStorage.removeItem('next-auth.session-token')
+        localStorage.removeItem('next-auth.callback-url')
+        localStorage.removeItem('next-auth.csrf-token')
       }
-    } catch {}
-    await signOut({ redirect: false })
+      
+      // Sign out with NextAuth
+      await signOut({ 
+        redirect: false,
+        callbackUrl: '/' 
+      })
+      
+      // Force clear any remaining session cookies
+      if (typeof window !== 'undefined') {
+        // Clear cookies by setting them to expire
+        document.cookie = 'next-auth.session-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+        document.cookie = 'next-auth.callback-url=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+        document.cookie = 'next-auth.csrf-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+        document.cookie = '__Secure-next-auth.session-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Even if logout fails, try to clear local data
+      if (typeof window !== 'undefined') {
+        localStorage.clear()
+        // Force reload to clear any cached state
+        window.location.reload()
+      }
+    }
   }
 
   const requestPasswordReset = async (data: PasswordResetFormData) => {
@@ -164,6 +223,39 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
 
     // Refresh session to get updated user data
     await fetch('/api/auth/session?update', { credentials: 'include' })
+  }
+
+  // Force clear all authentication state (for debugging)
+  const clearAuthState = async () => {
+    try {
+      // Call cleanup endpoint
+      await fetch('/api/auth/cleanup', { 
+        method: 'POST',
+        credentials: 'include'
+      })
+      
+      // Clear localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.clear()
+        
+        // Clear all cookies
+        document.cookie.split(";").forEach(cookie => {
+          const eqPos = cookie.indexOf("=")
+          const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
+        })
+        
+        // Reload page to reset all state
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('Clear auth state error:', error)
+    }
+  }
+
+  // Expose clearAuthState in development
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    (window as any).clearAuthState = clearAuthState
   }
 
   const value: AuthContextType = {
