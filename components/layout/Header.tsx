@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
 import { SearchBar } from '@/components/product/SearchBar'
 import { CartIcon } from '@/components/cart/CartIcon'
@@ -80,9 +81,16 @@ const Header: React.FC = () => {
       <div className="px-4 py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-full bg-blue-600"></div>
-            <span className="text-xl font-bold text-gray-900">ThePlug</span>
+          <Link href="/" className="flex items-center">
+            <Image 
+              src="/logo2.jpg" 
+              alt="ThePlug Logo" 
+              width={100} 
+              height={32}
+              className="h-7 w-auto object-cover"
+              style={{ objectPosition: 'center' }}
+              priority
+            />
           </Link>
 
           {/* Search bar - Desktop (lg and up) */}

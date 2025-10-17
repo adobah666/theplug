@@ -78,11 +78,12 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({ isOpen, onClose }) =>
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             <Link href="/" className="flex items-center" onClick={onClose}>
               <Image 
-                src="/logo1.jpg" 
+                src="/logo2.jpg" 
                 alt="ThePlug Logo" 
-                width={120} 
-                height={40}
-                className="h-10 w-auto object-contain"
+                width={100} 
+                height={32}
+                className="h-7 w-auto object-cover"
+                style={{ objectPosition: 'center' }}
                 priority
               />
             </Link>

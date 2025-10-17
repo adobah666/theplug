@@ -1,5 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { getBaseUrl } from '@/lib/utils/server'
 import { Button } from '@/components/ui/Button'
 import { SearchBar } from '@/components/product/SearchBar'
@@ -58,13 +59,16 @@ const HeaderServer: React.FC = async () => {
       <div className="px-3 py-3 sm:px-4 sm:py-4">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className={`leading-tight ${brandFont.className}`}>
-              <div className="text-xl font-extrabold text-gray-900">ThePlug</div>
-              <div className="mt-0.5 w-fit rounded px-1 py-0.5 text-[10px] uppercase tracking-[0.2em] text-blue-600 bg-blue-50">
-                online
-              </div>
-            </div>
+          <Link href="/" className="flex items-center">
+            <Image 
+              src="/logo2.jpg" 
+              alt="ThePlug Logo" 
+              width={100} 
+              height={32}
+              className="h-7 w-auto object-cover"
+              style={{ objectPosition: 'center' }}
+              priority
+            />
           </Link>
 
           {/* Search bar - Desktop (lg and up) */}

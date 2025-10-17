@@ -8,7 +8,7 @@ export const metadata = {
   description: 'Get in touch with ThePlug via WhatsApp or email.',
 }
 
-const WHATSAPP_NUMBER = '233501597756' // E.164 without plus
+const WHATSAPP_NUMBER = '233530493698' // E.164 without plus
 const EMAIL = 'calebadobah1234@gmail.com'
 
 export default function ContactPage() {
@@ -23,13 +23,13 @@ export default function ContactPage() {
       <div className="space-y-6">
         <Card className="p-6">
           <div className="flex items-start gap-4">
-            <div className="p-3 rounded-full bg-green-50 text-green-700">
+            <div className="p-3 rounded-full bg-green-50 text-green-700 flex-shrink-0">
               <MessageCircle className="w-6 h-6" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h2 className="text-xl font-semibold">WhatsApp</h2>
               <p className="text-gray-600 mt-1">Chat with us on WhatsApp for a faster response.</p>
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
                 <a
                   href={whatsappHref}
                   target="_blank"
@@ -40,7 +40,7 @@ export default function ContactPage() {
                     Message on WhatsApp
                   </Button>
                 </a>
-                <span className="text-sm text-gray-500">+{WHATSAPP_NUMBER}</span>
+                <span className="text-sm text-gray-500 break-all">+{WHATSAPP_NUMBER}</span>
               </div>
             </div>
           </div>
@@ -48,20 +48,20 @@ export default function ContactPage() {
 
         <Card className="p-6">
           <div className="flex items-start gap-4">
-            <div className="p-3 rounded-full bg-blue-50 text-blue-700">
+            <div className="p-3 rounded-full bg-blue-50 text-blue-700 flex-shrink-0">
               <Mail className="w-6 h-6" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h2 className="text-xl font-semibold">Email</h2>
               <p className="text-gray-600 mt-1">Prefer email? Send us a message and we will reply shortly.</p>
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
                 <a href={mailHref}>
                   <Button variant="secondary" className="inline-flex items-center gap-2">
                     <Mail className="w-4 h-4" />
                     Email Us
                   </Button>
                 </a>
-                <span className="text-sm text-gray-500">{EMAIL}</span>
+                <span className="text-sm text-gray-500 break-all">{EMAIL}</span>
               </div>
             </div>
           </div>

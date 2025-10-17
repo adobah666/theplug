@@ -8,6 +8,7 @@ import { HeaderServer as Header } from "@/components/layout/HeaderServer";
 import { FooterServer as Footer } from "@/components/layout/FooterServer";
 import { PWAInstallPrompt } from "@/components/layout/PWAInstallPrompt";
 import { OfflineIndicator } from "@/components/layout/OfflineIndicator";
+import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ImagePerformanceProvider } from "@/components/layout/ImagePerformanceProvider";
@@ -132,6 +133,7 @@ export default function RootLayout({
                   <Footer />
                 </div>
                   <PWAInstallPrompt />
+                  <WhatsAppButton />
                 </CartProvider>
               </AuthProvider>
             </PWAProvider>
