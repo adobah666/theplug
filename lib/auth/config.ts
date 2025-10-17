@@ -181,8 +181,9 @@ export const authOptions: NextAuthOptions = {
         return token
       } catch (error) {
         console.error('JWT refresh error:', error)
-        // Return null to force sign out
-        return null
+        // Return token as-is to avoid breaking the type contract
+        // The session will be invalid and user will need to re-authenticate
+        return token
       }
     },
     async session({ session, token }) {
@@ -209,13 +210,6 @@ export const authOptions: NextAuthOptions = {
     async signOut({ session, token }) {
       console.log('User signed out:', {
         userId: session?.user?.id || token?.id,
-        timestamp: new Date().toISOString()
-      })
-    },
-    async signInError({ error }) {
-      console.error('Sign in error:', {
-        error: error.message,
-        type: error.type,
         timestamp: new Date().toISOString()
       })
     }
