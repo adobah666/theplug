@@ -1,0 +1,19 @@
+{
+  "backupDate": "2025-10-21T18:14:23.851Z",
+  "databaseName": "fashion-ecommerce-prod",
+  "collections": [
+    "productevents",
+    "refundrequests",
+    "smslogs",
+    "carts",
+    "orders",
+    "products",
+    "smsqueues",
+    "settings",
+    "reviews",
+    "categories",
+    "users"
+  ],
+  "totalDocuments": 134,
+  "mongoUri": "mongodb+srv://***:***@usersdata.y1qiekt.mongodb.net/fashion-ecommerce-prod"
+}

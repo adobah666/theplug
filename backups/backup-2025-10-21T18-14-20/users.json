@@ -1,0 +1,81 @@
+[
+  {
+    "_id": "68cd6a47493246631b2e5866",
+    "email": "gilbertadobah1234@gmail.com",
+    "firstName": "Gilbert",
+    "lastName": "Adobah",
+    "phone": "+2331597756",
+    "gender": "male",
+    "password": "$2b$12$ZEx.LJLaZ6g3uDev7SefZOqfxJOuGhY8Y./26YVZh.AYtNIBblTpG",
+    "role": "admin",
+    "emailVerified": false,
+    "addresses": [],
+    "wishlist": [],
+    "cart": [],
+    "createdAt": "2025-09-19T14:35:51.140Z",
+    "updatedAt": "2025-09-19T14:42:04.916Z",
+    "__v": 0
+  },
+  {
+    "_id": "68cd6cbc686813bd6a1b901f",
+    "email": "gilbertadobah12345@gmail.com",
+    "firstName": "Gilbert",
+    "lastName": "Adobah",
+    "phone": "053530493698",
+    "gender": "male",
+    "password": "$2b$12$7uSFGw487nScMyMnE/BJMeMfpRlu5LbQdr6.gYWY9HFUN2b0x95KS",
+    "role": "admin",
+    "emailVerified": false,
+    "addresses": [
+      {
+        "id": "1761046744769",
+        "firstName": "Gil",
+        "lastName": "Adobah",
+        "street": "Ayana Street",
+        "city": "New Legon",
+        "state": "Greater Accra",
+        "postalCode": "",
+        "country": "Ghana",
+        "isDefault": true,
+        "_id": "68f770d86af16d7c6c33190b"
+      }
+    ],
+    "wishlist": [],
+    "cart": [],
+    "createdAt": "2025-09-19T14:46:20.015Z",
+    "updatedAt": "2025-10-21T11:39:04.775Z",
+    "__v": 1,
+    "lastLogin": "2025-10-17T20:23:01.573Z"
+  },
+  {
+    "_id": "68f0f683ac2f9d79457dc75f",
+    "email": "gilbby171997@gmail.com",
+    "firstName": "Gilbert",
+    "lastName": "Adobah",
+    "phone": "0501597756",
+    "gender": "male",
+    "password": "$2b$12$NQA9NDWY4cqSX8YfINItvO7Hgz210s0Z5jEvssgySRBvPBiuJD2qi",
+    "role": "user",
+    "emailVerified": false,
+    "addresses": [
+      {
+        "id": "1760622261119",
+        "firstName": "Gilbert",
+        "lastName": "Adobah",
+        "street": "Ayana Street",
+        "city": "New Legon",
+        "state": "Greater Accra",
+        "postalCode": "GA-419-42",
+        "country": "Ghana",
+        "isDefault": true,
+        "_id": "68f0f6b5ac2f9d79457dc76a"
+      }
+    ],
+    "wishlist": [],
+    "cart": [],
+    "createdAt": "2025-10-16T13:43:31.047Z",
+    "updatedAt": "2025-10-21T11:42:51.304Z",
+    "__v": 1,
+    "lastLogin": "2025-10-21T11:42:51.303Z"
+  }
+]

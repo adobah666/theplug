@@ -17,7 +17,8 @@
     "verify:setup": "tsx scripts/verify-setup.ts",
     "init:meilisearch": "tsx scripts/init-meilisearch.ts",
     "test:meilisearch": "tsx scripts/test-meilisearch.ts",
-    "test:email": "tsx scripts/test-email-system.ts"
+    "test:email": "tsx scripts/test-email-system.ts",
+    "backup:db": "tsx scripts/backup-database.ts"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.10.0",

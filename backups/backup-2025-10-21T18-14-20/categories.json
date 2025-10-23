@@ -1,0 +1,62 @@
+[
+  {
+    "_id": "68d50720c5db9031fe9640bf",
+    "name": "Sneakers & Trainers",
+    "parentCategory": null,
+    "isActive": true,
+    "slug": "sneakers-trainers",
+    "createdAt": "2025-09-25T09:10:56.078Z",
+    "updatedAt": "2025-09-25T09:10:56.078Z",
+    "__v": 0
+  },
+  {
+    "_id": "68f0fa8c63fc957ccca67ae1",
+    "name": "Shoes and Boots",
+    "parentCategory": null,
+    "isActive": true,
+    "slug": "shoes-and-boots",
+    "createdAt": "2025-10-16T14:00:44.123Z",
+    "updatedAt": "2025-10-16T14:00:44.123Z",
+    "__v": 0
+  },
+  {
+    "_id": "68f1034697a22c4e3e96a17f",
+    "name": "Slides",
+    "parentCategory": null,
+    "isActive": true,
+    "slug": "slides",
+    "createdAt": "2025-10-16T14:37:58.483Z",
+    "updatedAt": "2025-10-16T14:37:58.483Z",
+    "__v": 0
+  },
+  {
+    "_id": "68f1f914972ae5a55d0116cd",
+    "name": "Fashionova Shirts",
+    "parentCategory": null,
+    "isActive": true,
+    "slug": "fashionova-shirts",
+    "createdAt": "2025-10-17T08:06:44.258Z",
+    "updatedAt": "2025-10-17T08:06:44.258Z",
+    "__v": 0
+  },
+  {
+    "_id": "68f7c096a8752474a6c1d496",
+    "name": "Trousers/ Pants",
+    "parentCategory": null,
+    "isActive": true,
+    "slug": "trousers-pants",
+    "createdAt": "2025-10-21T17:19:18.721Z",
+    "updatedAt": "2025-10-21T17:19:18.721Z",
+    "__v": 0
+  },
+  {
+    "_id": "68f7c0eda8752474a6c1d4a2",
+    "name": "Shirts",
+    "parentCategory": null,
+    "isActive": true,
+    "slug": "shirts",
+    "createdAt": "2025-10-21T17:20:45.445Z",
+    "updatedAt": "2025-10-21T17:20:45.445Z",
+    "__v": 0
+  }
+]

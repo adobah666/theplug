@@ -1,0 +1,81 @@
+[
+  {
+    "_id": "68f0f6cbac2f9d79457dc772",
+    "userId": "68f0f683ac2f9d79457dc75f",
+    "items": [
+      {
+        "productId": "68f0f42c48aa9a4c15ef9e19",
+        "productName": "NIKE SB",
+        "productImage": "https://res.cloudinary.com/djrtta2w7/image/upload/v1760621603/theplug/adwust6oz8zkxqc2nscg.jpg",
+        "quantity": 1,
+        "unitPrice": 580,
+        "totalPrice": 580,
+        "_id": "68f0f6cbac2f9d79457dc773"
+      }
+    ],
+    "subtotal": 580,
+    "tax": 0,
+    "shipping": 0,
+    "discount": 0,
+    "total": 580,
+    "status": "pending",
+    "paymentStatus": "pending",
+    "paymentMethod": "card",
+    "shippingAddress": {
+      "street": "Ayana Street",
+      "city": "New Legon",
+      "state": "Greater Accra",
+      "zipCode": "GA-419-42",
+      "country": "Ghana",
+      "recipientName": "Gilbert Adobah",
+      "recipientPhone": "0501597756"
+    },
+    "createdAt": "2025-10-16T13:44:43.052Z",
+    "updatedAt": "2025-10-16T13:44:43.052Z",
+    "orderNumber": "ORD-20251016-420796",
+    "__v": 0
+  },
+  {
+    "_id": "68f770fd6af16d7c6c331913",
+    "userId": "68cd6cbc686813bd6a1b901f",
+    "items": [
+      {
+        "productId": "68f101ff4023b59ae543c6ab",
+        "productName": "NIKE AIR-MAX MUSE",
+        "productImage": "https://res.cloudinary.com/djrtta2w7/image/upload/v1760624899/theplug/fhokugiqnhruf5zewcct.jpg",
+        "quantity": 2,
+        "unitPrice": 580,
+        "totalPrice": 1160,
+        "_id": "68f770fd6af16d7c6c331914"
+      }
+    ],
+    "subtotal": 1160,
+    "tax": 0,
+    "shipping": 0,
+    "discount": 0,
+    "total": 1160,
+    "status": "delivered",
+    "paymentStatus": "paid",
+    "paymentMethod": "card",
+    "shippingAddress": {
+      "street": "Ayana Street",
+      "city": "New Legon",
+      "state": "Greater Accra",
+      "country": "Ghana",
+      "recipientName": "Gil Adobah",
+      "recipientPhone": "+2330540404342"
+    },
+    "createdAt": "2025-10-21T11:39:41.341Z",
+    "updatedAt": "2025-10-21T16:55:36.553Z",
+    "orderNumber": "ORD-20251021-495207",
+    "__v": 0,
+    "paidAt": "2025-10-21T11:42:07.000Z",
+    "paymentDetails": {
+      "authorizationCode": "AUTH_220xn0bf9z",
+      "gatewayResponse": "Approved",
+      "paidAt": "2025-10-21T11:42:07.000Z"
+    },
+    "paystackReference": "order_68f770fd6af16d7c6c331913_1761046801859_69678",
+    "estimatedDelivery": "2025-10-22T11:44:08.821Z"
+  }
+]

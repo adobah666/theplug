@@ -1,0 +1,62 @@
+[
+  {
+    "_id": "68f0f645ac2f9d79457dc753",
+    "sessionId": "guest_1760622148742_8ir020dcz",
+    "items": [
+      {
+        "productId": "68f0f42c48aa9a4c15ef9e19",
+        "quantity": 1,
+        "price": 580,
+        "name": "NIKE SB",
+        "image": "https://res.cloudinary.com/djrtta2w7/image/upload/v1760621603/theplug/adwust6oz8zkxqc2nscg.jpg",
+        "_id": "68f0f645ac2f9d79457dc754"
+      }
+    ],
+    "subtotal": 580,
+    "itemCount": 1,
+    "expiresAt": "2025-11-15T13:42:29.024Z",
+    "createdAt": "2025-10-16T13:42:29.027Z",
+    "updatedAt": "2025-10-16T13:42:29.027Z",
+    "__v": 0
+  },
+  {
+    "_id": "68f0f686c89365b8810f3e38",
+    "userId": "68f0f683ac2f9d79457dc75f",
+    "items": [
+      {
+        "productId": "68f0f42c48aa9a4c15ef9e19",
+        "quantity": 2,
+        "price": 580,
+        "name": "NIKE SB",
+        "image": "https://res.cloudinary.com/djrtta2w7/image/upload/v1760621603/theplug/adwust6oz8zkxqc2nscg.jpg",
+        "_id": "68f0f686c89365b8810f3e39"
+      }
+    ],
+    "subtotal": 1160,
+    "itemCount": 2,
+    "expiresAt": "2025-11-15T13:43:34.761Z",
+    "createdAt": "2025-10-16T13:43:34.763Z",
+    "updatedAt": "2025-10-21T11:42:53.126Z",
+    "__v": 0
+  },
+  {
+    "_id": "68f176dc957b6d6bd99d7555",
+    "sessionId": "guest_1760655067804_j7c2maruu",
+    "items": [
+      {
+        "productId": "68f1761e4f4059cbcd7a2b16",
+        "quantity": 1,
+        "price": 650,
+        "name": "NEW BALANCE 9060",
+        "image": "https://res.cloudinary.com/djrtta2w7/image/upload/v1760654787/theplug/cgb8umnrdknqh9oinnz5.jpg",
+        "_id": "68f176dc957b6d6bd99d7556"
+      }
+    ],
+    "subtotal": 650,
+    "itemCount": 1,
+    "expiresAt": "2025-11-15T22:51:08.086Z",
+    "createdAt": "2025-10-16T22:51:08.088Z",
+    "updatedAt": "2025-10-16T22:51:08.088Z",
+    "__v": 0
+  }
+]

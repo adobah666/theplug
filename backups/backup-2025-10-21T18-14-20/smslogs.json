@@ -1,0 +1,50 @@
+[
+  {
+    "_id": "68f77404ce255947dd5059f2",
+    "phoneNumber": "053530493698",
+    "content": "Hi Gilbert Adobah! Payment confirmed for order ORD-20251021-495207. Your order is being processed and will be shipped soon. Total: GHS 1160.00. Track: https://theplugonline.com/orders/68f770fd6af16d7c6c331913 - ThePlug",
+    "type": "ORDER_CONFIRMATION",
+    "status": "FAILED",
+    "sentBy": null,
+    "recipientId": "68cd6cbc686813bd6a1b901f",
+    "messageId": null,
+    "errorMessage": "Only Ghana numbers are allowed (start with 0 or +233).",
+    "orderId": "68f770fd6af16d7c6c331913",
+    "userId": "68cd6cbc686813bd6a1b901f",
+    "createdAt": "2025-10-21T11:52:36.207Z",
+    "updatedAt": "2025-10-21T11:52:36.207Z",
+    "__v": 0
+  },
+  {
+    "_id": "68f77535d44a3336a761c4a8",
+    "phoneNumber": "053530493698",
+    "content": "Hi Customer! Your order ORD-20251021-495207 (NIKE AIR-MAX MUSE (x2)) is now processing. ETA: 1 day (by 10/22/2025). - ThePlug",
+    "type": "MANUAL",
+    "status": "FAILED",
+    "sentBy": null,
+    "recipientId": "68cd6cbc686813bd6a1b901f",
+    "messageId": null,
+    "errorMessage": "Only Ghana numbers are allowed (start with 0 or +233).",
+    "orderId": "68f770fd6af16d7c6c331913",
+    "userId": null,
+    "createdAt": "2025-10-21T11:57:41.316Z",
+    "updatedAt": "2025-10-21T11:57:41.316Z",
+    "__v": 0
+  },
+  {
+    "_id": "68f7bdb4d13b17335aa58b0b",
+    "phoneNumber": "053530493698",
+    "content": "Hi Customer! Your order ORD-20251021-495207 (NIKE AIR-MAX MUSE (x2)) has been delivered. We hope you love it! - ThePlug",
+    "type": "ORDER_DELIVERED",
+    "status": "FAILED",
+    "sentBy": null,
+    "recipientId": "68cd6cbc686813bd6a1b901f",
+    "messageId": null,
+    "errorMessage": "Only Ghana numbers are allowed (start with 0 or +233).",
+    "orderId": "68f770fd6af16d7c6c331913",
+    "userId": null,
+    "createdAt": "2025-10-21T17:07:00.923Z",
+    "updatedAt": "2025-10-21T17:07:00.923Z",
+    "__v": 0
+  }
+]

@@ -73,21 +73,9 @@ export default function ProductPageClient({ product: initialProduct, relatedItem
     selectedVariantRef.current = selectedVariant;
   }, [selectedVariant]);
 
-  // Compute client-side reserved quantity and available quantity
-  const reservedQty = (() => {
-    if (!product) return 0;
-    if (selectedVariant) {
-      return state.items
-        .filter((it) => it.productId === product._id && it.variantId === selectedVariant._id)
-        .reduce((sum, it) => sum + (it.quantity || 0), 0);
-    } else {
-      return state.items
-        .filter((it) => it.productId === product._id && !it.variantId)
-        .reduce((sum, it) => sum + (it.quantity || 0), 0);
-    }
-  })();
-  const baseInventory = selectedVariant ? (selectedVariant.inventory || 0) : (product?.inventory || 0);
-  const availableQty = Math.max(0, baseInventory - reservedQty);
+  // Get available quantity from product/variant inventory
+  // Note: Cart quantities are already managed server-side, no need to subtract them here
+  const availableQty = selectedVariant ? (selectedVariant.inventory || 0) : (product?.inventory || 0);
 
   // Record a view event on mount/when product changes
   useEffect(() => {

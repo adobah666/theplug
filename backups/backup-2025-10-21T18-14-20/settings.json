@@ -1,0 +1,16 @@
+[
+  {
+    "_id": "68f7baca8b3d246fbe130fef",
+    "__v": 0,
+    "createdAt": "2025-10-21T16:54:34.831Z",
+    "deliveryFeeByRegion": [
+      {
+        "region": "Greater Accra",
+        "fee": 50
+      }
+    ],
+    "deliveryFeeDefault": 0,
+    "taxRate": 0,
+    "updatedAt": "2025-10-21T16:54:48.690Z"
+  }
+]

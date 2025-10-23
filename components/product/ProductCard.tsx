@@ -82,12 +82,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
     return null
   }
 
-  // Client-side availability (subtract items already in cart for this product)
-  const reservedQty = state.items
-    .filter((it) => it.productId === product._id)
-    .reduce((sum, it) => sum + (it.quantity || 0), 0)
-  const availableQty = Math.max(0, (product.inventory || 0) - reservedQty)
-  const isOutOfStock = availableQty === 0
+  // Check stock availability from product inventory
+  // Note: Cart quantities are already managed server-side, no need to subtract them here
+  const isOutOfStock = (product.inventory || 0) === 0
 
   if (viewMode === 'list') {
     return (
