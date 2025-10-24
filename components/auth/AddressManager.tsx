@@ -45,9 +45,15 @@ export function AddressManager() {
     city: '',
     state: '',
     postalCode: '',
-    country: 'Nigeria',
+    country: 'Ghana',
     isDefault: false,
   });
+
+  const ghanaRegions = [
+    'Ahafo', 'Ashanti', 'Bono', 'Bono East', 'Central', 'Eastern', 'Greater Accra',
+    'North East', 'Northern', 'Oti', 'Savannah', 'Upper East', 'Upper West', 'Volta',
+    'Western', 'Western North'
+  ];
 
   useEffect(() => {
     fetchAddresses();
@@ -69,6 +75,12 @@ export function AddressManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Validate region is Greater Accra
+    if (formData.state !== 'Greater Accra') {
+      setError('We currently only deliver to Greater Accra. Please contact us on WhatsApp for deliveries to other regions.');
+      return;
+    }
 
     try {
       const url = editingAddress 
@@ -143,7 +155,7 @@ export function AddressManager() {
       city: '',
       state: '',
       postalCode: '',
-      country: 'Nigeria',
+      country: 'Ghana',
       isDefault: false,
     });
     setError(null);
@@ -243,6 +255,22 @@ export function AddressManager() {
         title={editingAddress ? 'Edit Address' : 'Add New Address'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Delivery Region Notice */}
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-blue-700">
+                  We currently deliver only to <strong>Greater Accra</strong>. For other regions, contact us on WhatsApp.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="First Name"
@@ -276,39 +304,50 @@ export function AddressManager() {
               onChange={handleChange('city')}
               required
             />
-            <Input
-              label="State"
-              type="text"
-              value={formData.state}
-              onChange={handleChange('state')}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Postal Code"
-              type="text"
-              value={formData.postalCode}
-              onChange={handleChange('postalCode')}
-              required
-            />
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Country
+                Region <span className="text-red-500">*</span>
               </label>
               <select
-                value={formData.country}
-                onChange={handleChange('country')}
+                value={formData.state}
+                onChange={handleChange('state')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
-                <option value="Nigeria">Nigeria</option>
-                <option value="Ghana">Ghana</option>
-                <option value="Kenya">Kenya</option>
-                <option value="South Africa">South Africa</option>
+                <option value="">Select Region</option>
+                {ghanaRegions.map(region => (
+                  <option key={region} value={region}>{region}</option>
+                ))}
               </select>
+              {formData.state && formData.state !== 'Greater Accra' && (
+                <p className="mt-1 text-sm text-amber-600">
+                  ⚠️ We only deliver to Greater Accra. Contact us on WhatsApp for other regions.
+                </p>
+              )}
             </div>
+          </div>
+
+          <Input
+            label="GhanaPost GPS Address (optional)"
+            type="text"
+            value={formData.postalCode}
+            onChange={handleChange('postalCode')}
+            placeholder="GA-123-4567"
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Country
+            </label>
+            <select
+              value={formData.country}
+              onChange={handleChange('country')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              disabled
+            >
+              <option value="Ghana">Ghana</option>
+            </select>
           </div>
 
           <div className="flex items-center">

@@ -61,13 +61,6 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
           })
         }).catch(() => {})
       }
-
-  // Also run merge when status flips to authenticated (covers OAuth and external flows)
-  useEffect(() => {
-    if (status === 'authenticated') {
-      mergeGuestCart()
-    }
-  }, [status])
       // Read server cart and persist it locally so reloads survive
       try {
         const res = await fetch('/api/cart', { credentials: 'include' })
@@ -81,6 +74,13 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
       // localStorage.removeItem('cart')
     } catch {}
   }
+
+  // Also run merge when status flips to authenticated (covers OAuth and external flows)
+  useEffect(() => {
+    if (status === 'authenticated') {
+      mergeGuestCart()
+    }
+  }, [status])
 
   const login = async (data: LoginFormData) => {
     try {

@@ -4,6 +4,8 @@ import { Suspense } from 'react';
 
 import { OrderHistory } from '@/components/auth/OrderHistory';
 
+export const dynamic = 'force-dynamic';
+
 export default function OrdersPage() {
   return (
     <Suspense fallback={<div className="min-h-[200px] flex items-center justify-center">Loading…</div>}>

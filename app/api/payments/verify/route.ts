@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
           const phoneNumber = user.phone || order.shippingAddress.recipientPhone;
           if (phoneNumber) {
             const customerName = `${user.firstName} ${user.lastName}`;
-            const smsContent = `Hi ${customerName}! Payment confirmed for order ${order.orderNumber}. Your order is being processed and will be shipped soon. Total: GHS ${order.total.toFixed(2)}. Track: https://theplugonline.com/orders/${order._id} - ThePlug`;
+            const smsContent = `Hi ${customerName}! Payment confirmed for order ${order.orderNumber}. Your order is being processed and will be shipped soon. Total: GHS ${order.total.toFixed(2)}. Track: https://theplugonline.com/account/orders - ThePlug`;
 
             await smsQueue.addToQueue({
               to: phoneNumber,

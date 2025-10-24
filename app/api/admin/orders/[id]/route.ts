@@ -111,7 +111,7 @@ export async function PATCH(
 
         if (statusLc === 'processing') {
           const etaText = etaDate ? `${etaDays} day${(etaDays||0)===1?'':'s'} (by ${etaDate.toLocaleDateString()})` : 'soon'
-          smsContent = `Hi ${customerName}! Your order ${orderNumber} (${itemSummary}) is now processing. ETA: ${etaText}. - ThePlug`
+          smsContent = `Hi ${customerName}! Your order ${orderNumber} (${itemSummary}) is now processing. You should receive your order within ${etaText}. - ThePlug`
           emailSubject = `Order ${orderNumber} is processing`
           emailBodyText = `Hi ${customerName},\n\nYour order ${orderNumber} (${itemSummary}) is now processing. Estimated delivery: ${etaText}. We'll notify you when it ships.\n\nThank you for shopping at ThePlug!`
           emailBodyHtml = `<p>Hi ${customerName},</p><p>Your order <strong>${orderNumber}</strong> (<em>${itemSummary}</em>) is now <strong>processing</strong>.</p><p>Estimated delivery: <strong>${etaText}</strong>.</p><p>We'll notify you when it ships.</p><p>Thank you for shopping at <strong>ThePlug</strong>!</p>`

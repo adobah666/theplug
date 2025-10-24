@@ -111,15 +111,15 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const approveRefund = async (id: string) => {
+  const markAsRefunded = async (id: string) => {
     try {
       setRefundActionId(id)
-      const res = await fetch(`/api/admin/refunds/${id}/approve`, { method: 'POST' })
+      const res = await fetch(`/api/admin/refunds/${id}/mark-refunded`, { method: 'POST' })
       const json = await res.json().catch(() => ({} as any))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || 'Failed to approve refund')
+      if (!res.ok || json?.success === false) throw new Error(json?.error || 'Failed to mark as refunded')
       await Promise.all([fetchRefunds(), fetchOrders()])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to approve refund')
+      setError(err instanceof Error ? err.message : 'Failed to mark as refunded')
     } finally {
       setRefundActionId(null)
     }
@@ -139,19 +139,7 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const instantRefund = async (orderId: string) => {
-    try {
-      setUpdatingOrder(orderId)
-      const res = await fetch(`/api/admin/orders/${orderId}/instant-refund`, { method: 'POST' })
-      const json = await res.json().catch(() => ({} as any))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || 'Instant refund failed')
-      await Promise.all([fetchOrders(), fetchRefunds()])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Instant refund failed')
-    } finally {
-      setUpdatingOrder(null)
-    }
-  }
+
 
   const updateOrderStatus = async (
     orderId: string,
@@ -247,7 +235,7 @@ export default function AdminOrdersPage() {
                     </div>
                     <div className="flex gap-2 mt-3 md:mt-0">
                       <Button size="sm" variant="outline" onClick={() => rejectRefund(r._id)} disabled={refundActionId === r._id}>Reject</Button>
-                      <Button size="sm" onClick={() => approveRefund(r._id)} disabled={refundActionId === r._id}>Approve & Refund</Button>
+                      <Button size="sm" onClick={() => markAsRefunded(r._id)} disabled={refundActionId === r._id}>Mark as Refunded</Button>
                     </div>
                   </div>
                 ))}
@@ -317,31 +305,21 @@ export default function AdminOrdersPage() {
                   </div>
 
                   <div className="flex flex-col gap-2 mt-4 lg:mt-0 lg:ml-6">
-                    {/* Instant Refund (before processing) */}
+                    {/* Start Processing button */}
                     {payLc === 'paid' && (statusLc === 'pending' || statusLc === 'confirmed') && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setEtaTargetOrderId(order._id);
-                            setEtaMode('days');
-                            setEtaDays(3);
-                            setEtaDate('');
-                            setEtaModalOpen(true);
-                          }}
-                          disabled={updatingOrder === order._id}
-                        >
-                          Start Processing
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => instantRefund(order._id)}
-                          disabled={updatingOrder === order._id}
-                        >
-                          Instant Refund
-                        </Button>
-                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setEtaTargetOrderId(order._id);
+                          setEtaMode('days');
+                          setEtaDays(3);
+                          setEtaDate('');
+                          setEtaModalOpen(true);
+                        }}
+                        disabled={updatingOrder === order._id}
+                      >
+                        Start Processing
+                      </Button>
                     )}
 
                     {/* Revert to Confirmed if needed */
