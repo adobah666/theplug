@@ -12,6 +12,9 @@ import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ImagePerformanceProvider } from "@/components/layout/ImagePerformanceProvider";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Suspense } from "react";
 
 const geistSans = Geist({
@@ -99,6 +102,7 @@ export default function RootLayout({
         {/* Speed up image delivery by preparing connections to Cloudinary */}
         <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+        <GoogleAnalytics />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-full flex flex-col`}
@@ -108,30 +112,30 @@ export default function RootLayout({
             <PWAProvider>
               <AuthProvider>
                 <CartProvider>
-                <OfflineIndicator />
-                <div className="flex flex-col min-h-screen">
-                  <Suspense
-                    fallback={
-                      <div className="flex items-center justify-center py-4">
-                        <LoadingSpinner size="md" />
-                      </div>
-                    }
-                  >
-                    <Header />
-                  </Suspense>
-                  <main className="flex-1">
-                    <Suspense 
+                  <OfflineIndicator />
+                  <div className="flex flex-col min-h-screen">
+                    <Suspense
                       fallback={
-                        <div className="flex items-center justify-center min-h-[400px]">
-                          <LoadingSpinner size="lg" />
+                        <div className="flex items-center justify-center py-4">
+                          <LoadingSpinner size="md" />
                         </div>
                       }
                     >
-                      {children}
+                      <Header />
                     </Suspense>
-                  </main>
-                  <Footer />
-                </div>
+                    <main className="flex-1">
+                      <Suspense
+                        fallback={
+                          <div className="flex items-center justify-center min-h-[400px]">
+                            <LoadingSpinner size="lg" />
+                          </div>
+                        }
+                      >
+                        {children}
+                      </Suspense>
+                    </main>
+                    <Footer />
+                  </div>
                   <PWAInstallPrompt />
                   <WhatsAppButton />
                 </CartProvider>
@@ -139,6 +143,8 @@ export default function RootLayout({
             </PWAProvider>
           </ImagePerformanceProvider>
         </ErrorBoundary>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
