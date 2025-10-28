@@ -458,16 +458,17 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex justify-center mt-12">
-                  <div className="flex items-center space-x-2">
+                <div className="flex justify-center mt-12 px-2">
+                  <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center max-w-full">
                     <Link
                       href={buildHref(`/categories/${category}`, { page: String(Math.max(1, page - 1)) })}
-                      className={`px-3 py-1.5 text-sm border rounded ${page <= 1 ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
+                      className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded whitespace-nowrap ${page <= 1 ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Previous
                     </Link>
                     {(() => {
-                      const maxVisible = 5;
+                      // Show fewer pages on mobile
+                      const maxVisible = 3;
                       let start = Math.max(1, page - Math.floor(maxVisible / 2));
                       let end = Math.min(totalPages, start + maxVisible - 1);
 
@@ -477,23 +478,62 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                       }
 
                       const pages = [];
+                      
+                      // Show first page if not in range
+                      if (start > 1) {
+                        pages.push(
+                          <Link
+                            key={1}
+                            href={buildHref(`/categories/${category}`, { page: '1' })}
+                            className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded min-w-[32px] sm:min-w-[36px] text-center hover:bg-gray-50"
+                          >
+                            1
+                          </Link>
+                        );
+                        if (start > 2) {
+                          pages.push(
+                            <span key="ellipsis-start" className="px-1 text-gray-400">...</span>
+                          );
+                        }
+                      }
+
+                      // Show page numbers
                       for (let p = start; p <= end; p++) {
                         const active = p === page;
                         pages.push(
                           <Link
                             key={p}
                             href={buildHref(`/categories/${category}`, { page: String(p) })}
-                            className={`px-3 py-1.5 text-sm border rounded ${active ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}
+                            className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded min-w-[32px] sm:min-w-[36px] text-center ${active ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}
                           >
                             {p}
                           </Link>
                         );
                       }
+
+                      // Show last page if not in range
+                      if (end < totalPages) {
+                        if (end < totalPages - 1) {
+                          pages.push(
+                            <span key="ellipsis-end" className="px-1 text-gray-400">...</span>
+                          );
+                        }
+                        pages.push(
+                          <Link
+                            key={totalPages}
+                            href={buildHref(`/categories/${category}`, { page: String(totalPages) })}
+                            className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded min-w-[32px] sm:min-w-[36px] text-center hover:bg-gray-50"
+                          >
+                            {totalPages}
+                          </Link>
+                        );
+                      }
+
                       return pages;
                     })()}
                     <Link
                       href={buildHref(`/categories/${category}`, { page: String(Math.min(totalPages, page + 1)) })}
-                      className={`px-3 py-1.5 text-sm border rounded ${page >= totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
+                      className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded whitespace-nowrap ${page >= totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Next
                     </Link>
