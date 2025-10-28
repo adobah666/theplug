@@ -462,7 +462,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                   <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center max-w-full">
                     <Link
                       href={buildHref(`/categories/${category}`, { page: String(Math.max(1, page - 1)) })}
-                      className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded whitespace-nowrap ${page <= 1 ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
+                      className={`inline-flex items-center justify-center px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded whitespace-nowrap ${page <= 1 ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Previous
                     </Link>
@@ -485,7 +485,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                           <Link
                             key={1}
                             href={buildHref(`/categories/${category}`, { page: '1' })}
-                            className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded min-w-[32px] sm:min-w-[36px] text-center hover:bg-gray-50"
+                            className="inline-flex items-center justify-center px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded min-w-[32px] sm:min-w-[36px] hover:bg-gray-50"
                           >
                             1
                           </Link>
@@ -504,7 +504,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                           <Link
                             key={p}
                             href={buildHref(`/categories/${category}`, { page: String(p) })}
-                            className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded min-w-[32px] sm:min-w-[36px] text-center ${active ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}
+                            className={`inline-flex items-center justify-center px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded min-w-[32px] sm:min-w-[36px] ${active ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'}`}
                           >
                             {p}
                           </Link>
@@ -522,7 +522,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                           <Link
                             key={totalPages}
                             href={buildHref(`/categories/${category}`, { page: String(totalPages) })}
-                            className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded min-w-[32px] sm:min-w-[36px] text-center hover:bg-gray-50"
+                            className="inline-flex items-center justify-center px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded min-w-[32px] sm:min-w-[36px] hover:bg-gray-50"
                           >
                             {totalPages}
                           </Link>
@@ -533,7 +533,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                     })()}
                     <Link
                       href={buildHref(`/categories/${category}`, { page: String(Math.min(totalPages, page + 1)) })}
-                      className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded whitespace-nowrap ${page >= totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
+                      className={`inline-flex items-center justify-center px-2 sm:px-3 py-1.5 text-xs sm:text-sm border rounded whitespace-nowrap ${page >= totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'}`}
                     >
                       Next
                     </Link>
