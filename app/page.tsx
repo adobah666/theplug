@@ -283,7 +283,7 @@ async function getCategories() {
         })
 
         const products: any[] = Array.isArray(prodJson?.data?.data) ? prodJson.data.data : []
-        const totalCount = prodJson?.data?.total || products.length
+        const totalCount = prodJson?.data?.pagination?.total || prodJson?.data?.total || 0
 
         console.log('[home:getCategories] Category', cat.slug, 'has', products.length, 'products, total:', totalCount)
 
